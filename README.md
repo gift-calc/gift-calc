@@ -67,6 +67,7 @@ gift-calc -b 100 -v 25 -f 8
 gift-calc                    # Calculate with defaults/config
 gcalc                        # Short alias for gift-calc
 gift-calc init-config        # Setup configuration file
+gift-calc log                # Open log file with less
 gcalc init-config            # Setup config (short form)
 gift-calc --help            # Show help message
 ```
@@ -80,6 +81,8 @@ gift-calc --help            # Show help message
 | `-f` | `--friend-score` | Relationship closeness | 1-10 | 5 |
 | `-c` | `--currency` | Currency code to display | Any string | SEK |
 | `-d` | `--decimals` | Number of decimal places | 0-10 | 2 |
+| `-n` | `--name` | Gift recipient name | Any string | - |
+| `--log` | `--log` | Write to log file | - | false |
 | `-cp` | `--copy` | Copy amount to clipboard | - | false |
 | `-h` | `--help` | Show help | - | - |
 
@@ -90,31 +93,34 @@ gift-calc --help            # Show help message
 gift-calc
 # Output: 73.24 SEK
 
-# No decimal places
-gcalc -d 0
-# Output: 68 SEK
+# Gift for a specific person
+gcalc -n "Alice"
+# Output: 68.45 SEK for Alice
 
 # Set a higher base amount
-gift-calc -b 150 -d 1
-# Output: 142.1 SEK
+gift-calc -b 150 -d 1 -n "Bob"
+# Output: 142.1 SEK for Bob
 
-# Different currency with more decimals
-gcalc -b 100 -c USD -d 3
-# Output: 127.358 USD
+# Different currency with logging
+gcalc -b 100 -c USD -n "Charlie" --log
+# Output: 127.35 USD for Charlie
+# Entry logged to /Users/username/.config/gift-calc/gift-calc.log
 
-# Copy to clipboard
-gift-calc -b 80 -cp
-# Output: 89.67 SEK
+# Copy to clipboard with name
+gift-calc -b 80 -n "Diana" -cp
+# Output: 89.67 SEK for Diana
 # Amount 89.67 copied to clipboard
 
-# Best friend (high score = bias toward higher amounts)
-gift-calc -b 80 -f 9 -c EUR -d 4
-# Output: 85.1234 EUR
+# Best friend with logging
+gift-calc -b 80 -f 9 -c EUR -n "Emma" --log
+# Output: 85.12 EUR for Emma
+# Entry logged to /Users/username/.config/gift-calc/gift-calc.log
 
 # Combine all options
-gcalc -b 120 -v 30 -f 7 -c USD -d 1 -cp
-# Output: 134.8 USD
+gcalc -b 120 -v 30 -f 7 -c USD -d 1 -n "Frank" -cp --log
+# Output: 134.8 USD for Frank
 # Amount 134.8 copied to clipboard
+# Entry logged to /Users/username/.config/gift-calc/gift-calc.log
 ```
 
 ## Configuration
@@ -190,6 +196,43 @@ The `--copy` flag copies just the numerical amount (without currency) to your cl
 - **macOS**: Uses `pbcopy`
 - **Windows**: Uses `clip`  
 - **Linux**: Uses `xclip` or `xsel` (install with your package manager)
+
+### Logging Functionality
+
+The `--log` flag writes a timestamped entry to `~/.config/gift-calc/gift-calc.log`:
+
+- **Format**: `[ISO timestamp] [amount] [currency] [for name]`
+- **Location**: `~/.config/gift-calc/gift-calc.log`
+- **Behavior**: Appends to existing log file, creates if doesn't exist
+- **Note**: Name parameter is not stored in config but can be logged when used
+
+Example log entries:
+```
+2025-09-05T02:15:30.123Z 75.50 SEK
+2025-09-05T02:16:45.456Z 120.00 USD for Alice
+2025-09-05T02:17:12.789Z 89.67 EUR for Bob
+```
+
+### Log Command
+
+The `gift-calc log` command opens your calculation history using `less`:
+
+```bash
+gift-calc log
+```
+
+**Behavior:**
+- Opens `~/.config/gift-calc/gift-calc.log` with `less` pager
+- Use standard `less` navigation (arrow keys, page up/down, q to quit)
+- Raw log format with ISO timestamps
+- Handles missing log files gracefully
+
+**Log file format:**
+```
+2025-09-05T02:15:30.123Z 75.50 SEK
+2025-09-05T02:16:45.456Z 120.00 USD for Alice
+2025-09-05T02:17:12.789Z 89.67 EUR for Bob
+```
 
 ## Development
 

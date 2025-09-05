@@ -39,15 +39,32 @@ const args = process.argv.slice(2);
 const config = loadConfig();
 let baseValue = config.baseValue || 70;
 let variation = config.variation || 20;
-let friendScore = config.friendScore || 5;
+let friendScore = 5;
+let niceScore = 5;
 let currency = config.currency || 'SEK';
 let decimals = config.decimals || 2;
+let recipientName = null;
+let logToFile = true;
 let copyToClipboard = false;
 let showHelp = false;
+let useMaximum = false;
+let useMinimum = false;
 
 // Check for init-config command first
 if (args[0] === 'init-config') {
   initConfig();
+  process.exit(0);
+}
+
+// Check for update-config command
+if (args[0] === 'update-config') {
+  updateConfig();
+  process.exit(0);
+}
+
+// Check for log command
+if (args[0] === 'log') {
+  displayLog();
   process.exit(0);
 }
 
@@ -104,6 +121,23 @@ for (let i = 0; i < args.length; i++) {
     }
   }
   
+  if (arg === '-n' || arg === '--nice-score') {
+    const nextArg = args[i + 1];
+    if (nextArg !== undefined && !isNaN(nextArg)) {
+      const scoreValue = parseFloat(nextArg);
+      if (scoreValue >= 0 && scoreValue <= 10) {
+        niceScore = scoreValue;
+        i++; // Skip the next argument as it's the value
+      } else {
+        console.error('Error: -n/--nice-score must be between 0 and 10');
+        process.exit(1);
+      }
+    } else {
+      console.error('Error: -n/--nice-score requires a numeric value');
+      process.exit(1);
+    }
+  }
+  
   if (arg === '-c' || arg === '--currency') {
     const nextArg = args[i + 1];
     if (nextArg && !nextArg.startsWith('-')) {
@@ -135,6 +169,33 @@ for (let i = 0; i < args.length; i++) {
       process.exit(1);
     }
   }
+  
+  if (arg === '--name') {
+    const nextArg = args[i + 1];
+    if (nextArg && !nextArg.startsWith('-')) {
+      recipientName = nextArg;
+      i++; // Skip the next argument as it's the value
+    } else {
+      console.error('Error: --name requires a name value');
+      process.exit(1);
+    }
+  }
+  
+  if (arg === '--max') {
+    useMaximum = true;
+  }
+  
+  if (arg === '--min') {
+    useMinimum = true;
+  }
+  
+  if (arg === '--asshole' || arg === '--dickhead') {
+    niceScore = 0;
+  }
+  
+  if (arg === '--no-log') {
+    logToFile = false;
+  }
 }
 
 if (showHelp) {
@@ -148,18 +209,30 @@ DESCRIPTION:
 USAGE:
   gift-calc [options]
   gift-calc init-config
+  gift-calc update-config
+  gift-calc log
   gcalc [options]              # Short alias
 
 COMMANDS:
   init-config                 Setup configuration file with default values
+  update-config               Update existing configuration file
+  log                         Open gift calculation log file with less
 
 OPTIONS:
   -b, --basevalue <number>    Set the base value for gift calculation (default: 70)
   -v, --variation <percent>   Set variation percentage (0-100, default: 20)
   -f, --friend-score <1-10>   Friend score affecting gift amount bias (default: 5)
                               Higher scores increase chance of higher amounts
+  -n, --nice-score <0-10>     Nice score affecting gift amount bias (default: 5)
+                              0=no gift, 1-3=fixed reductions, 4-10=bias amounts
   -c, --currency <code>       Currency code to display (default: SEK)
   -d, --decimals <0-10>       Number of decimal places (default: 2)
+  --name <name>               Name of gift recipient to include in output
+  --max                       Set amount to maximum (baseValue + 20%)
+  --min                       Set amount to minimum (baseValue - 20%)
+  --asshole                   Set nice score to 0 (no gift)
+  --dickhead                  Set nice score to 0 (no gift)
+  --no-log                    Disable logging to file (logging enabled by default)
   -cp, --copy                 Copy amount (without currency) to clipboard
   -h, --help                  Show this help message
 
@@ -171,11 +244,21 @@ CONFIGURATION:
 EXAMPLES:
   gift-calc                             # Use config defaults or built-in defaults
   gcalc init-config                     # Setup configuration file (short form)
+  gift-calc update-config               # Update existing configuration file
+  gift-calc log                         # Open log file with less
   gift-calc -b 100                      # Base value of 100
   gcalc -b 100 -v 30 -d 0               # Base 100, 30% variation, no decimals
-  gift-calc -b 50 -f 9 -c USD -d 3      # Base 50, high friend score, USD, 3 decimals
-  gcalc -b 80 -v 15 -f 3 -cp            # Base 80, 15% variation, copy to clipboard
-  gift-calc -c EUR -d 1 -cp             # Use defaults with EUR, 1 decimal, copy
+  gift-calc --name "Alice" -c USD       # Gift for Alice in USD currency
+  gcalc -b 50 -f 9 --name "Bob"         # Gift for Bob (with logging by default)
+  gift-calc -c EUR -d 1 -cp --no-log     # Use defaults with EUR, copy but no log
+  gcalc --name "Charlie" -b 80 -cp      # Gift for Charlie, copy to clipboard
+  gift-calc -f 8 -n 9                   # High friend and nice scores
+  gift-calc -n 0 -b 100                 # No gift (nice score 0)
+  gift-calc --asshole --name "Kevin"    # No gift for asshole Kevin
+  gift-calc --dickhead -b 50            # No gift for dickhead
+  gift-calc -n 2 -b 100                 # Mean person (20 SEK from base 100)
+  gift-calc -b 100 --max                # Set to maximum amount (120)
+  gcalc -b 100 --min                    # Set to minimum amount (80)
   gift-calc --help                      # Shows this help message
 
 FRIEND SCORE GUIDE:
@@ -184,11 +267,112 @@ FRIEND SCORE GUIDE:
   7-8: Good friend (bias toward higher amounts)
   9-10: Best friend/family (strong bias toward higher amounts)
 
+NICE SCORE GUIDE:
+  0: Asshole (amount = 0)
+  1: Terrible person (10% of base value)
+  2: Very mean person (20% of base value)
+  3: Mean person (30% of base value)
+  4-6: Average niceness (neutral bias)
+  7-8: Nice person (bias toward higher amounts)
+  9-10: Very nice person (strong bias toward higher amounts)
+
 OUTPUT:
-  The script returns a randomly calculated gift amount with variation 
-  and friend score influence applied to the base value.
+  The script returns a randomly calculated gift amount with variation,
+  friend score, and nice score influences applied to the base value.
   `);
   process.exit(0);
+}
+
+async function updateConfig() {
+  console.log('Gift Calculator - Configuration Update');
+  console.log('======================================\n');
+  console.log('This will update your configuration file at:', getConfigPath());
+  console.log('Current values are shown in parentheses. Press enter to keep current value.\n');
+
+  const existingConfig = loadConfig();
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const askQuestion = (question) => {
+    return new Promise((resolve) => {
+      rl.question(question, resolve);
+    });
+  };
+
+  const newConfig = {};
+
+  // Base Value
+  const currentBase = existingConfig.baseValue || 70;
+  const baseValueAnswer = await askQuestion(`Base value (current: ${currentBase}): `);
+  if (baseValueAnswer.trim() && !isNaN(baseValueAnswer)) {
+    newConfig.baseValue = parseFloat(baseValueAnswer);
+  } else if (existingConfig.baseValue) {
+    newConfig.baseValue = existingConfig.baseValue;
+  }
+
+  // Variation
+  const currentVariation = existingConfig.variation || 20;
+  const variationAnswer = await askQuestion(`Variation percentage 0-100 (current: ${currentVariation}): `);
+  if (variationAnswer.trim() && !isNaN(variationAnswer)) {
+    const varValue = parseFloat(variationAnswer);
+    if (varValue >= 0 && varValue <= 100) {
+      newConfig.variation = varValue;
+    } else {
+      console.log('Warning: Variation must be between 0 and 100. Keeping current value.');
+      if (existingConfig.variation) newConfig.variation = existingConfig.variation;
+    }
+  } else if (existingConfig.variation) {
+    newConfig.variation = existingConfig.variation;
+  }
+
+  // Currency
+  const currentCurrency = existingConfig.currency || 'SEK';
+  const currencyAnswer = await askQuestion(`Currency code (current: ${currentCurrency}): `);
+  if (currencyAnswer.trim()) {
+    newConfig.currency = currencyAnswer.toUpperCase();
+  } else if (existingConfig.currency) {
+    newConfig.currency = existingConfig.currency;
+  }
+
+  // Decimals
+  const currentDecimals = existingConfig.decimals !== undefined ? existingConfig.decimals : 2;
+  const decimalsAnswer = await askQuestion(`Number of decimals 0-10 (current: ${currentDecimals}): `);
+  if (decimalsAnswer.trim() && !isNaN(decimalsAnswer)) {
+    const decValue = parseInt(decimalsAnswer);
+    if (decValue >= 0 && decValue <= 10) {
+      newConfig.decimals = decValue;
+    } else {
+      console.log('Warning: Decimals must be between 0 and 10. Keeping current value.');
+      if (existingConfig.decimals !== undefined) newConfig.decimals = existingConfig.decimals;
+    }
+  } else if (existingConfig.decimals !== undefined) {
+    newConfig.decimals = existingConfig.decimals;
+  }
+
+  rl.close();
+
+  // Save config
+  ensureConfigDir();
+  const configPath = getConfigPath();
+  
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
+    console.log(`\nConfiguration updated at: ${configPath}`);
+    if (Object.keys(newConfig).length === 0) {
+      console.log('No values were configured. Using default values.');
+    } else {
+      console.log('Updated values:');
+      if (newConfig.baseValue) console.log(`  Base value: ${newConfig.baseValue}`);
+      if (newConfig.variation !== undefined) console.log(`  Variation: ${newConfig.variation}%`);
+      if (newConfig.currency) console.log(`  Currency: ${newConfig.currency}`);
+      if (newConfig.decimals !== undefined) console.log(`  Decimals: ${newConfig.decimals}`);
+    }
+  } catch (error) {
+    console.error('Error updating configuration:', error.message);
+    process.exit(1);
+  }
 }
 
 async function initConfig() {
@@ -227,17 +411,6 @@ async function initConfig() {
     }
   }
 
-  // Friend Score
-  const friendScoreAnswer = await askQuestion(`Friend score 1-10 (default: 5): `);
-  if (friendScoreAnswer.trim() && !isNaN(friendScoreAnswer)) {
-    const scoreValue = parseFloat(friendScoreAnswer);
-    if (scoreValue >= 1 && scoreValue <= 10) {
-      newConfig.friendScore = scoreValue;
-    } else {
-      console.log('Warning: Friend score must be between 1 and 10. Skipping.');
-    }
-  }
-
   // Currency
   const currencyAnswer = await askQuestion(`Currency code (default: SEK): `);
   if (currencyAnswer.trim()) {
@@ -270,7 +443,6 @@ async function initConfig() {
       console.log('Configured values:');
       if (newConfig.baseValue) console.log(`  Base value: ${newConfig.baseValue}`);
       if (newConfig.variation) console.log(`  Variation: ${newConfig.variation}%`);
-      if (newConfig.friendScore) console.log(`  Friend score: ${newConfig.friendScore}`);
       if (newConfig.currency) console.log(`  Currency: ${newConfig.currency}`);
       if (newConfig.decimals !== undefined) console.log(`  Decimals: ${newConfig.decimals}`);
     }
@@ -280,16 +452,51 @@ async function initConfig() {
   }
 }
 
-function calculateGiftAmount(base, variationPercent, friendScore, decimalPlaces) {
+function displayLog() {
+  const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+  
+  // Check if log file exists
+  if (!fs.existsSync(logPath)) {
+    console.log('No log file found. Use --log flag to start logging gift calculations.');
+    return;
+  }
+  
+  // Open log file with less using spawnSync for immediate execution
+  const { spawnSync } = require('child_process');
+  try {
+    const result = spawnSync('less', [logPath], { 
+      stdio: 'inherit'
+    });
+    
+    if (result.error) {
+      console.error(`Error opening log file with less: ${result.error.message}`);
+      console.log(`Log file location: ${logPath}`);
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(`Error opening log file with less: ${error.message}`);
+    console.log(`Log file location: ${logPath}`);
+    process.exit(1);
+  }
+}
+
+function calculateGiftAmount(base, variationPercent, friendScore, niceScore, decimalPlaces) {
   // Friend score influences the bias towards higher amounts
   // Score 1-5: neutral to negative bias, Score 6-10: positive bias
   const friendBias = (friendScore - 5.5) * 0.1; // Range: -0.45 to +0.45
   
+  // Nice score also influences the bias towards higher amounts
+  // Score 1-5: neutral to negative bias, Score 6-10: positive bias
+  const niceBias = (niceScore - 5.5) * 0.1; // Range: -0.45 to +0.45
+  
+  // Combine both biases (average them to avoid double effect)
+  const combinedBias = (friendBias + niceBias) / 2;
+  
   // Generate base random percentage within the variation range
   const randomPercentage = (Math.random() * (variationPercent * 2)) - variationPercent;
   
-  // Apply friend bias - higher scores increase chance of higher amounts
-  const biasedPercentage = randomPercentage + (friendBias * variationPercent);
+  // Apply combined bias - higher scores increase chance of higher amounts
+  const biasedPercentage = randomPercentage + (combinedBias * variationPercent);
   
   // Ensure we don't exceed the original variation bounds
   const finalPercentage = Math.max(-variationPercent, Math.min(variationPercent, biasedPercentage));
@@ -302,10 +509,40 @@ function calculateGiftAmount(base, variationPercent, friendScore, decimalPlaces)
   return Math.round(giftAmount * multiplier) / multiplier;
 }
 
-const suggestedAmount = calculateGiftAmount(baseValue, variation, friendScore, decimals);
+// Calculate the suggested amount
+let suggestedAmount;
+if (useMaximum) {
+  // Maximum is baseValue + 20%
+  suggestedAmount = baseValue * 1.2;
+} else if (useMinimum) {
+  // Minimum is baseValue - 20%
+  suggestedAmount = baseValue * 0.8;
+} else if (niceScore === 0) {
+  // Special case: nice score 0 = amount is 0
+  suggestedAmount = 0;
+} else if (niceScore === 1) {
+  // Special case: nice score 1 = baseValue - 90%
+  suggestedAmount = baseValue * 0.1;
+} else if (niceScore === 2) {
+  // Special case: nice score 2 = baseValue - 80%
+  suggestedAmount = baseValue * 0.2;
+} else if (niceScore === 3) {
+  // Special case: nice score 3 = baseValue - 70%
+  suggestedAmount = baseValue * 0.3;
+} else {
+  // Normal random calculation for nice scores 4-10
+  suggestedAmount = calculateGiftAmount(baseValue, variation, friendScore, niceScore, decimals);
+}
 
-// Format output with currency
-const output = `${suggestedAmount} ${currency}`;
+// Round to specified decimal places
+const multiplier = Math.pow(10, decimals);
+suggestedAmount = Math.round(suggestedAmount * multiplier) / multiplier;
+
+// Format output with currency and optional name
+let output = `${suggestedAmount} ${currency}`;
+if (recipientName) {
+  output += ` for ${recipientName}`;
+}
 console.log(output);
 
 // Copy to clipboard if requested
@@ -330,4 +567,22 @@ if (copyToClipboard) {
       console.log(`Amount ${copyText} copied to clipboard`);
     }
   });
+}
+
+// Log to file if requested
+if (logToFile) {
+  const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+  const timestamp = new Date().toISOString();
+  const logEntry = `${timestamp} ${output}\n`;
+  
+  // Ensure log directory exists
+  ensureConfigDir();
+  
+  // Append to log file
+  try {
+    fs.appendFileSync(logPath, logEntry);
+    console.log(`Entry logged to ${logPath}`);
+  } catch (error) {
+    console.error(`Warning: Could not write to log file: ${error.message}`);
+  }
 }
