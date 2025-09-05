@@ -316,7 +316,6 @@ if (parsedConfig.logToFile) {
   // Append to log file
   try {
     fs.appendFileSync(logPath, logEntry);
-    console.log(`Entry logged to ${logPath}`);
   } catch (error) {
     console.error(`Warning: Could not write to log file: ${error.message}`);
   }
