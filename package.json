@@ -1,6 +1,6 @@
 {
   "name": "gift-calc",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "The only gift amount calculation tool you'll ever need",
   "type": "module",
   "main": "index.js",
@@ -11,7 +11,7 @@
   "scripts": {
     "test": "node test/run-tests.js",
     "test:core": "node --test test/core.test.js",
-    "test:algorithm": "node --test test/algorithm.test.js", 
+    "test:algorithm": "node --test test/algorithm.test.js",
     "test:config": "node --test test/config.test.js",
     "test:verbose": "VERBOSE=1 node test/run-tests.js"
   },
