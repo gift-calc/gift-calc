@@ -1,7 +1,7 @@
 {
   "name": "gift-calc",
   "version": "1.0.0",
-  "description": "A CLI tool to suggest gift amounts based on a base value with random variation",
+  "description": "The only gift amount calculation tool you'll ever need",
   "main": "index.js",
   "bin": {
     "gift-amount": "./index.js",
@@ -14,11 +14,29 @@
     "gift",
     "amount",
     "calculator",
-    "cli"
+    "cli",
+    "gift-calculator",
+    "present",
+    "money",
+    "random",
+    "variation"
   ],
-  "author": "",
+  "author": "David Nossebro",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/david-nossebro/gift-calc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/david-nossebro/gift-calc/issues"
+  },
+  "homepage": "https://github.com/david-nossebro/gift-calc#readme",
   "engines": {
     "node": ">=14.0.0"
-  }
+  },
+  "files": [
+    "index.js",
+    ".config-example.json",
+    "README.md"
+  ]
 }
