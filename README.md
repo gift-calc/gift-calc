@@ -16,7 +16,33 @@ A CLI tool that suggests gift amounts based on a configurable base value with ra
 
 ## Installation
 
-### From NPM (Recommended)
+### Via Homebrew (macOS/Linux)
+
+Install using Homebrew:
+```bash
+brew tap david-nossebro/gift-calc
+brew install gift-calc
+```
+
+### Via Install Script (Unix/Linux/macOS)
+
+One-line installation from source:
+```bash
+curl -fsSL https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.sh | sh
+```
+
+This installs from source to `~/.local/share/gift-calc` and creates executables in `~/.local/bin`.
+
+### Via PowerShell Script (Windows)
+
+One-line installation from source:
+```powershell
+irm https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.ps1 | iex
+```
+
+This installs from source to `%LOCALAPPDATA%\gift-calc` and creates executables in `%LOCALAPPDATA%\Microsoft\WindowsApps`.
+
+### From NPM
 
 Install globally from npm:
 ```bash
@@ -50,7 +76,17 @@ npm link
 ## Quick Start
 
 ```bash
-# Install the package globally
+# Install via Homebrew (macOS/Linux)
+brew tap david-nossebro/gift-calc
+brew install gift-calc
+
+# OR install via script (Unix/Linux/macOS)
+curl -fsSL https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.sh | sh
+
+# OR install via PowerShell (Windows)
+irm https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.ps1 | iex
+
+# OR install via npm
 npm install -g gift-calc
 
 # Use default values (with automatic logging)
