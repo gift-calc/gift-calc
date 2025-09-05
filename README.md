@@ -20,7 +20,7 @@ A CLI tool that suggests gift amounts based on a configurable base value with ra
 
 Install using Homebrew:
 ```bash
-brew tap david-nossebro/gift-calc
+brew tap gift-calc/homebrew-gift-calc
 brew install gift-calc
 ```
 
@@ -28,7 +28,7 @@ brew install gift-calc
 
 One-line installation from source:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/install.sh | sh
 ```
 
 This installs from source to `~/.local/share/gift-calc` and creates executables in `~/.local/bin`.
@@ -37,7 +37,7 @@ This installs from source to `~/.local/share/gift-calc` and creates executables 
 
 One-line installation from source:
 ```powershell
-irm https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/gift-calc/gift-calc/main/install.ps1 | iex
 ```
 
 This installs from source to `%LOCALAPPDATA%\gift-calc` and creates executables in `%LOCALAPPDATA%\Microsoft\WindowsApps`.
@@ -55,7 +55,7 @@ The package will be available as both `gift-calc` and `gcalc` commands.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/david-nossebro/gift-calc.git
+git clone https://github.com/gift-calc/gift-calc.git
 cd gift-calc
 ```
 
@@ -77,14 +77,14 @@ npm link
 
 ```bash
 # Install via Homebrew (macOS/Linux)
-brew tap david-nossebro/gift-calc
+brew tap gift-calc/homebrew-gift-calc
 brew install gift-calc
 
 # OR install via script (Unix/Linux/macOS)
-curl -fsSL https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/install.sh | sh
 
 # OR install via PowerShell (Windows)
-irm https://raw.githubusercontent.com/david-nossebro/gift-calc/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/gift-calc/gift-calc/main/install.ps1 | iex
 
 # OR install via npm
 npm install -g gift-calc
@@ -354,7 +354,7 @@ gift-calc/
 
 ```bash
 # Clone and setup
-git clone https://github.com/david-nossebro/gift-calc.git
+git clone https://github.com/gift-calc/gift-calc.git
 cd gift-calc
 npm install
 
@@ -419,7 +419,7 @@ David Nossebro - Created as a practical CLI tool for gift amount suggestions.
 ## Package Information
 
 - **NPM Package:** [gift-calc](https://www.npmjs.com/package/gift-calc)
-- **GitHub Repository:** [david-nossebro/gift-calc](https://github.com/david-nossebro/gift-calc)
+- **GitHub Repository:** [gift-calc/gift-calc](https://github.com/gift-calc/gift-calc)
 - **Version:** 1.2.0
 - **License:** ISC
 

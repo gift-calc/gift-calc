@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$RepoUrl = "https://github.com/david-nossebro/gift-calc"
+$RepoUrl = "https://github.com/gift-calc/gift-calc"
 $InstallDir = "$env:LOCALAPPDATA\gift-calc"
 $BinDir = "$env:LOCALAPPDATA\Microsoft\WindowsApps"
 

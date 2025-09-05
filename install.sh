@@ -5,7 +5,7 @@
 
 set -e
 
-REPO_URL="https://github.com/david-nossebro/gift-calc"
+REPO_URL="https://github.com/gift-calc/gift-calc"
 INSTALL_DIR="$HOME/.local/share/gift-calc"
 BIN_DIR="$HOME/.local/bin"
 

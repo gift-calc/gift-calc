@@ -30,12 +30,12 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/david-nossebro/gift-calc.git"
+    "url": "git+https://github.com/gift-calc/gift-calc.git"
   },
   "bugs": {
-    "url": "https://github.com/david-nossebro/gift-calc/issues"
+    "url": "https://github.com/gift-calc/gift-calc/issues"
   },
-  "homepage": "https://github.com/david-nossebro/gift-calc#readme",
+  "homepage": "https://gift-calc.github.io",
   "engines": {
     "node": ">=18.0.0"
   },
