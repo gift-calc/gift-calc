@@ -47,6 +47,18 @@ gcalc -b 50 -f 8
 - Special handling for `init-config` as first argument
 - Standard CLI options: `-b/--basevalue`, `-v/--variation`, `-f/--friend-score`
 
+## GitHub Tool Usage
+
+**IMPORTANT**: Always use the `gh` CLI tool for GitHub-related tasks when possible. This includes:
+- Creating and managing pull requests: `gh pr create`, `gh pr view`, `gh pr merge`
+- Managing issues: `gh issue create`, `gh issue list`, `gh issue close`
+- Repository operations: `gh repo view`, `gh repo clone`, `gh repo create`
+- GitHub Pages: `gh api repos/owner/repo/pages` for configuration
+- Releases: `gh release create`, `gh release list`
+- Working with GitHub Actions: `gh run list`, `gh run view`
+
+The `gh` tool provides better integration, authentication, and error handling than manual git operations for GitHub-specific tasks.
+
 ## Git Commit Guidelines
 
 **IMPORTANT**: NEVER include Claude Code references, AI attribution, or "Generated with Claude" messages in commit messages. Keep all commit messages clean and professional.
