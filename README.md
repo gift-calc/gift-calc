@@ -12,11 +12,20 @@ A CLI tool that suggests gift amounts based on a configurable base value with ra
 
 ## Installation
 
+### From NPM (Recommended)
+
+Install globally from npm:
+```bash
+npm install -g gift-calc
+```
+
+The package will be available as both `gift-calc` and `gift-amount` commands.
+
 ### From Source
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/david-nossebro/gift-calc.git
 cd gift-calc
 ```
 
@@ -37,6 +46,9 @@ npm link
 ## Quick Start
 
 ```bash
+# Install the package globally
+npm install -g gift-calc
+
 # Use default values
 gift-calc
 
@@ -220,6 +232,13 @@ ISC License
 ## Author
 
 Created as a practical CLI tool for gift amount suggestions.
+
+## Package Information
+
+- **NPM Package:** [gift-calc](https://www.npmjs.com/package/gift-calc)
+- **GitHub Repository:** [david-nossebro/gift-calc](https://github.com/david-nossebro/gift-calc)
+- **Version:** 1.0.0
+- **License:** ISC
 
 ---
 
