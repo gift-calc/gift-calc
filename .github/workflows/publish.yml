@@ -72,6 +72,19 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           
+      - name: Trigger Homebrew formula update
+        if: steps.changes.outputs.script-changed == 'true'
+        run: |
+          # Get the new version from package.json
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          
+          # Trigger the homebrew repository to update
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.HOMEBREW_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/gift-calc/homebrew-gift-calc/dispatches \
+            -d "{\"event_type\":\"version_update\",\"client_payload\":{\"version\":\"$NEW_VERSION\"}}"
+          
       - name: Sync core to website
         if: steps.changes.outputs.core-changed == 'true'
         run: |

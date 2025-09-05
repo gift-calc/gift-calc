@@ -113,6 +113,7 @@ gift-calc init-config        # Setup configuration file
 gift-calc update-config      # Update existing configuration
 gift-calc log                # Open log file with less
 gift-calc --help             # Show help message
+gift-calc --version          # Show version information
 ```
 
 ### Command Options
@@ -133,6 +134,7 @@ gift-calc --help             # Show help message
 | | `--no-log` | Disable logging to file | - | false |
 | `-cp` | `--copy` | Copy amount to clipboard | - | false |
 | `-h` | `--help` | Show help | - | - |
+| | `--version` | Show version information | - | - |
 
 ### Examples
 

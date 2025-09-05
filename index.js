@@ -34,6 +34,18 @@ function loadConfig() {
   return {};
 }
 
+function showVersion() {
+  try {
+    // Read package.json to get version
+    const packageJsonPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'package.json');
+    const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    console.log(`gift-calc version ${packageData.version}`);
+  } catch (error) {
+    console.error('Error reading version information');
+    process.exit(1);
+  }
+}
+
 const args = process.argv.slice(2);
 
 // Load config defaults
@@ -66,6 +78,11 @@ if (parsedConfig.command === 'log') {
 
 if (parsedConfig.showHelp) {
   console.log(getHelpText());
+  process.exit(0);
+}
+
+if (parsedConfig.command === 'version') {
+  showVersion();
   process.exit(0);
 }
 
