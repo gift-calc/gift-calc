@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Pre-push hook to run tests before pushing to master
+# This prevents pushing broken code to master branch
+
+protected_branch='master'
+current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+
+# Only run tests when pushing to master
+if [ "$current_branch" = "$protected_branch" ]; then
+    echo "Running tests before push to master..."
+    npm test
+    
+    if [ $? -ne 0 ]; then
+        echo "❌ Tests failed! Push to master rejected."
+        echo "Fix the failing tests before pushing."
+        exit 1
+    fi
+    
+    echo "✅ All tests passed. Proceeding with push to master."
+fi
+
+exit 0
