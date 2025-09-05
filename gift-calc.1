@@ -1,0 +1,203 @@
+.TH GIFT-CALC 1 "2024-12-01" "gift-calc 1.2.1" "User Commands"
+.SH NAME
+gift-calc, gcalc \- calculate gift amounts with configurable randomness and relationship bias
+.SH SYNOPSIS
+.B gift-calc
+[\fIOPTIONS\fR]
+.br
+.B gift-calc
+.B init-config
+.br
+.B gift-calc
+.B update-config
+.br
+.B gift-calc
+.B log
+.br
+.B gcalc
+[\fIOPTIONS\fR]
+.SH DESCRIPTION
+.B gift-calc
+is a CLI tool that suggests gift amounts based on a base value with configurable random variation, friend score, and nice score influences. It supports both
+.B gift-calc
+and
+.B gcalc
+as command aliases.
+
+The tool applies mathematical algorithms to generate varied gift amounts influenced by relationship factors, making gift-giving decisions more interesting and fair.
+
+.SH COMMANDS
+.TP
+.B init-config
+Setup configuration file with default values at ~/.config/gift-calc/.config.json
+.TP
+.B update-config
+Update existing configuration file interactively
+.TP
+.B log
+Open gift calculation log file with less pager
+
+.SH OPTIONS
+.TP
+.BR \-b ", " \-\-basevalue " " \fINUMBER\fR
+Set the base value for gift calculation (default: 70)
+.TP
+.BR \-v ", " \-\-variation " " \fIPERCENT\fR
+Set variation percentage, must be between 0-100 (default: 20)
+.TP
+.BR \-f ", " \-\-friend-score " " \fISCORE\fR
+Friend score affecting gift amount bias, must be between 1-10 (default: 5).
+Higher scores increase chance of higher amounts.
+.TP
+.BR \-n ", " \-\-nice-score " " \fISCORE\fR
+Nice score affecting gift amount bias, must be between 0-10 (default: 5).
+0=no gift, 1-3=fixed reductions, 4-10=bias amounts.
+.TP
+.BR \-c ", " \-\-currency " " \fICODE\fR
+Currency code to display (default: SEK). Examples: USD, EUR, GBP.
+.TP
+.BR \-d ", " \-\-decimals " " \fINUMBER\fR
+Number of decimal places, must be between 0-10 (default: 2)
+.TP
+.BR \-\-name " " \fINAME\fR
+Name of gift recipient to include in output
+.TP
+.BR \-\-max
+Set amount to maximum (baseValue + 20%)
+.TP
+.BR \-\-min
+Set amount to minimum (baseValue - 20%)
+.TP
+.BR \-\-asshole ", " \-\-dickhead
+Set nice score to 0 (no gift)
+.TP
+.BR \-\-no-log
+Disable logging to file (logging is enabled by default)
+.TP
+.BR \-cp ", " \-\-copy
+Copy amount (without currency) to clipboard
+.TP
+.BR \-h ", " \-\-help
+Show help message and exit
+
+.SH CONFIGURATION
+Default values can be configured by running
+.B gift-calc init-config
+or
+.B gcalc init-config.
+Configuration is stored at:
+.I ~/.config/gift-calc/.config.json
+
+Command line options override config file defaults.
+
+.SH FRIEND SCORE GUIDE
+.TP
+.B 1-3
+Acquaintance (bias toward lower amounts)
+.TP
+.B 4-6
+Regular friend (neutral)
+.TP
+.B 7-8
+Good friend (bias toward higher amounts)
+.TP
+.B 9-10
+Best friend/family (strong bias toward higher amounts)
+
+.SH NICE SCORE GUIDE
+.TP
+.B 0
+Asshole (amount = 0)
+.TP
+.B 1
+Terrible person (10% of base value)
+.TP
+.B 2
+Very mean person (20% of base value)
+.TP
+.B 3
+Mean person (30% of base value)
+.TP
+.B 4-6
+Average niceness (neutral bias)
+.TP
+.B 7-8
+Nice person (bias toward higher amounts)
+.TP
+.B 9-10
+Very nice person (strong bias toward higher amounts)
+
+.SH ALGORITHM
+The gift amount calculation applies the following logic:
+.IP 1. 3
+Generate base random percentage within variation range
+.IP 2. 3
+Calculate friend bias: (friend_score - 5.5) * 0.1
+.IP 3. 3
+Calculate nice bias: (nice_score - 5.5) * 0.1
+.IP 4. 3
+Apply combined bias to random percentage
+.IP 5. 3
+Ensure result stays within variation bounds
+.IP 6. 3
+Apply special cases for nice scores 0-3, --max, and --min
+
+.SH FILES
+.TP
+.I ~/.config/gift-calc/.config.json
+User configuration file
+.TP
+.I ~/.config/gift-calc/gift-calc.log
+Gift calculation history log file
+
+.SH EXAMPLES
+.TP
+.B gift-calc
+Use config defaults or built-in defaults
+.TP
+.B gcalc init-config
+Setup configuration file (short form)
+.TP
+.B gift-calc -b 100
+Base value of 100
+.TP
+.B gcalc -b 100 -v 30 -d 0
+Base 100, 30% variation, no decimals
+.TP
+.B gift-calc --name "Alice" -c USD
+Gift for Alice in USD currency
+.TP
+.B gcalc -b 50 -f 9 --name "Bob"
+Gift for Bob with high friend score
+.TP
+.B gift-calc -f 8 -n 9
+High friend and nice scores
+.TP
+.B gift-calc --asshole --name "Kevin"
+No gift for asshole Kevin
+.TP
+.B gift-calc -b 100 --max
+Set to maximum amount (120)
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+Error (invalid arguments, file system errors, etc.)
+
+.SH AUTHOR
+Written by David Nossebro.
+
+.SH REPORTING BUGS
+Report bugs to: <https://github.com/david-nossebro/gift-calc/issues>
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions.
+
+.SH SEE ALSO
+.BR node (1),
+.BR npm (1)
+
+Project homepage: <https://github.com/david-nossebro/gift-calc>
