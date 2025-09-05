@@ -19,7 +19,7 @@ Install globally from npm:
 npm install -g gift-calc
 ```
 
-The package will be available as both `gift-calc` and `gift-amount` commands.
+The package will be available as both `gift-calc` and `gcalc` commands.
 
 ### From Source
 
@@ -65,7 +65,9 @@ gift-calc -b 100 -v 25 -f 8
 
 ```bash
 gift-calc                    # Calculate with defaults/config
+gcalc                        # Short alias for gift-calc
 gift-calc init-config        # Setup configuration file
+gcalc init-config            # Setup config (short form)
 gift-calc --help            # Show help message
 ```
 
@@ -85,12 +87,16 @@ gift-calc --help            # Show help message
 gift-calc
 # Output: 73.24
 
+# Short form
+gcalc
+# Output: 68.45
+
 # Set a higher base amount
 gift-calc -b 150
 # Output: 142.18
 
-# High variation for more randomness
-gift-calc -b 100 -v 40
+# High variation for more randomness (short form)
+gcalc -b 100 -v 40
 # Output: 127.35
 
 # Best friend (high score = bias toward higher amounts)
@@ -98,7 +104,7 @@ gift-calc -b 80 -f 9
 # Output: 89.67
 
 # Acquaintance (low score = bias toward lower amounts)  
-gift-calc -b 80 -f 2
+gcalc -b 80 -f 2
 # Output: 71.23
 
 # Combine all options
@@ -114,6 +120,8 @@ Run the interactive configuration setup:
 
 ```bash
 gift-calc init-config
+# or use the short form:
+gcalc init-config
 ```
 
 This will prompt you for default values:
@@ -193,6 +201,7 @@ node index.js -b 100
 # Link for global testing
 npm link
 gift-calc --help
+gcalc --help
 ```
 
 ### Testing
@@ -208,6 +217,10 @@ node index.js  # Should use config values
 
 # Test help
 node index.js --help
+
+# Test both commands after linking
+gcalc -b 100
+gift-calc init-config
 ```
 
 ## Contributing
@@ -237,7 +250,7 @@ Created as a practical CLI tool for gift amount suggestions.
 
 - **NPM Package:** [gift-calc](https://www.npmjs.com/package/gift-calc)
 - **GitHub Repository:** [david-nossebro/gift-calc](https://github.com/david-nossebro/gift-calc)
-- **Version:** 1.0.0
+- **Version:** 1.1.0
 - **License:** ISC
 
 ---

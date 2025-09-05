@@ -1,10 +1,10 @@
 {
   "name": "gift-calc",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The only gift amount calculation tool you'll ever need",
   "main": "index.js",
   "bin": {
-    "gift-amount": "./index.js",
+    "gcalc": "./index.js",
     "gift-calc": "./index.js"
   },
   "scripts": {

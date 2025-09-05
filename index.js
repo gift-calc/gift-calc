@@ -103,15 +103,16 @@ for (let i = 0; i < args.length; i++) {
 
 if (showHelp) {
   console.log(`
-gift-amount - Gift Amount Calculator
+Gift Calculator - CLI Tool
 
 DESCRIPTION:
   A CLI tool that suggests a gift amount based on a base value with 
   configurable random variation and friend score influence.
 
 USAGE:
-  gift-amount [options]
-  gift-amount init-config
+  gift-calc [options]
+  gift-calc init-config
+  gcalc [options]              # Short alias
 
 COMMANDS:
   init-config                 Setup configuration file with default values
@@ -124,18 +125,18 @@ OPTIONS:
   -h, --help                  Show this help message
 
 CONFIGURATION:
-  Default values can be configured by running 'gift-amount init-config'.
+  Default values can be configured by running 'gift-calc init-config' or 'gcalc init-config'.
   Config is stored at: ~/.config/gift-calc/.config.json
   Command line options override config file defaults.
 
 EXAMPLES:
-  gift-amount                           # Use config defaults or built-in defaults
-  gift-amount init-config               # Setup configuration file
-  gift-amount -b 100                    # Base value of 100
-  gift-amount -b 100 -v 30              # Base 100 with 30% variation
-  gift-amount -b 50 -f 9                # Base 50, high friend score (bias toward higher)
-  gift-amount -b 80 -v 15 -f 3          # Base 80, 15% variation, low friend score
-  gift-amount --help                    # Shows this help message
+  gift-calc                             # Use config defaults or built-in defaults
+  gcalc init-config                     # Setup configuration file (short form)
+  gift-calc -b 100                      # Base value of 100
+  gcalc -b 100 -v 30                    # Base 100 with 30% variation (short form)
+  gift-calc -b 50 -f 9                  # Base 50, high friend score (bias toward higher)
+  gcalc -b 80 -v 15 -f 3                # Base 80, 15% variation, low friend score
+  gift-calc --help                      # Shows this help message
 
 FRIEND SCORE GUIDE:
   1-3: Acquaintance (bias toward lower amounts)
