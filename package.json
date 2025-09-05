@@ -1,0 +1,24 @@
+{
+  "name": "gift-calc",
+  "version": "1.0.0",
+  "description": "A CLI tool to suggest gift amounts based on a base value with random variation",
+  "main": "index.js",
+  "bin": {
+    "gift-amount": "./index.js",
+    "gift-calc": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gift",
+    "amount",
+    "calculator",
+    "cli"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
