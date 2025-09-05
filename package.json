@@ -27,7 +27,7 @@
     "variation"
   ],
   "author": "David Nossebro",
-  "license": "ISC",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gift-calc/gift-calc.git"
@@ -43,6 +43,7 @@
     "index.js",
     ".config-example.json",
     "README.md",
-    "gift-calc.1"
+    "gift-calc.1",
+    "LICENSE"
   ]
 }
