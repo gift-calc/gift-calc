@@ -6,6 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is `gift-calc`, a CLI tool that calculates gift amounts with configurable randomness and relationship-based bias. It's published as an npm package with dual command names: `gift-calc` (primary) and `gcalc` (short alias).
 
+## Sibling Repositories
+
+This project has two related repositories that should be kept synchronized:
+
+1. **Homebrew Tap**: `homebrew-gift-calc` (likely at `../homebrew-gift-calc`) - Contains the Homebrew formula for installing gift-calc via `brew tap gift-calc/homebrew-gift-calc && brew install gift-calc`
+2. **Website**: `gift-calc.github.io` (likely at `../gift-calc.github.io`) - GitHub Pages site providing documentation and web interface at https://gift-calc.github.io
+
+**IMPORTANT**: After making changes to functionality, command-line interface, or configuration, always ensure documentation is updated in:
+- `README.md` in this repository
+- The website documentation in the `gift-calc.github.io` repository
+- Homebrew formula if installation methods or dependencies change
+
 ## Development Commands
 
 ```bash
