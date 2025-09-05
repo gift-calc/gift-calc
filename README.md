@@ -78,6 +78,9 @@ gift-calc --help            # Show help message
 | `-b` | `--basevalue` | Base gift amount | Any number | 70 |
 | `-v` | `--variation` | Variation percentage | 0-100 | 20 |
 | `-f` | `--friend-score` | Relationship closeness | 1-10 | 5 |
+| `-c` | `--currency` | Currency code to display | Any string | SEK |
+| `-d` | `--decimals` | Number of decimal places | 0-10 | 2 |
+| `-cp` | `--copy` | Copy amount to clipboard | - | false |
 | `-h` | `--help` | Show help | - | - |
 
 ### Examples
@@ -85,31 +88,33 @@ gift-calc --help            # Show help message
 ```bash
 # Basic usage with defaults
 gift-calc
-# Output: 73.24
+# Output: 73.24 SEK
 
-# Short form
-gcalc
-# Output: 68.45
+# No decimal places
+gcalc -d 0
+# Output: 68 SEK
 
 # Set a higher base amount
-gift-calc -b 150
-# Output: 142.18
+gift-calc -b 150 -d 1
+# Output: 142.1 SEK
 
-# High variation for more randomness (short form)
-gcalc -b 100 -v 40
-# Output: 127.35
+# Different currency with more decimals
+gcalc -b 100 -c USD -d 3
+# Output: 127.358 USD
+
+# Copy to clipboard
+gift-calc -b 80 -cp
+# Output: 89.67 SEK
+# Amount 89.67 copied to clipboard
 
 # Best friend (high score = bias toward higher amounts)
-gift-calc -b 80 -f 9
-# Output: 89.67
-
-# Acquaintance (low score = bias toward lower amounts)  
-gcalc -b 80 -f 2
-# Output: 71.23
+gift-calc -b 80 -f 9 -c EUR -d 4
+# Output: 85.1234 EUR
 
 # Combine all options
-gift-calc -b 120 -v 30 -f 7
-# Output: 134.89
+gcalc -b 120 -v 30 -f 7 -c USD -d 1 -cp
+# Output: 134.8 USD
+# Amount 134.8 copied to clipboard
 ```
 
 ## Configuration
@@ -128,6 +133,8 @@ This will prompt you for default values:
 - **Base value**: Your typical gift amount (default: 70)
 - **Variation percentage**: How much to vary from base (0-100%, default: 20%)
 - **Friend score**: Default relationship level (1-10, default: 5)
+- **Currency**: Currency code to display (default: SEK)
+- **Decimals**: Number of decimal places (0-10, default: 2)
 
 You can skip any prompt to keep the built-in default.
 
@@ -140,7 +147,9 @@ Example configuration:
 {
   "baseValue": 100,
   "variation": 25,
-  "friendScore": 6
+  "friendScore": 6,
+  "currency": "USD",
+  "decimals": 1
 }
 ```
 
@@ -173,6 +182,14 @@ The friend score influences the probability of getting higher or lower amounts:
 - Variation creates a range of `base ± (base × variation/100)`
 - Friend score adds bias: `(friendScore - 5.5) × 0.1 × variation`
 - Final result is clamped within the original variation bounds
+
+### Clipboard Functionality
+
+The `--copy` flag copies just the numerical amount (without currency) to your clipboard:
+
+- **macOS**: Uses `pbcopy`
+- **Windows**: Uses `clip`  
+- **Linux**: Uses `xclip` or `xsel` (install with your package manager)
 
 ## Development
 

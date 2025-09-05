@@ -1,5 +1,7 @@
 {
   "baseValue": 70,
   "variation": 20,
-  "friendScore": 5
+  "friendScore": 5,
+  "currency": "SEK",
+  "decimals": 2
 }

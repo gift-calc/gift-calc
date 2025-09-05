@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const readline = require('readline');
+const { exec } = require('child_process');
 
 // Config utilities
 function getConfigPath() {
@@ -39,6 +40,9 @@ const config = loadConfig();
 let baseValue = config.baseValue || 70;
 let variation = config.variation || 20;
 let friendScore = config.friendScore || 5;
+let currency = config.currency || 'SEK';
+let decimals = config.decimals || 2;
+let copyToClipboard = false;
 let showHelp = false;
 
 // Check for init-config command first
@@ -99,6 +103,38 @@ for (let i = 0; i < args.length; i++) {
       process.exit(1);
     }
   }
+  
+  if (arg === '-c' || arg === '--currency') {
+    const nextArg = args[i + 1];
+    if (nextArg && !nextArg.startsWith('-')) {
+      currency = nextArg.toUpperCase();
+      i++; // Skip the next argument as it's the value
+    } else {
+      console.error('Error: -c/--currency requires a currency code (e.g., SEK, USD, EUR)');
+      process.exit(1);
+    }
+  }
+  
+  if (arg === '-cp' || arg === '--copy') {
+    copyToClipboard = true;
+  }
+  
+  if (arg === '-d' || arg === '--decimals') {
+    const nextArg = args[i + 1];
+    if (nextArg && !isNaN(nextArg)) {
+      const decValue = parseInt(nextArg);
+      if (decValue >= 0 && decValue <= 10) {
+        decimals = decValue;
+        i++; // Skip the next argument as it's the value
+      } else {
+        console.error('Error: -d/--decimals must be between 0 and 10');
+        process.exit(1);
+      }
+    } else {
+      console.error('Error: -d/--decimals requires a numeric value');
+      process.exit(1);
+    }
+  }
 }
 
 if (showHelp) {
@@ -122,6 +158,9 @@ OPTIONS:
   -v, --variation <percent>   Set variation percentage (0-100, default: 20)
   -f, --friend-score <1-10>   Friend score affecting gift amount bias (default: 5)
                               Higher scores increase chance of higher amounts
+  -c, --currency <code>       Currency code to display (default: SEK)
+  -d, --decimals <0-10>       Number of decimal places (default: 2)
+  -cp, --copy                 Copy amount (without currency) to clipboard
   -h, --help                  Show this help message
 
 CONFIGURATION:
@@ -133,9 +172,10 @@ EXAMPLES:
   gift-calc                             # Use config defaults or built-in defaults
   gcalc init-config                     # Setup configuration file (short form)
   gift-calc -b 100                      # Base value of 100
-  gcalc -b 100 -v 30                    # Base 100 with 30% variation (short form)
-  gift-calc -b 50 -f 9                  # Base 50, high friend score (bias toward higher)
-  gcalc -b 80 -v 15 -f 3                # Base 80, 15% variation, low friend score
+  gcalc -b 100 -v 30 -d 0               # Base 100, 30% variation, no decimals
+  gift-calc -b 50 -f 9 -c USD -d 3      # Base 50, high friend score, USD, 3 decimals
+  gcalc -b 80 -v 15 -f 3 -cp            # Base 80, 15% variation, copy to clipboard
+  gift-calc -c EUR -d 1 -cp             # Use defaults with EUR, 1 decimal, copy
   gift-calc --help                      # Shows this help message
 
 FRIEND SCORE GUIDE:
@@ -198,6 +238,23 @@ async function initConfig() {
     }
   }
 
+  // Currency
+  const currencyAnswer = await askQuestion(`Currency code (default: SEK): `);
+  if (currencyAnswer.trim()) {
+    newConfig.currency = currencyAnswer.toUpperCase();
+  }
+
+  // Decimals
+  const decimalsAnswer = await askQuestion(`Number of decimals 0-10 (default: 2): `);
+  if (decimalsAnswer.trim() && !isNaN(decimalsAnswer)) {
+    const decValue = parseInt(decimalsAnswer);
+    if (decValue >= 0 && decValue <= 10) {
+      newConfig.decimals = decValue;
+    } else {
+      console.log('Warning: Decimals must be between 0 and 10. Skipping.');
+    }
+  }
+
   rl.close();
 
   // Save config
@@ -214,6 +271,8 @@ async function initConfig() {
       if (newConfig.baseValue) console.log(`  Base value: ${newConfig.baseValue}`);
       if (newConfig.variation) console.log(`  Variation: ${newConfig.variation}%`);
       if (newConfig.friendScore) console.log(`  Friend score: ${newConfig.friendScore}`);
+      if (newConfig.currency) console.log(`  Currency: ${newConfig.currency}`);
+      if (newConfig.decimals !== undefined) console.log(`  Decimals: ${newConfig.decimals}`);
     }
   } catch (error) {
     console.error('Error saving configuration:', error.message);
@@ -221,7 +280,7 @@ async function initConfig() {
   }
 }
 
-function calculateGiftAmount(base, variationPercent, friendScore) {
+function calculateGiftAmount(base, variationPercent, friendScore, decimalPlaces) {
   // Friend score influences the bias towards higher amounts
   // Score 1-5: neutral to negative bias, Score 6-10: positive bias
   const friendBias = (friendScore - 5.5) * 0.1; // Range: -0.45 to +0.45
@@ -238,9 +297,37 @@ function calculateGiftAmount(base, variationPercent, friendScore) {
   const variation = base * (finalPercentage / 100);
   const giftAmount = base + variation;
   
-  // Round to 2 decimal places
-  return Math.round(giftAmount * 100) / 100;
+  // Round to specified decimal places
+  const multiplier = Math.pow(10, decimalPlaces);
+  return Math.round(giftAmount * multiplier) / multiplier;
 }
 
-const suggestedAmount = calculateGiftAmount(baseValue, variation, friendScore);
-console.log(suggestedAmount);
+const suggestedAmount = calculateGiftAmount(baseValue, variation, friendScore, decimals);
+
+// Format output with currency
+const output = `${suggestedAmount} ${currency}`;
+console.log(output);
+
+// Copy to clipboard if requested
+if (copyToClipboard) {
+  const copyText = suggestedAmount.toString();
+  const platform = os.platform();
+  
+  let copyCommand;
+  if (platform === 'darwin') {
+    copyCommand = `echo "${copyText}" | pbcopy`;
+  } else if (platform === 'win32') {
+    copyCommand = `echo ${copyText} | clip`;
+  } else {
+    // Linux/Unix - try xclip first, then xsel
+    copyCommand = `echo "${copyText}" | xclip -selection clipboard 2>/dev/null || echo "${copyText}" | xsel --clipboard --input 2>/dev/null`;
+  }
+  
+  exec(copyCommand, (error) => {
+    if (error) {
+      console.error('Warning: Could not copy to clipboard. Make sure xclip or xsel is installed (Linux) or use macOS/Windows.');
+    } else {
+      console.log(`Amount ${copyText} copied to clipboard`);
+    }
+  });
+}
