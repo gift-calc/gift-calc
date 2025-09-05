@@ -47,12 +47,16 @@ gcalc -b 50 -f 8
 - Special handling for `init-config` as first argument
 - Standard CLI options: `-b/--basevalue`, `-v/--variation`, `-f/--friend-score`
 
+## Git Commit Guidelines
+
+**IMPORTANT**: NEVER include Claude Code references, AI attribution, or "Generated with Claude" messages in commit messages. Keep all commit messages clean and professional.
+
 ## Publishing Process
 
 When making changes that affect command names, help text, or functionality:
 1. Update version in `package.json`
 2. Update version in `README.md` Package Information section
-3. Commit changes with descriptive message
+3. Commit changes with descriptive message (NO AI attribution)
 4. Push to GitHub
 5. Run `npm publish` to update npm package
 
