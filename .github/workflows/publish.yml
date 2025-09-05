@@ -1,0 +1,62 @@
+name: Publish to NPM
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Check for script changes
+        id: changes
+        run: |
+          # Check if index.js or package.json (excluding version field) changed
+          if git diff HEAD~1 HEAD --name-only | grep -E '^(index\.js|package\.json)$' | grep -v -E '\.(md|test\.js|spec\.js)$'; then
+            # If package.json changed, check if it's not just the version field
+            if git diff HEAD~1 HEAD --name-only | grep -q package.json; then
+              # Check if changes are more than just version
+              if git diff HEAD~1 HEAD package.json | grep -v '"version"' | grep -E '^[+-]' | grep -v -E '^[+-]{3}|^@@'; then
+                echo "script-changed=true" >> $GITHUB_OUTPUT
+              elif git diff HEAD~1 HEAD --name-only | grep -q index.js; then
+                echo "script-changed=true" >> $GITHUB_OUTPUT
+              else
+                echo "script-changed=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "script-changed=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "script-changed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Configure git
+        if: steps.changes.outputs.script-changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Bump version and publish
+        if: steps.changes.outputs.script-changed == 'true'
+        run: |
+          npm version patch
+          git push origin master --tags
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
