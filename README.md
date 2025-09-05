@@ -1,14 +1,18 @@
 # Gift Calculator
 
-A CLI tool that suggests gift amounts based on a configurable base value with random variation and friend score influence.
+A CLI tool that suggests gift amounts based on a configurable base value with random variation, friend score, and nice score influences.
 
 ## Features
 
 - 🎁 Smart gift amount calculation with configurable parameters
-- 📊 Friend score system to bias amounts based on relationship closeness
-- ⚙️ Persistent configuration file support
+- 📊 Friend score system to bias amounts based on relationship closeness  
+- 😊 Nice score system with special cases for mean people
+- ⚡ Quick convenience parameters for difficult people (--asshole, --dickhead)
+- 📈 Fixed amount options (--max, --min) for predictable results
+- ⚙️ Persistent configuration file support with update capability
+- 📝 Automatic logging with log viewing functionality
 - 🎯 Percentage-based variation for realistic randomness
-- 📱 Simple command-line interface
+- 📱 Simple command-line interface with dual command names
 
 ## Installation
 
@@ -49,14 +53,17 @@ npm link
 # Install the package globally
 npm install -g gift-calc
 
-# Use default values
+# Use default values (with automatic logging)
 gift-calc
 
 # Setup your preferences
 gift-calc init-config
 
 # Override specific values
-gift-calc -b 100 -v 25 -f 8
+gift-calc -b 100 -v 25 -f 8 -n 7
+
+# For someone you really don't like
+gift-calc --asshole --name "Kevin"
 ```
 
 ## Usage
@@ -64,12 +71,12 @@ gift-calc -b 100 -v 25 -f 8
 ### Basic Commands
 
 ```bash
-gift-calc                    # Calculate with defaults/config
+gift-calc                    # Calculate with defaults/config (logging enabled)
 gcalc                        # Short alias for gift-calc
 gift-calc init-config        # Setup configuration file
+gift-calc update-config      # Update existing configuration
 gift-calc log                # Open log file with less
-gcalc init-config            # Setup config (short form)
-gift-calc --help            # Show help message
+gift-calc --help             # Show help message
 ```
 
 ### Command Options
@@ -79,70 +86,148 @@ gift-calc --help            # Show help message
 | `-b` | `--basevalue` | Base gift amount | Any number | 70 |
 | `-v` | `--variation` | Variation percentage | 0-100 | 20 |
 | `-f` | `--friend-score` | Relationship closeness | 1-10 | 5 |
+| `-n` | `--nice-score` | Person's niceness level | 0-10 | 5 |
 | `-c` | `--currency` | Currency code to display | Any string | SEK |
 | `-d` | `--decimals` | Number of decimal places | 0-10 | 2 |
-| `-n` | `--name` | Gift recipient name | Any string | - |
-| `--log` | `--log` | Write to log file | - | false |
+| | `--name` | Gift recipient name | Any string | - |
+| | `--max` | Set to maximum amount (base + 20%) | - | - |
+| | `--min` | Set to minimum amount (base - 20%) | - | - |
+| | `--asshole` | Set nice score to 0 (no gift) | - | - |
+| | `--dickhead` | Set nice score to 0 (no gift) | - | - |
+| | `--no-log` | Disable logging to file | - | false |
 | `-cp` | `--copy` | Copy amount to clipboard | - | false |
 | `-h` | `--help` | Show help | - | - |
 
 ### Examples
 
 ```bash
-# Basic usage with defaults
+# Basic usage with defaults (automatic logging)
 gift-calc
 # Output: 73.24 SEK
+# Entry logged to ~/.config/gift-calc/gift-calc.log
 
-# Gift for a specific person
-gcalc -n "Alice"
-# Output: 68.45 SEK for Alice
+# Gift for a specific person with high nice score
+gcalc --name "Alice" -n 9
+# Output: 78.45 SEK for Alice
 
-# Set a higher base amount
-gift-calc -b 150 -d 1 -n "Bob"
-# Output: 142.1 SEK for Bob
+# Set a higher base amount with friend and nice scores
+gift-calc -b 150 -f 8 -n 7 --name "Bob"
+# Output: 162.3 SEK for Bob
 
-# Different currency with logging
-gcalc -b 100 -c USD -n "Charlie" --log
-# Output: 127.35 USD for Charlie
-# Entry logged to /Users/username/.config/gift-calc/gift-calc.log
+# Different currency with no logging
+gcalc -b 100 -c USD --name "Charlie" --no-log
+# Output: 87.35 USD for Charlie
 
-# Copy to clipboard with name
-gift-calc -b 80 -n "Diana" -cp
-# Output: 89.67 SEK for Diana
+# Maximum amount for best friend
+gift-calc -b 100 --max --name "Diana"
+# Output: 120.0 SEK for Diana
+
+# Minimum amount for acquaintance
+gift-calc -b 100 --min --name "Eric"
+# Output: 80.0 SEK for Eric
+
+# Mean person gets reduced amount
+gift-calc -b 100 -n 2 --name "Frank"
+# Output: 20.0 SEK for Frank
+
+# No gift for terrible people
+gift-calc --asshole --name "Kevin"
+# Output: 0 SEK for Kevin
+
+gift-calc --dickhead -b 200 --name "Larry"
+# Output: 0 SEK for Larry
+
+# Copy to clipboard with nice person bias
+gift-calc -b 80 -n 8 --name "Maya" -cp
+# Output: 89.67 SEK for Maya
 # Amount 89.67 copied to clipboard
 
-# Best friend with logging
-gift-calc -b 80 -f 9 -c EUR -n "Emma" --log
-# Output: 85.12 EUR for Emma
-# Entry logged to /Users/username/.config/gift-calc/gift-calc.log
-
-# Combine all options
-gcalc -b 120 -v 30 -f 7 -c USD -d 1 -n "Frank" -cp --log
-# Output: 134.8 USD for Frank
-# Amount 134.8 copied to clipboard
-# Entry logged to /Users/username/.config/gift-calc/gift-calc.log
+# Combine friend and nice scores
+gcalc -b 120 -f 9 -n 8 -c USD --name "Nina"
+# Output: 134.8 USD for Nina
 ```
 
-## Configuration
+## Commands
 
-### Setup Configuration
+### Configuration Commands
 
-Run the interactive configuration setup:
-
+#### init-config
+Setup a new configuration file with default values:
 ```bash
 gift-calc init-config
-# or use the short form:
-gcalc init-config
 ```
 
-This will prompt you for default values:
+This will prompt you for:
 - **Base value**: Your typical gift amount (default: 70)
 - **Variation percentage**: How much to vary from base (0-100%, default: 20%)
-- **Friend score**: Default relationship level (1-10, default: 5)
-- **Currency**: Currency code to display (default: SEK)
+- **Currency**: Currency code to display (default: SEK)  
 - **Decimals**: Number of decimal places (0-10, default: 2)
 
-You can skip any prompt to keep the built-in default.
+**Note**: Friend score and nice score are NOT saved in configuration - they must be specified each time via command line.
+
+#### update-config
+Update your existing configuration file:
+```bash
+gift-calc update-config
+```
+
+Shows current values and allows you to update them selectively. Press Enter to keep existing values.
+
+### Log Command
+
+#### log
+View your calculation history:
+```bash
+gift-calc log
+```
+
+Opens `~/.config/gift-calc/gift-calc.log` with the `less` pager for easy browsing.
+
+**Navigation in less:**
+- Arrow keys or j/k: Move up/down
+- Space/Page Down: Next page
+- Page Up: Previous page  
+- q: Quit
+- /pattern: Search for pattern
+
+## Scoring Systems
+
+### Friend Score Guide
+
+The friend score influences the probability of getting higher or lower amounts:
+
+| Score | Relationship | Bias |
+|-------|-------------|------|
+| 1-3 | Acquaintance | Toward lower amounts |
+| 4-6 | Regular friend | Neutral |
+| 7-8 | Good friend | Toward higher amounts |
+| 9-10 | Best friend/family | Strong bias toward higher |
+
+### Nice Score Guide
+
+The nice score has special cases for low scores and bias for higher scores:
+
+| Score | Description | Amount |
+|-------|-------------|--------|
+| 0 | Asshole | 0 (no gift) |
+| 1 | Terrible person | 10% of base value |
+| 2 | Very mean person | 20% of base value |
+| 3 | Mean person | 30% of base value |
+| 4-6 | Average niceness | Neutral bias |
+| 7-8 | Nice person | Bias toward higher amounts |
+| 9-10 | Very nice person | Strong bias toward higher |
+
+**Special Cases:** Nice scores 0-3 override all other calculations (including friend score, variation, --max, --min) with fixed amounts.
+
+### Convenience Parameters
+
+For quick access to no-gift amounts:
+- `--asshole`: Sets nice score to 0 (amount = 0)
+- `--dickhead`: Sets nice score to 0 (amount = 0)
+
+These override any explicit nice score values.
+
+## Configuration
 
 ### Configuration File
 
@@ -153,7 +238,6 @@ Example configuration:
 {
   "baseValue": 100,
   "variation": 25,
-  "friendScore": 6,
   "currency": "USD",
   "decimals": 1
 }
@@ -165,74 +249,57 @@ Example configuration:
 2. **Configuration file values**
 3. **Built-in defaults** (lowest priority)
 
-## Friend Score Guide
+**Important**: Friend scores and nice scores are never stored in configuration and must be specified via command line each time.
 
-The friend score influences the probability of getting higher or lower amounts:
+## Logging
 
-| Score | Relationship | Bias |
-|-------|-------------|------|
-| 1-3 | Acquaintance | Toward lower amounts |
-| 4-6 | Regular friend | Neutral |
-| 7-8 | Good friend | Toward higher amounts |
-| 9-10 | Best friend/family | Strong bias toward higher |
+### Automatic Logging
+
+By default, all calculations are logged to `~/.config/gift-calc/gift-calc.log`. Each entry includes:
+- ISO timestamp
+- Calculated amount and currency
+- Recipient name (if specified)
+
+Example log entries:
+```
+2025-09-05T02:15:30.123Z 75.50 SEK
+2025-09-05T02:16:45.456Z 120.00 USD for Alice
+2025-09-05T02:17:12.789Z 0 SEK for Kevin
+```
+
+### Disable Logging
+
+Use `--no-log` to disable logging for a specific calculation:
+```bash
+gift-calc -b 100 --no-log
+```
 
 ## How It Works
 
-1. **Base Calculation**: Starts with your base value
-2. **Random Variation**: Applies ±variation% random adjustment
-3. **Friend Score Bias**: Adjusts probability distribution based on relationship
-4. **Final Amount**: Returns calculated amount rounded to 2 decimal places
-
 ### Algorithm Details
 
-- Variation creates a range of `base ± (base × variation/100)`
-- Friend score adds bias: `(friendScore - 5.5) × 0.1 × variation`
-- Final result is clamped within the original variation bounds
+1. **Special Cases First**: If nice score is 0-3, return fixed amount
+2. **Fixed Amounts**: If --max/--min specified, return base±20%
+3. **Base Calculation**: Start with your base value
+4. **Random Variation**: Apply ±variation% random adjustment  
+5. **Combined Bias**: Average friend score and nice score biases
+6. **Final Amount**: Apply bias and clamp within variation bounds
+
+### Mathematical Formula
+
+For normal calculations (nice score 4-10):
+- Friend bias: `(friendScore - 5.5) × 0.1`
+- Nice bias: `(niceScore - 5.5) × 0.1`
+- Combined bias: `(friendBias + niceBias) / 2`
+- Final: `base + (randomVariation + combinedBias × variation)`
 
 ### Clipboard Functionality
 
 The `--copy` flag copies just the numerical amount (without currency) to your clipboard:
 
 - **macOS**: Uses `pbcopy`
-- **Windows**: Uses `clip`  
+- **Windows**: Uses `clip`
 - **Linux**: Uses `xclip` or `xsel` (install with your package manager)
-
-### Logging Functionality
-
-The `--log` flag writes a timestamped entry to `~/.config/gift-calc/gift-calc.log`:
-
-- **Format**: `[ISO timestamp] [amount] [currency] [for name]`
-- **Location**: `~/.config/gift-calc/gift-calc.log`
-- **Behavior**: Appends to existing log file, creates if doesn't exist
-- **Note**: Name parameter is not stored in config but can be logged when used
-
-Example log entries:
-```
-2025-09-05T02:15:30.123Z 75.50 SEK
-2025-09-05T02:16:45.456Z 120.00 USD for Alice
-2025-09-05T02:17:12.789Z 89.67 EUR for Bob
-```
-
-### Log Command
-
-The `gift-calc log` command opens your calculation history using `less`:
-
-```bash
-gift-calc log
-```
-
-**Behavior:**
-- Opens `~/.config/gift-calc/gift-calc.log` with `less` pager
-- Use standard `less` navigation (arrow keys, page up/down, q to quit)
-- Raw log format with ISO timestamps
-- Handles missing log files gracefully
-
-**Log file format:**
-```
-2025-09-05T02:15:30.123Z 75.50 SEK
-2025-09-05T02:16:45.456Z 120.00 USD for Alice
-2025-09-05T02:17:12.789Z 89.67 EUR for Bob
-```
 
 ## Development
 
@@ -241,16 +308,17 @@ gift-calc log
 ```
 gift-calc/
 ├── index.js              # Main CLI application
-├── package.json          # Project configuration
+├── package.json          # Project configuration  
 ├── .config-example.json  # Example configuration
-└── README.md             # This file
+├── README.md             # This file
+└── CLAUDE.md            # Development instructions for Claude Code
 ```
 
 ### Local Development
 
 ```bash
 # Clone and setup
-git clone <repository-url>
+git clone https://github.com/david-nossebro/gift-calc.git
 cd gift-calc
 npm install
 
@@ -264,23 +332,29 @@ gift-calc --help
 gcalc --help
 ```
 
-### Testing
+### Testing Features
 
 ```bash
 # Test basic functionality
 node index.js
-node index.js -b 50 -v 30 -f 8
+node index.js -b 50 -v 30 -f 8 -n 7
+
+# Test special cases
+node index.js --asshole
+node index.js -n 1 -b 100
+node index.js --max -b 100
 
 # Test configuration
 node index.js init-config
-node index.js  # Should use config values
+node index.js update-config
 
-# Test help
-node index.js --help
+# Test logging  
+node index.js -b 100  # Should log by default
+node index.js log     # Should open log file
 
 # Test both commands after linking
 gcalc -b 100
-gift-calc init-config
+gift-calc --dickhead --name "Test"
 ```
 
 ## Contributing
@@ -294,7 +368,7 @@ gift-calc init-config
 ### Code Style
 
 - Use consistent indentation (2 spaces)
-- Follow existing patterns
+- Follow existing patterns  
 - Add comments for complex logic
 - Keep functions focused and small
 
@@ -304,13 +378,13 @@ ISC License
 
 ## Author
 
-Created as a practical CLI tool for gift amount suggestions.
+David Nossebro - Created as a practical CLI tool for gift amount suggestions.
 
 ## Package Information
 
 - **NPM Package:** [gift-calc](https://www.npmjs.com/package/gift-calc)
 - **GitHub Repository:** [david-nossebro/gift-calc](https://github.com/david-nossebro/gift-calc)
-- **Version:** 1.1.0
+- **Version:** 1.2.0
 - **License:** ISC
 
 ---

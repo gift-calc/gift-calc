@@ -2,13 +2,18 @@
   "name": "gift-calc",
   "version": "1.2.0",
   "description": "The only gift amount calculation tool you'll ever need",
+  "type": "module",
   "main": "index.js",
   "bin": {
     "gcalc": "./index.js",
     "gift-calc": "./index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/run-tests.js",
+    "test:core": "node --test test/core.test.js",
+    "test:algorithm": "node --test test/algorithm.test.js", 
+    "test:config": "node --test test/config.test.js",
+    "test:verbose": "VERBOSE=1 node test/run-tests.js"
   },
   "keywords": [
     "gift",
@@ -32,7 +37,7 @@
   },
   "homepage": "https://github.com/david-nossebro/gift-calc#readme",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "index.js",

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const readline = require('readline');
-const { exec } = require('child_process');
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import readline from 'node:readline';
+import { exec, spawnSync } from 'node:child_process';
 
 // Config utilities
 function getConfigPath() {
@@ -204,7 +204,7 @@ Gift Calculator - CLI Tool
 
 DESCRIPTION:
   A CLI tool that suggests a gift amount based on a base value with 
-  configurable random variation and friend score influence.
+  configurable random variation, friend score, and nice score influences.
 
 USAGE:
   gift-calc [options]
@@ -462,7 +462,6 @@ function displayLog() {
   }
   
   // Open log file with less using spawnSync for immediate execution
-  const { spawnSync } = require('child_process');
   try {
     const result = spawnSync('less', [logPath], { 
       stdio: 'inherit'
@@ -511,24 +510,24 @@ function calculateGiftAmount(base, variationPercent, friendScore, niceScore, dec
 
 // Calculate the suggested amount
 let suggestedAmount;
-if (useMaximum) {
+if (niceScore === 0) {
+  // Special case: nice score 0 = amount is 0 (overrides everything)
+  suggestedAmount = 0;
+} else if (niceScore === 1) {
+  // Special case: nice score 1 = baseValue - 90% (overrides everything)
+  suggestedAmount = baseValue * 0.1;
+} else if (niceScore === 2) {
+  // Special case: nice score 2 = baseValue - 80% (overrides everything)
+  suggestedAmount = baseValue * 0.2;
+} else if (niceScore === 3) {
+  // Special case: nice score 3 = baseValue - 70% (overrides everything)
+  suggestedAmount = baseValue * 0.3;
+} else if (useMaximum) {
   // Maximum is baseValue + 20%
   suggestedAmount = baseValue * 1.2;
 } else if (useMinimum) {
   // Minimum is baseValue - 20%
   suggestedAmount = baseValue * 0.8;
-} else if (niceScore === 0) {
-  // Special case: nice score 0 = amount is 0
-  suggestedAmount = 0;
-} else if (niceScore === 1) {
-  // Special case: nice score 1 = baseValue - 90%
-  suggestedAmount = baseValue * 0.1;
-} else if (niceScore === 2) {
-  // Special case: nice score 2 = baseValue - 80%
-  suggestedAmount = baseValue * 0.2;
-} else if (niceScore === 3) {
-  // Special case: nice score 3 = baseValue - 70%
-  suggestedAmount = baseValue * 0.3;
 } else {
   // Normal random calculation for nice scores 4-10
   suggestedAmount = calculateGiftAmount(baseValue, variation, friendScore, niceScore, decimals);
