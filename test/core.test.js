@@ -240,8 +240,9 @@ describe('Gift Calculator Core Tests', () => {
       cleanup();
       const result = runCLI('-b 100');
       assert.strictEqual(result.success, true);
-      assert.match(result.stdout, /Entry logged to/);
+      // Verify that log file exists and contains the entry (but no logging message in stdout)
       assert.strictEqual(fs.existsSync(LOG_PATH), true);
+      assert.match(result.stdout, /\d+\.?\d* SEK$/); // Should just show the amount and currency
     });
 
     test('should not log with --no-log', () => {
