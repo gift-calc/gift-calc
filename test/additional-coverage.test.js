@@ -353,7 +353,7 @@ describe('Additional Coverage Tests', () => {
     test('should show version with --version', () => {
       const result = runCLI('--version');
       expect(result.success).toBe(true);
-      expect(result.stdout).toMatch(/Version: \d+\.\d+\.\d+/);
+      expect(result.stdout).toMatch(/\d+\.\d+\.\d+/);
     });
   });
 

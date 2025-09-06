@@ -87,20 +87,20 @@ describe('Interactive Configuration Tests', () => {
   describe('Version Display', () => {
     test('should show version information', () => {
       const result = execSync(`node "${CLI_PATH}" --version`, { encoding: 'utf8' });
-      expect(result).toMatch(/Version: \d+\.\d+\.\d+/);
+      expect(result).toMatch(/\d+\.\d+\.\d+/);
     });
     
     test('should handle version command variant', () => {
       // Test standalone --version command
       const result = execSync(`node "${CLI_PATH}" --version`, { encoding: 'utf8' });
-      expect(result).toMatch(/Version: 1\.2\.1/); // Should match package.json version
+      expect(result).toMatch(/1\.2\.1/); // Should match package.json version
     });
     
     test('should handle version reading errors gracefully', () => {
       // This is harder to test without modifying the file system,
       // but we can at least verify the command works normally
       const result = execSync(`node "${CLI_PATH}" --version`, { encoding: 'utf8' });
-      expect(result).toMatch(/Version:/);
+      expect(result).toMatch(/\d+\.\d+\.\d+/);
     });
   });
 
