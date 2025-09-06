@@ -97,14 +97,11 @@ function runTestFile(testFile) {
   });
 }
 
-// Run all tests sequentially
+// Run all tests in parallel  
 async function runAllTests() {
-  const results = [];
-  
-  for (const testFile of testFiles) {
-    const result = await runTestFile(testFile);
-    results.push(result);
-  }
+  const results = await Promise.all(
+    testFiles.map(testFile => runTestFile(testFile))
+  );
   
   // Summary
   console.log('📊 Test Summary');

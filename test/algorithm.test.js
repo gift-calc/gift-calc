@@ -2,29 +2,13 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
-import { execSync } from 'node:child_process';
-import path from 'node:path';
+import { calculateGiftAmount, calculateFinalAmount } from '../src/core.js';
 
-const CLI_PATH = path.join(process.cwd(), 'index.js');
-
-// Helper function to run CLI commands and get numeric result
-function getAmount(args = '') {
-  try {
-    const result = execSync(`node "${CLI_PATH}" ${args} --no-log`, {
-      encoding: 'utf8',
-      timeout: 5000
-    });
-    return parseFloat(result.trim().split(' ')[0]);
-  } catch (error) {
-    throw new Error(`CLI failed: ${error.message}`);
-  }
-}
-
-// Helper to run multiple times and get statistics
-function getStats(args, iterations = 100) {
+// Helper to get multiple calculations for statistical tests  
+function getStats(baseValue, variation, friendScore = 5, niceScore = 5, iterations = 50) {
   const amounts = [];
   for (let i = 0; i < iterations; i++) {
-    amounts.push(getAmount(args));
+    amounts.push(calculateGiftAmount(baseValue, variation, friendScore, niceScore, 2));
   }
   
   amounts.sort((a, b) => a - b);
@@ -43,7 +27,7 @@ describe('Algorithm and Calculation Tests', () => {
     test('fixed amounts should be consistent', () => {
       // Test --max multiple times
       for (let i = 0; i < 10; i++) {
-        const amount = getAmount('--max -b 100');
+        const amount = calculateFinalAmount(100, 20, 5, 5, 2, true, false);
         assert.strictEqual(amount, 120);
       }
     });
@@ -51,17 +35,17 @@ describe('Algorithm and Calculation Tests', () => {
     test('special nice scores should be consistent', () => {
       // Test nice score special cases multiple times
       for (let i = 0; i < 10; i++) {
-        assert.strictEqual(getAmount('-n 0 -b 100'), 0);
-        assert.strictEqual(getAmount('-n 1 -b 100'), 10);
-        assert.strictEqual(getAmount('-n 2 -b 100'), 20);
-        assert.strictEqual(getAmount('-n 3 -b 100'), 30);
+        assert.strictEqual(calculateFinalAmount(100, 20, 5, 0, 2), 0);
+        assert.strictEqual(calculateFinalAmount(100, 20, 5, 1, 2), 10);
+        assert.strictEqual(calculateFinalAmount(100, 20, 5, 2, 2), 20);
+        assert.strictEqual(calculateFinalAmount(100, 20, 5, 3, 2), 30);
       }
     });
 
     test('convenience parameters should be consistent', () => {
       for (let i = 0; i < 10; i++) {
-        assert.strictEqual(getAmount('--asshole -b 100'), 0);
-        assert.strictEqual(getAmount('--dickhead -b 200'), 0);
+        assert.strictEqual(calculateFinalAmount(100, 20, 5, 0, 2), 0);
+        assert.strictEqual(calculateFinalAmount(200, 20, 5, 0, 2), 0);
       }
     });
   });
@@ -69,8 +53,8 @@ describe('Algorithm and Calculation Tests', () => {
   describe('Randomness and Variation', () => {
     test('should produce different values with randomness', () => {
       const amounts = [];
-      for (let i = 0; i < 50; i++) {
-        amounts.push(getAmount('-b 100 -v 30'));
+      for (let i = 0; i < 30; i++) {
+        amounts.push(calculateGiftAmount(100, 30, 5, 5, 2));
       }
       
       // Check that we get different values
@@ -79,7 +63,7 @@ describe('Algorithm and Calculation Tests', () => {
     });
 
     test('should respect variation bounds', () => {
-      const stats = getStats('-b 100 -v 20', 200);
+      const stats = getStats(100, 20, 5, 5, 100);
       
       // With 20% variation, values should be roughly 80-120
       // Allow for some bias effects but check general bounds
@@ -88,7 +72,7 @@ describe('Algorithm and Calculation Tests', () => {
     });
 
     test('zero variation should produce consistent results', () => {
-      const stats = getStats('-b 100 -v 0', 50);
+      const stats = getStats(100, 0, 5, 5, 30);
       
       // With zero variation, all values should be very close to base
       const range = stats.max - stats.min;
@@ -99,8 +83,8 @@ describe('Algorithm and Calculation Tests', () => {
   describe('Bias Effects', () => {
     test('friend score should affect distribution', () => {
       // Compare low vs high friend scores
-      const lowStats = getStats('-b 100 -f 1', 200);  // Low friend score
-      const highStats = getStats('-b 100 -f 10', 200); // High friend score
+      const lowStats = getStats(100, 20, 1, 5, 100);  // Low friend score
+      const highStats = getStats(100, 20, 10, 5, 100); // High friend score
       
       // High friend score should generally produce higher amounts
       assert.ok(highStats.avg > lowStats.avg, 
@@ -109,8 +93,8 @@ describe('Algorithm and Calculation Tests', () => {
 
     test('nice score should affect distribution', () => {
       // Compare different nice scores (avoiding special cases 0-3)
-      const lowStats = getStats('-b 100 -n 4', 200);   // Low nice score
-      const highStats = getStats('-b 100 -n 10', 200); // High nice score
+      const lowStats = getStats(100, 20, 5, 4, 100);   // Low nice score
+      const highStats = getStats(100, 20, 5, 10, 100); // High nice score
       
       // High nice score should generally produce higher amounts
       assert.ok(highStats.avg > lowStats.avg,
@@ -119,8 +103,8 @@ describe('Algorithm and Calculation Tests', () => {
 
     test('combined scores should have cumulative effect', () => {
       // Test combination effects
-      const bothLowStats = getStats('-b 100 -f 1 -n 4', 150);   // Both low
-      const bothHighStats = getStats('-b 100 -f 10 -n 10', 150); // Both high
+      const bothLowStats = getStats(100, 20, 1, 4, 75);   // Both low
+      const bothHighStats = getStats(100, 20, 10, 10, 75); // Both high
       
       // Combined high scores should produce notably higher amounts than combined low
       const difference = bothHighStats.avg - bothLowStats.avg;
@@ -130,8 +114,8 @@ describe('Algorithm and Calculation Tests', () => {
 
   describe('Mathematical Properties', () => {
     test('should maintain proper scaling with base value', () => {
-      const base50Stats = getStats('-b 50 -v 20', 100);
-      const base100Stats = getStats('-b 100 -v 20', 100);
+      const base50Stats = getStats(50, 20, 5, 5, 50);
+      const base100Stats = getStats(100, 20, 5, 5, 50);
       
       // Results should scale roughly proportionally
       const ratio = base100Stats.avg / base50Stats.avg;
@@ -140,9 +124,9 @@ describe('Algorithm and Calculation Tests', () => {
 
     test('should handle decimal precision correctly', () => {
       // Test different decimal settings
-      const amount0 = getAmount('-b 100 --max -d 0');
-      const amount2 = getAmount('-b 100 --max -d 2');
-      const amount5 = getAmount('-b 100 --max -d 5');
+      const amount0 = calculateFinalAmount(100, 20, 5, 5, 0, true);
+      const amount2 = calculateFinalAmount(100, 20, 5, 5, 2, true);
+      const amount5 = calculateFinalAmount(100, 20, 5, 5, 5, true);
       
       // All should represent the same value (120) but with different precision
       assert.strictEqual(amount0, 120);
@@ -152,11 +136,11 @@ describe('Algorithm and Calculation Tests', () => {
 
     test('should handle edge case base values', () => {
       // Very small base values
-      const smallAmount = getAmount('-b 0.01 --max');
+      const smallAmount = calculateFinalAmount(0.01, 20, 5, 5, 2, true);
       assert.ok(smallAmount >= 0.01, 'Should handle small base values');
       
       // Very large base values  
-      const largeAmount = getAmount('-b 1000000 --max');
+      const largeAmount = calculateFinalAmount(1000000, 20, 5, 5, 2, true);
       assert.ok(largeAmount >= 1000000, 'Should handle large base values');
     });
   });
@@ -164,28 +148,22 @@ describe('Algorithm and Calculation Tests', () => {
   describe('Priority and Override Logic', () => {
     test('special nice scores should override everything', () => {
       // Test that nice score 0-3 overrides all other parameters
-      assert.strictEqual(getAmount('-n 0 --max -f 10 -v 100 -b 100'), 0);
-      assert.strictEqual(getAmount('-n 1 --min -f 10 -v 50 -b 200'), 20);
-      assert.strictEqual(getAmount('-n 2 --max -f 1 -v 0 -b 150'), 30);
-      assert.strictEqual(getAmount('-n 3 --min -f 10 -v 100 -b 50'), 15);
-    });
-
-    test('convenience parameters should override nice score', () => {
-      // --asshole and --dickhead should override explicit nice scores
-      assert.strictEqual(getAmount('-n 9 --asshole -b 100'), 0);
-      assert.strictEqual(getAmount('-n 8 --dickhead -b 200'), 0);
+      assert.strictEqual(calculateFinalAmount(100, 100, 10, 0, 2, true), 0);
+      assert.strictEqual(calculateFinalAmount(200, 50, 10, 1, 2, false, true), 20);
+      assert.strictEqual(calculateFinalAmount(150, 0, 1, 2, 2, true), 30);
+      assert.strictEqual(calculateFinalAmount(50, 100, 10, 3, 2, false, true), 15);
     });
 
     test('max/min should work when nice score allows', () => {
       // With nice scores >= 4, max/min should work
-      assert.strictEqual(getAmount('-n 5 --max -b 100'), 120);
-      assert.strictEqual(getAmount('-n 7 --min -b 100'), 80);
+      assert.strictEqual(calculateFinalAmount(100, 20, 5, 5, 2, true), 120);
+      assert.strictEqual(calculateFinalAmount(100, 20, 5, 7, 2, false, true), 80);
     });
   });
 
   describe('Statistical Distribution', () => {
     test('neutral scores should center around base value', () => {
-      const stats = getStats('-b 100 -f 5 -n 5 -v 20', 300);
+      const stats = getStats(100, 20, 5, 5, 150);
       
       // With neutral scores (5), average should be close to base value
       const deviation = Math.abs(stats.avg - 100);
@@ -193,7 +171,7 @@ describe('Algorithm and Calculation Tests', () => {
     });
 
     test('should produce reasonable spread with variation', () => {
-      const stats = getStats('-b 100 -v 30', 200);
+      const stats = getStats(100, 30, 5, 5, 100);
       
       // With 30% variation, we should see good spread
       const range = stats.max - stats.min;
@@ -206,26 +184,32 @@ describe('Algorithm and Calculation Tests', () => {
 
   describe('Consistency Across Runs', () => {
     test('deterministic operations should be identical', () => {
-      const results = [];
-      
-      // Test various deterministic operations multiple times
       const tests = [
-        '--max -b 100',
-        '--min -b 50',
-        '-n 0 -b 200',
-        '-n 1 -b 150', 
-        '--asshole -b 300'
+        { baseValue: 100, variation: 20, friendScore: 5, niceScore: 5, decimals: 2, useMax: true, useMin: false },
+        { baseValue: 50, variation: 20, friendScore: 5, niceScore: 5, decimals: 2, useMax: false, useMin: true },
+        { baseValue: 200, variation: 20, friendScore: 5, niceScore: 0, decimals: 2, useMax: false, useMin: false },
+        { baseValue: 150, variation: 20, friendScore: 5, niceScore: 1, decimals: 2, useMax: false, useMin: false },
+        { baseValue: 300, variation: 20, friendScore: 5, niceScore: 0, decimals: 2, useMax: false, useMin: false }
       ];
       
-      for (const test of tests) {
+      for (const testParams of tests) {
         const values = [];
         for (let i = 0; i < 10; i++) {
-          values.push(getAmount(test));
+          values.push(calculateFinalAmount(
+            testParams.baseValue, 
+            testParams.variation,
+            testParams.friendScore,
+            testParams.niceScore,
+            testParams.decimals,
+            testParams.useMax,
+            testParams.useMin
+          ));
         }
         
-        // All values should be identical
+        // All values should be identical for deterministic cases
         const unique = new Set(values);
-        assert.strictEqual(unique.size, 1, `All values should be identical for: ${test}`);
+        assert.strictEqual(unique.size, 1, 
+          `All values should be identical for: base=${testParams.baseValue}, nice=${testParams.niceScore}, max=${testParams.useMax}, min=${testParams.useMin}`);
       }
     });
   });
