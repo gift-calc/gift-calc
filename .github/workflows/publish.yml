@@ -155,7 +155,7 @@ jobs:
             
             git add js/
             git commit -m "chore: sync core logic and terminal from main repository (v$CURRENT_VERSION)"
-            git push origin master
+            git push origin main
             echo "✅ Website updated with new core logic and terminal"
           else
             echo "ℹ️ No changes detected, website already up to date"
