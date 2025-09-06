@@ -93,7 +93,7 @@ describe('Interactive Configuration Tests', () => {
     test('should handle version command variant', () => {
       // Test standalone --version command
       const result = execSync(`node "${CLI_PATH}" --version`, { encoding: 'utf8' });
-      expect(result).toMatch(/1\.2\.1/); // Should match package.json version
+      expect(result).toMatch(/gift-calc v\d+\.\d+\.\d+/); // Should match new format with version
     });
     
     test('should handle version reading errors gracefully', () => {
