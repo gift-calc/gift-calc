@@ -62,21 +62,20 @@ jobs:
             NEW_VERSION=${LATEST_TAG#v}  # Remove 'v' prefix if present
             echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
             echo "🎉 New version published: $NEW_VERSION"
-            
-            # Check if files affecting website demo changed
-            DEMO_FILES_CHANGED=$(git diff HEAD~1 --name-only | grep -E '^(index\.js|src/|package\.json)' || true)
-            if [ -n "$DEMO_FILES_CHANGED" ]; then
-              echo "core-changed=true" >> $GITHUB_OUTPUT
-              echo "✅ Demo-affecting files changed, will sync to website:"
-              echo "$DEMO_FILES_CHANGED"
-            else
-              echo "core-changed=false" >> $GITHUB_OUTPUT
-              echo "ℹ️ No demo-affecting files changed"
-            fi
           else
             echo "published=false" >> $GITHUB_OUTPUT
-            echo "core-changed=false" >> $GITHUB_OUTPUT
             echo "ℹ️ No new version published"
+          fi
+          
+          # Check if files affecting website demo changed (regardless of version)
+          DEMO_FILES_CHANGED=$(git diff HEAD~1 --name-only | grep -E '^(index\.js|src/|package\.json)' || true)
+          if [ -n "$DEMO_FILES_CHANGED" ]; then
+            echo "core-changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Demo-affecting files changed, will sync to website:"
+            echo "$DEMO_FILES_CHANGED"
+          else
+            echo "core-changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No demo-affecting files changed"
           fi
           
       - name: Build web bundle
