@@ -227,7 +227,7 @@ describe('Configuration and File Handling Tests', () => {
       const result = runCLI('--no-log');
       expect(result.success).toBe(true);
       expect(result.stdout).toMatch(/USD$/);
-      expect(result.stdout).match(/^\d+\.\d USD$/); // 1 decimal place
+      expect(result.stdout).toMatch(/^\d+\.\d USD$/); // 1 decimal place
       
       cleanup();
     });
