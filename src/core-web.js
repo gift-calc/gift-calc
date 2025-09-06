@@ -332,7 +332,7 @@ EXAMPLES:
   gift-calc --asshole --name "Kevin"    # No gift for asshole Kevin
   gift-calc --dickhead -b 50            # No gift for dickhead
   gift-calc -n 2 -b 100                 # Mean person (20 SEK from base 100)
-  gift-calc -b 50 --dickhead            # Example: no gift for mean person
+  gift-calc -b 50 --dickhead            # No gift for terrible person
   gift-calc -b 100 --max                # Set to maximum amount (120)
   gcalc -b 100 --min                    # Set to minimum amount (80)
   gift-calc --help                      # Shows this help message
