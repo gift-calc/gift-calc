@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/gift-calc/gift-calc/compare/v1.3.1...v1.3.2) (2025-09-06)
+
+
+### Bug Fixes
+
+* enhance help text with occasion examples ([cb41a83](https://github.com/gift-calc/gift-calc/commit/cb41a833e4ca7ed4cea4ca924244e513f6d4ec42))
+
 ## [1.3.1](https://github.com/gift-calc/gift-calc/compare/v1.3.0...v1.3.1) (2025-09-06)
 
 
