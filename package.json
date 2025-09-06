@@ -9,11 +9,14 @@
     "gift-calc": "./index.js"
   },
   "scripts": {
-    "test": "node test/run-tests.js",
-    "test:core": "node --test test/core.test.js",
-    "test:algorithm": "node --test test/algorithm.test.js",
-    "test:config": "node --test test/config.test.js",
-    "test:verbose": "VERBOSE=1 node test/run-tests.js"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:verbose": "vitest run --reporter=verbose",
+    "test:core": "vitest run test/core.test.js",
+    "test:algorithm": "vitest run test/algorithm.test.js",
+    "test:config": "vitest run test/config.test.js",
+    "test:interactive": "vitest run test/interactive.test.js"
   },
   "keywords": [
     "gift",
@@ -45,5 +48,9 @@
     "README.md",
     "gift-calc.1",
     "LICENSE"
-  ]
+  ],
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "vitest": "^3.2.4"
+  }
 }
