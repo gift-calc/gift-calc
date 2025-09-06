@@ -375,6 +375,7 @@ Examples:
   gift-calc
   gift-calc -b 100 -f 8 --name "Alice"
   gcalc -c USD -v 30 -n 9
+  gift-calc -b 50 --dickhead
   gift-calc --help
 
 Use Tab for command completion, ↑/↓ for history.
