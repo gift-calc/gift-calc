@@ -123,6 +123,29 @@ refactor: reorganize utility functions              # → No release
 
 **Breaking Changes:** Add `!` after type or include `BREAKING CHANGE:` in footer.
 
+### ⚠️ Important: Choose the Right Commit Type
+
+**Ask yourself: "Does this change affect the published library functionality?"**
+
+- **If YES** → Use `feat:`, `fix:`, or `perf:` (triggers version bump)
+- **If NO** → Use `docs:`, `test:`, `ci:`, `chore:`, `style:`, or `refactor:` (no version bump)
+
+**Common Mistakes to Avoid:**
+```bash
+# ❌ WRONG - These don't change library functionality:
+fix: update GitHub Actions Node.js version        # Should be: ci:
+fix: add missing tests for edge cases             # Should be: test:  
+fix: update README installation instructions      # Should be: docs:
+fix: update dependencies to latest versions       # Should be: chore:
+
+# ✅ CORRECT - These DO change library functionality:
+fix: resolve config file parsing error            # Actual bug fix
+feat: add --quiet flag to suppress output         # New feature
+perf: optimize calculation algorithm               # Performance improvement
+```
+
+**Key Rule:** Only use `fix:` for actual bugs that affect end users of the library, not for fixing tests, documentation, or CI issues.
+
 ### Setup Pre-commit Validation
 
 ```bash
