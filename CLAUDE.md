@@ -157,7 +157,7 @@ pre-commit install --hook-type commit-msg
 npm run commit
 ```
 
-**IMPORTANT**: Keep all commit messages clean and professional. No AI attribution or generated content references.
+**CRITICAL**: All commit messages MUST be clean and professional. NEVER include any AI attribution, Claude references, or generated content mentions in commit messages. Commit messages should appear as if written by a human developer.
 
 ## Publishing Process
 
