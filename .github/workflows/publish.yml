@@ -27,15 +27,19 @@ jobs:
       - name: Check for script changes
         id: changes
         run: |
-          # Check if index.js, src/, or package.json (excluding version field) changed
-          if git diff HEAD~1 HEAD --name-only | grep -E '^(index\.js|src/|package\.json)$' | grep -v -E '\.(md|test\.js|spec\.js)$'; then
+          # Get the last published tag, or use initial commit if no tags exist
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          echo "Comparing changes since: $LAST_TAG"
+          
+          # Check if index.js, src/, or package.json (excluding version field) changed since last published version
+          if git diff $LAST_TAG...HEAD --name-only | grep -E '^(index\.js|src/|package\.json)$' | grep -v -E '\.(md|test\.js|spec\.js)$'; then
             # If package.json changed, check if it's not just the version field
-            if git diff HEAD~1 HEAD --name-only | grep -q package.json; then
+            if git diff $LAST_TAG...HEAD --name-only | grep -q package.json; then
               # Check if changes are more than just version
-              if git diff HEAD~1 HEAD package.json | grep -v '"version"' | grep -E '^[+-]' | grep -v -E '^[+-]{3}|^@@'; then
+              if git diff $LAST_TAG...HEAD package.json | grep -v '"version"' | grep -E '^[+-]' | grep -v -E '^[+-]{3}|^@@'; then
                 echo "script-changed=true" >> $GITHUB_OUTPUT
                 echo "core-changed=true" >> $GITHUB_OUTPUT
-              elif git diff HEAD~1 HEAD --name-only | grep -E '^(index\.js|src/)'; then
+              elif git diff $LAST_TAG...HEAD --name-only | grep -E '^(index\.js|src/)'; then
                 echo "script-changed=true" >> $GITHUB_OUTPUT
                 echo "core-changed=true" >> $GITHUB_OUTPUT
               else

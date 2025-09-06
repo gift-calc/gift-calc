@@ -16,7 +16,8 @@
     "test:core": "vitest run test/core.test.js",
     "test:algorithm": "vitest run test/algorithm.test.js",
     "test:config": "vitest run test/config.test.js",
-    "test:interactive": "vitest run test/interactive.test.js"
+    "test:interactive": "vitest run test/interactive.test.js",
+    "commit": "cz"
   },
   "keywords": [
     "gift",
@@ -51,6 +52,8 @@
   ],
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
     "vitest": "^3.2.4"
   }
 }

@@ -73,18 +73,90 @@ The `gh` tool provides better integration, authentication, and error handling th
 
 ## Git Commit Guidelines
 
-**IMPORTANT**: NEVER include Claude Code references, AI attribution, or "Generated with Claude" messages in commit messages. Keep all commit messages clean and professional.
+### Conventional Commits Format
+This project uses **Conventional Commits** for consistent messaging and automated semantic versioning:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Commit Types and Semantic Versioning Impact
+
+**Core Types:**
+- `feat:` - New feature (triggers **MINOR** version bump)
+- `fix:` - Bug fix (triggers **PATCH** version bump)  
+- `BREAKING CHANGE:` - Breaking change (triggers **MAJOR** version bump)
+
+**Additional Types:**
+- `docs:` - Documentation changes
+- `style:` - Code formatting (no logic changes)
+- `refactor:` - Code refactoring (no feature/fix)
+- `perf:` - Performance improvements
+- `test:` - Test additions/modifications
+- `build:` - Build system changes
+- `ci:` - CI/CD configuration changes
+- `chore:` - Maintenance tasks
+
+### Examples
+
+```bash
+feat: add --quiet flag to suppress output
+fix: resolve config file parsing error
+docs: update README with new installation steps
+feat!: remove deprecated --old-flag option
+```
+
+**Breaking Changes:** Add `!` after type or include `BREAKING CHANGE:` in footer.
+
+### Setup Pre-commit Validation
+
+```bash
+# Install pre-commit hooks (requires Python)
+pip install pre-commit
+pre-commit install --hook-type commit-msg
+
+# Interactive commit helper
+npm run commit
+```
+
+**IMPORTANT**: Keep all commit messages clean and professional. No AI attribution or generated content references.
 
 ## Publishing Process
 
-When making changes that affect command names, help text, or functionality:
-1. Update version in `package.json`
-2. Update version in `README.md` Package Information section
-3. Commit changes with descriptive message (NO AI attribution)
-4. Push to GitHub
-5. Run `npm publish` to update npm package
+### Automated Publishing Workflow
+The project uses **automated publishing** via GitHub Actions on pushes to master:
 
-The package includes `index.js`, `.config-example.json`, and `README.md` as defined in the `files` field.
+1. **Make Changes**: Edit code using conventional commits
+2. **Push to Master**: GitHub Action automatically:
+   - Runs tests
+   - Detects core changes since last published version
+   - Bumps version automatically (`npm version patch`)
+   - Creates git tag on master branch
+   - Publishes to npm registry
+   - Updates Homebrew formula
+   - Syncs core logic to website
+
+### Change Detection Logic
+Publishing is triggered when changes are detected in core files since the **last published git tag**:
+- `index.js` (main CLI file)
+- `src/` directory (if present)
+- `package.json` (excluding version-only changes)
+
+**Key Benefit**: Fixes accumulated over multiple commits are published together, even if individual commits only contain test fixes.
+
+### Manual Version Control
+For special cases, you can still manually control versions:
+```bash
+npm version patch|minor|major  # Manual version bump
+git push origin master --tags  # Trigger automated publishing
+```
+
+### Package Contents
+Published package includes: `index.js`, `.config-example.json`, `README.md`, `gift-calc.1`, `LICENSE` as defined in the `files` field.
 
 ## Important Implementation Details
 
