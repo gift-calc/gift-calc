@@ -1,17 +1,34 @@
 #!/usr/bin/env node
 
-import { test, describe } from 'node:test';
-import assert from 'node:assert';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { parseArguments } from '../src/core.js';
-
-const CLI_PATH = path.join(process.cwd(), 'index.js');
+// Test configuration paths
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'gift-calc');
 const CONFIG_PATH = path.join(CONFIG_DIR, '.config.json');
 const LOG_PATH = path.join(CONFIG_DIR, 'gift-calc.log');
+
+// Enhanced cleanup function
+function globalCleanup() {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) fs.unlinkSync(CONFIG_PATH);
+    if (fs.existsSync(LOG_PATH)) fs.unlinkSync(LOG_PATH);
+    // Also clean up any test artifacts that might interfere
+    const testArtifacts = [
+      path.join(CONFIG_DIR, 'test-config.json'),
+      path.join(CONFIG_DIR, '.test.json')
+    ];
+    testArtifacts.forEach(artifact => {
+      if (fs.existsSync(artifact)) fs.unlinkSync(artifact);
+    });
+  } catch (e) {
+    // Ignore cleanup errors
+  }
+}
+
+const CLI_PATH = path.join(process.cwd(), 'index.js');
 
 // Helper function to run CLI commands (minimal usage)
 function runCLI(args = '', options = {}) {
@@ -32,22 +49,9 @@ function runCLI(args = '', options = {}) {
   }
 }
 
-// Helper to clean up test files
+// Enhanced cleanup function
 function cleanup() {
-  try {
-    if (fs.existsSync(CONFIG_PATH)) fs.unlinkSync(CONFIG_PATH);
-    if (fs.existsSync(LOG_PATH)) fs.unlinkSync(LOG_PATH);
-    // Also clean up any test artifacts that might interfere
-    const testArtifacts = [
-      path.join(CONFIG_DIR, 'test-config.json'),
-      path.join(CONFIG_DIR, '.test.json')
-    ];
-    testArtifacts.forEach(artifact => {
-      if (fs.existsSync(artifact)) fs.unlinkSync(artifact);
-    });
-  } catch (e) {
-    // Ignore cleanup errors
-  }
+  globalCleanup();
 }
 
 // Helper to create test config
@@ -70,10 +74,10 @@ describe('Configuration and File Handling Tests', () => {
       };
       
       const config = parseArguments([], defaultConfig);
-      assert.strictEqual(config.baseValue, 85);
-      assert.strictEqual(config.currency, 'USD');
-      assert.strictEqual(config.decimals, 1);
-      assert.strictEqual(config.variation, 30);
+      expect(config.baseValue).toBe(85);
+      expect(config.currency).toBe('USD');
+      expect(config.decimals).toBe(1);
+      expect(config.variation).toBe(30);
     });
 
     test('should handle partial config objects', () => {
@@ -83,9 +87,9 @@ describe('Configuration and File Handling Tests', () => {
       };
       
       const config = parseArguments([], partialConfig);
-      assert.strictEqual(config.currency, 'GBP'); // Should use config currency
-      assert.strictEqual(config.baseValue, 70);   // Should use built-in default
-      assert.strictEqual(config.decimals, 2);     // Should use built-in default
+      expect(config.currency).toBe('GBP'); // Should use config currency
+      expect(config.baseValue).toBe(70);   // Should use built-in default
+      expect(config.decimals).toBe(2);     // Should use built-in default
     });
 
     test('should handle malformed config data gracefully', () => {
@@ -99,10 +103,10 @@ describe('Configuration and File Handling Tests', () => {
       // parseArguments uses config values as defaults, but still validates types
       // The invalid values will be used as-is since parseArguments doesn't validate config input
       const config = parseArguments([], malformedConfig);
-      assert.strictEqual(config.baseValue, 'invalid'); // Config value used as-is
-      assert.strictEqual(config.variation, 20);       // Falls back to default due to || operator
-      assert.strictEqual(config.currency, 123);        // Config value used as-is
-      assert.strictEqual(config.decimals, 'bad');      // Config value used as-is
+      expect(config.baseValue).toBe('invalid'); // Config value used as-is
+      expect(config.variation).toBe(20);       // Falls back to default due to || operator
+      expect(config.currency).toBe(123);        // Config value used as-is
+      expect(config.decimals).toBe('bad');      // Config value used as-is
     });
 
     test('should prioritize command line over config', () => {
@@ -114,9 +118,9 @@ describe('Configuration and File Handling Tests', () => {
       
       // Override config with command line
       const config = parseArguments(['-b', '200', '-c', 'EUR', '-d', '2'], defaultConfig);
-      assert.strictEqual(config.baseValue, 200); // CLI wins
-      assert.strictEqual(config.currency, 'EUR'); // CLI wins
-      assert.strictEqual(config.decimals, 2);     // CLI wins
+      expect(config.baseValue).toBe(200); // CLI wins
+      expect(config.currency).toBe('EUR'); // CLI wins
+      expect(config.decimals).toBe(2);     // CLI wins
     });
 
     test('should handle edge case config values', () => {
@@ -130,10 +134,10 @@ describe('Configuration and File Handling Tests', () => {
       const config = parseArguments([], edgeConfig);
       // Zero values may be treated as falsy and fall back to defaults in the logic
       // The parseArguments function uses || operator which treats 0 as falsy
-      assert.strictEqual(config.baseValue, 70);  // Falls back to default (70)
-      assert.strictEqual(config.variation, 20);  // Falls back to default (20)
-      assert.strictEqual(config.currency, 'XYZ'); // String value preserved
-      assert.strictEqual(config.decimals, 10);    // Non-zero number preserved
+      expect(config.baseValue).toBe(70);  // Falls back to default (70)
+      expect(config.variation).toBe(20);  // Falls back to default (20)
+      expect(config.currency).toBe('XYZ'); // String value preserved
+      expect(config.decimals).toBe(10);    // Non-zero number preserved
     });
   });
 
@@ -141,28 +145,28 @@ describe('Configuration and File Handling Tests', () => {
     test('should apply config constraints properly', () => {
       // Test that config values are used but CLI validation still applies
       const config = parseArguments(['-f', '8'], { baseValue: 150 });
-      assert.strictEqual(config.baseValue, 150); // From config
-      assert.strictEqual(config.friendScore, 8); // From CLI, validated
+      expect(config.baseValue).toBe(150); // From config
+      expect(config.friendScore).toBe(8); // From CLI, validated
     });
 
     test('should maintain validation for CLI args even with config', () => {
       const defaultConfig = { variation: 50 }; // Valid config value
       
       // But CLI validation should still fail for invalid CLI args
-      assert.throws(() => parseArguments(['-f', '11'], defaultConfig), /friend-score must be between 1 and 10/);
-      assert.throws(() => parseArguments(['-v', '101'], defaultConfig), /variation must be between 0 and 100/);
+      expect(() => parseArguments(['-f', '11'], defaultConfig)).toThrow(/friend-score must be between 1 and 10/);
+      expect(() => parseArguments(['-v', '101'], defaultConfig)).toThrow(/variation must be between 0 and 100/);
     });
   });
 
   describe('Default Value Handling', () => {
     test('should use built-in defaults when no config provided', () => {
       const config = parseArguments([]);
-      assert.strictEqual(config.baseValue, 70);
-      assert.strictEqual(config.variation, 20);
-      assert.strictEqual(config.currency, 'SEK');
-      assert.strictEqual(config.decimals, 2);
-      assert.strictEqual(config.friendScore, 5);
-      assert.strictEqual(config.niceScore, 5);
+      expect(config.baseValue).toBe(70);
+      expect(config.variation).toBe(20);
+      expect(config.currency).toBe('SEK');
+      expect(config.decimals).toBe(2);
+      expect(config.friendScore).toBe(5);
+      expect(config.niceScore).toBe(5);
     });
 
     test('should handle undefined config values properly', () => {
@@ -174,9 +178,9 @@ describe('Configuration and File Handling Tests', () => {
       
       const config = parseArguments([], configWithUndefined);
       // Should fall back to built-in defaults for undefined/null values
-      assert.strictEqual(config.baseValue, 70);   // Built-in default
-      assert.strictEqual(config.currency, 'SEK'); // Built-in default
-      assert.strictEqual(config.decimals, 2);     // Built-in default
+      expect(config.baseValue).toBe(70);   // Built-in default
+      expect(config.currency).toBe('SEK'); // Built-in default
+      expect(config.decimals).toBe(2);     // Built-in default
     });
   });
 
@@ -190,16 +194,16 @@ describe('Configuration and File Handling Tests', () => {
       
       const config = parseArguments([], zeroConfig);
       // Zero values fall back to defaults due to || operator in parseArguments
-      assert.strictEqual(config.baseValue, 70);  // Falls back to default
-      assert.strictEqual(config.variation, 20);  // Falls back to default
-      assert.strictEqual(config.decimals, 0);    // Zero decimals is preserved (uses !== undefined check)
+      expect(config.baseValue).toBe(70);  // Falls back to default
+      expect(config.variation).toBe(20);  // Falls back to default
+      expect(config.decimals).toBe(0);    // Zero decimals is preserved (uses !== undefined check)
     });
 
     test('should handle boolean and special values', () => {
       const config = parseArguments(['--no-log', '-cp', '--max']);
-      assert.strictEqual(config.logToFile, false);
-      assert.strictEqual(config.copyToClipboard, true);
-      assert.strictEqual(config.useMaximum, true);
+      expect(config.logToFile).toBe(false);
+      expect(config.copyToClipboard).toBe(true);
+      expect(config.useMaximum).toBe(true);
     });
   });
 
@@ -208,9 +212,9 @@ describe('Configuration and File Handling Tests', () => {
     test('should work without config file', () => {
       cleanup(); // Ensure no config exists
       const result = runCLI('--no-log');
-      assert.strictEqual(result.success, true);
+      expect(result.success).toBe(true);
       // Should use default currency (SEK)
-      assert.match(result.stdout, /SEK$/);
+      expect(result.stdout).toMatch(/SEK$/);
     });
 
     test('should load and use config file values', () => {
@@ -221,9 +225,9 @@ describe('Configuration and File Handling Tests', () => {
       });
       
       const result = runCLI('--no-log');
-      assert.strictEqual(result.success, true);
-      assert.match(result.stdout, /USD$/);
-      assert.match(result.stdout, /^\d+\.\d\s+USD$/); // 1 decimal place
+      expect(result.success).toBe(true);
+      expect(result.stdout).toMatch(/USD$/);
+      expect(result.stdout).toMatch(/^\d+\.\d\s+USD$/); // 1 decimal place
       
       cleanup();
     });
@@ -236,9 +240,9 @@ describe('Configuration and File Handling Tests', () => {
       fs.writeFileSync(CONFIG_PATH, '{ invalid json }');
       
       const result = runCLI('--no-log');
-      assert.strictEqual(result.success, true);
+      expect(result.success).toBe(true);
       // Should fall back to defaults and still work
-      assert.match(result.stdout, /^\d+(\.\d+)?\s+\w+$/);
+      expect(result.stdout).toMatch(/^\d+(\.\d+)?\s+\w+$/);
       
       cleanup();
     });
@@ -246,14 +250,14 @@ describe('Configuration and File Handling Tests', () => {
     test('should create log file when logging enabled', () => {
       cleanup();
       const result = runCLI('-b 100');
-      assert.strictEqual(result.success, true);
+      expect(result.success).toBe(true);
       
       // Check if log file was created (it should be, but timing can vary)
       // The important part is that CLI execution succeeded with logging enabled
       const logExists = fs.existsSync(LOG_PATH);
       if (logExists) {
         const logContent = fs.readFileSync(LOG_PATH, 'utf8');
-        assert.match(logContent, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \d+(\.\d+)? \w+/);
+        expect(logContent).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \d+(\.\d+)? \w+/);
       }
       // Don't fail if log file isn't immediately present - async file operations can vary
       // The CLI succeeded, which is what matters
@@ -264,8 +268,8 @@ describe('Configuration and File Handling Tests', () => {
     test('should handle log command with missing file', () => {
       cleanup();
       const result = runCLI('log');
-      assert.strictEqual(result.success, true);
-      assert.match(result.stdout, /No log file found/);
+      expect(result.success).toBe(true);
+      expect(result.stdout).toMatch(/No log file found/);
     });
   });
 });

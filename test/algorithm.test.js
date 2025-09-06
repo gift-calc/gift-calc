@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-import { test, describe } from 'node:test';
-import assert from 'node:assert';
 import { calculateGiftAmount, calculateFinalAmount } from '../src/core.js';
 
 // Helper to get multiple calculations for statistical tests  
@@ -28,24 +26,24 @@ describe('Algorithm and Calculation Tests', () => {
       // Test --max multiple times
       for (let i = 0; i < 10; i++) {
         const amount = calculateFinalAmount(100, 20, 5, 5, 2, true, false);
-        assert.strictEqual(amount, 120);
+        expect(amount).toBe(120);
       }
     });
 
     test('special nice scores should be consistent', () => {
       // Test nice score special cases multiple times
       for (let i = 0; i < 10; i++) {
-        assert.strictEqual(calculateFinalAmount(100, 20, 5, 0, 2), 0);
-        assert.strictEqual(calculateFinalAmount(100, 20, 5, 1, 2), 10);
-        assert.strictEqual(calculateFinalAmount(100, 20, 5, 2, 2), 20);
-        assert.strictEqual(calculateFinalAmount(100, 20, 5, 3, 2), 30);
+        expect(calculateFinalAmount(100, 20, 5, 0, 2)).toBe(0);
+        expect(calculateFinalAmount(100, 20, 5, 1, 2)).toBe(10);
+        expect(calculateFinalAmount(100, 20, 5, 2, 2)).toBe(20);
+        expect(calculateFinalAmount(100, 20, 5, 3, 2)).toBe(30);
       }
     });
 
     test('convenience parameters should be consistent', () => {
       for (let i = 0; i < 10; i++) {
-        assert.strictEqual(calculateFinalAmount(100, 20, 5, 0, 2), 0);
-        assert.strictEqual(calculateFinalAmount(200, 20, 5, 0, 2), 0);
+        expect(calculateFinalAmount(100, 20, 5, 0, 2)).toBe(0);
+        expect(calculateFinalAmount(200, 20, 5, 0, 2)).toBe(0);
       }
     });
   });
@@ -59,7 +57,7 @@ describe('Algorithm and Calculation Tests', () => {
       
       // Check that we get different values
       const uniqueValues = new Set(amounts);
-      assert.ok(uniqueValues.size > 10, 'Should produce varied results');
+      expect(uniqueValues.size).toBeGreaterThan(10);
     });
 
     test('should respect variation bounds', () => {
@@ -67,8 +65,8 @@ describe('Algorithm and Calculation Tests', () => {
       
       // With 20% variation, values should be roughly 80-120
       // Allow for some bias effects but check general bounds
-      assert.ok(stats.min >= 60, `Min too low: ${stats.min}`);
-      assert.ok(stats.max <= 140, `Max too high: ${stats.max}`);
+      expect(stats.min).toBeGreaterThanOrEqual(60);
+      expect(stats.max).toBeLessThanOrEqual(140);
     });
 
     test('zero variation should produce consistent results', () => {
@@ -76,7 +74,7 @@ describe('Algorithm and Calculation Tests', () => {
       
       // With zero variation, all values should be very close to base
       const range = stats.max - stats.min;
-      assert.ok(range < 5, `Range too large with zero variation: ${range}`);
+      expect(range).toBeLessThan(5);
     });
   });
 
@@ -87,8 +85,7 @@ describe('Algorithm and Calculation Tests', () => {
       const highStats = getStats(100, 20, 10, 5, 100); // High friend score
       
       // High friend score should generally produce higher amounts
-      assert.ok(highStats.avg > lowStats.avg, 
-        `High friend score avg (${highStats.avg}) should be > low friend score avg (${lowStats.avg})`);
+      expect(highStats.avg > lowStats.avg).toBeTruthy();
     });
 
     test('nice score should affect distribution', () => {
@@ -97,8 +94,7 @@ describe('Algorithm and Calculation Tests', () => {
       const highStats = getStats(100, 20, 5, 10, 100); // High nice score
       
       // High nice score should generally produce higher amounts
-      assert.ok(highStats.avg > lowStats.avg,
-        `High nice score avg (${highStats.avg}) should be > low nice score avg (${lowStats.avg})`);
+      expect(highStats.avg > lowStats.avg).toBeTruthy();
     });
 
     test('combined scores should have cumulative effect', () => {
@@ -108,7 +104,7 @@ describe('Algorithm and Calculation Tests', () => {
       
       // Combined high scores should produce notably higher amounts than combined low
       const difference = bothHighStats.avg - bothLowStats.avg;
-      assert.ok(difference > 5, `Combined effect should be significant: ${difference}`);
+      expect(difference).toBeGreaterThan(5);
     });
   });
 
@@ -119,7 +115,8 @@ describe('Algorithm and Calculation Tests', () => {
       
       // Results should scale roughly proportionally
       const ratio = base100Stats.avg / base50Stats.avg;
-      assert.ok(ratio >= 1.8 && ratio <= 2.2, `Scaling ratio should be ~2.0, got ${ratio}`);
+      expect(ratio).toBeGreaterThanOrEqual(1.8);
+      expect(ratio).toBeLessThanOrEqual(2.2);
     });
 
     test('should handle decimal precision correctly', () => {
@@ -129,35 +126,35 @@ describe('Algorithm and Calculation Tests', () => {
       const amount5 = calculateFinalAmount(100, 20, 5, 5, 5, true);
       
       // All should represent the same value (120) but with different precision
-      assert.strictEqual(amount0, 120);
-      assert.strictEqual(amount2, 120);
-      assert.strictEqual(amount5, 120);
+      expect(amount0).toBe(120);
+      expect(amount2).toBe(120);
+      expect(amount5).toBe(120);
     });
 
     test('should handle edge case base values', () => {
       // Very small base values
       const smallAmount = calculateFinalAmount(0.01, 20, 5, 5, 2, true);
-      assert.ok(smallAmount >= 0.01, 'Should handle small base values');
+      expect(smallAmount).toBeGreaterThanOrEqual(0.01);
       
       // Very large base values  
       const largeAmount = calculateFinalAmount(1000000, 20, 5, 5, 2, true);
-      assert.ok(largeAmount >= 1000000, 'Should handle large base values');
+      expect(largeAmount).toBeGreaterThanOrEqual(1000000);
     });
   });
 
   describe('Priority and Override Logic', () => {
     test('special nice scores should override everything', () => {
       // Test that nice score 0-3 overrides all other parameters
-      assert.strictEqual(calculateFinalAmount(100, 100, 10, 0, 2, true), 0);
-      assert.strictEqual(calculateFinalAmount(200, 50, 10, 1, 2, false, true), 20);
-      assert.strictEqual(calculateFinalAmount(150, 0, 1, 2, 2, true), 30);
-      assert.strictEqual(calculateFinalAmount(50, 100, 10, 3, 2, false, true), 15);
+      expect(calculateFinalAmount(100, 100, 10, 0, 2, true)).toBe(0);
+      expect(calculateFinalAmount(200, 50, 10, 1, 2, false, true)).toBe(20);
+      expect(calculateFinalAmount(150, 0, 1, 2, 2, true)).toBe(30);
+      expect(calculateFinalAmount(50, 100, 10, 3, 2, false, true)).toBe(15);
     });
 
     test('max/min should work when nice score allows', () => {
       // With nice scores >= 4, max/min should work
-      assert.strictEqual(calculateFinalAmount(100, 20, 5, 5, 2, true), 120);
-      assert.strictEqual(calculateFinalAmount(100, 20, 5, 7, 2, false, true), 80);
+      expect(calculateFinalAmount(100, 20, 5, 5, 2, true)).toBe(120);
+      expect(calculateFinalAmount(100, 20, 5, 7, 2, false, true)).toBe(80);
     });
   });
 
@@ -167,7 +164,7 @@ describe('Algorithm and Calculation Tests', () => {
       
       // With neutral scores (5), average should be close to base value
       const deviation = Math.abs(stats.avg - 100);
-      assert.ok(deviation < 10, `Average should be close to base value, deviation: ${deviation}`);
+      expect(deviation).toBeLessThan(10);
     });
 
     test('should produce reasonable spread with variation', () => {
@@ -175,10 +172,10 @@ describe('Algorithm and Calculation Tests', () => {
       
       // With 30% variation, we should see good spread
       const range = stats.max - stats.min;
-      assert.ok(range > 30, `Should have reasonable spread: ${range}`);
+      expect(range).toBeGreaterThan(30);
       
       // But not too extreme
-      assert.ok(range < 100, `Spread should not be excessive: ${range}`);
+      expect(range).toBeLessThan(100);
     });
   });
 
@@ -208,7 +205,7 @@ describe('Algorithm and Calculation Tests', () => {
         
         // All values should be identical for deterministic cases
         const unique = new Set(values);
-        assert.strictEqual(unique.size, 1, 
+        expect(unique.size).toBe(1, 
           `All values should be identical for: base=${testParams.baseValue}, nice=${testParams.niceScore}, max=${testParams.useMax}, min=${testParams.useMin}`);
       }
     });
