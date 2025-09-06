@@ -39,7 +39,7 @@ function showVersion() {
     // Read package.json to get version
     const packageJsonPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'package.json');
     const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    console.log(`gift-calc version ${packageData.version}`);
+    console.log(`Version: ${packageData.version}`);
   } catch (error) {
     console.error('Error reading version information');
     process.exit(1);
