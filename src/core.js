@@ -278,6 +278,7 @@ Gift Calculator - CLI Tool
 DESCRIPTION:
   A CLI tool that suggests a gift amount based on a base value with 
   configurable random variation, friend score, and nice score influences.
+  Perfect for birthday, holiday, and special occasion gift planning!
 
 USAGE:
   gift-calc [options]
