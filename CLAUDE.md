@@ -86,28 +86,39 @@ This project uses **Conventional Commits** for consistent messaging and automate
 
 ### Commit Types and Semantic Versioning Impact
 
-**Core Types:**
+**Core Types (trigger version bumps):**
 - `feat:` - New feature (triggers **MINOR** version bump)
 - `fix:` - Bug fix (triggers **PATCH** version bump)  
+- `perf:` - Performance improvements (triggers **PATCH** version bump)
 - `BREAKING CHANGE:` - Breaking change (triggers **MAJOR** version bump)
 
-**Additional Types:**
-- `docs:` - Documentation changes
-- `style:` - Code formatting (no logic changes)
-- `refactor:` - Code refactoring (no feature/fix)
-- `perf:` - Performance improvements
+**Non-Release Types (no version bump):**
+- `docs:` - Documentation changes only
+- `style:` - Code formatting, whitespace (no logic changes)
+- `refactor:` - Code refactoring (no feature/fix/perf change)
 - `test:` - Test additions/modifications
-- `build:` - Build system changes
-- `ci:` - CI/CD configuration changes
-- `chore:` - Maintenance tasks
+- `build:` - Build system changes (webpack, npm scripts, etc.)
+- `ci:` - CI/CD configuration changes (.github/workflows, etc.)
+- `chore:` - Maintenance tasks (dependency updates, tooling)
 
 ### Examples
 
+**Version Bump Examples:**
 ```bash
-feat: add --quiet flag to suppress output
-fix: resolve config file parsing error
-docs: update README with new installation steps
-feat!: remove deprecated --old-flag option
+feat: add --quiet flag to suppress output          # → Minor bump (1.2.0 → 1.3.0)
+fix: resolve config file parsing error             # → Patch bump (1.2.0 → 1.2.1) 
+perf: optimize calculation algorithm                # → Patch bump (1.2.0 → 1.2.1)
+feat!: remove deprecated --old-flag option         # → Major bump (1.2.0 → 2.0.0)
+```
+
+**No Version Bump Examples:**
+```bash
+docs: update README with new installation steps    # → No release
+test: add tests for config validation               # → No release  
+ci: update GitHub Actions workflow                  # → No release
+chore: update dependencies to latest versions       # → No release
+style: fix code formatting and indentation         # → No release
+refactor: reorganize utility functions              # → No release
 ```
 
 **Breaking Changes:** Add `!` after type or include `BREAKING CHANGE:` in footer.
@@ -128,25 +139,48 @@ npm run commit
 ## Publishing Process
 
 ### Automated Publishing Workflow
-The project uses **automated publishing** via GitHub Actions on pushes to master:
+The project uses **semantic-release** for fully automated publishing via GitHub Actions on pushes to master:
 
 1. **Make Changes**: Edit code using conventional commits
 2. **Push to Master**: GitHub Action automatically:
    - Runs tests
-   - Detects core changes since last published version
-   - Bumps version automatically (`npm version patch`)
-   - Creates git tag on master branch
-   - Publishes to npm registry
-   - Updates Homebrew formula
-   - Syncs core logic to website
+   - Executes `semantic-release` which handles all publishing logic
+   - **semantic-release automatically**:
+     - Analyzes commit messages for version determination
+     - Bumps version using semantic versioning (`major`, `minor`, or `patch`) 
+     - Generates and updates `CHANGELOG.md`
+     - Creates git tag and commits back to repository
+     - Publishes to npm registry with provenance
+     - Creates GitHub release with release notes
+   - Updates Homebrew formula (if new version published)
+   - Syncs core logic to website (if core files changed)
 
-### Change Detection Logic
-Publishing is triggered when changes are detected in core files since the **last published git tag**:
-- `index.js` (main CLI file)
-- `src/` directory (if present)
-- `package.json` (excluding version-only changes)
+### semantic-release Configuration
+**Powered by `semantic-release`** - the industry-standard tool with 2M+ weekly downloads:
+- Configuration in `.releaserc.json`
+- Plugins: commit-analyzer, release-notes-generator, changelog, npm, github, git
 
-**Key Benefit**: Fixes accumulated over multiple commits are published together, even if individual commits only contain test fixes.
+**Semantic Version Determination**:
+- `feat:` commits → **Minor** version bump (new features)
+- `fix:`, `perf:` commits → **Patch** version bump (bug fixes, improvements)  
+- `BREAKING CHANGE` or `!` suffix → **Major** version bump (breaking changes)
+- `docs:`, `test:`, `ci:`, `chore:`, `style:`, `refactor:` → **No version bump**
+- Uses Angular Commit Message Conventions by default
+
+**Workflow Features**:
+- ✅ **Battle-tested**: Used by thousands of open source projects
+- ✅ **Automated changelog**: Generates CHANGELOG.md from commits
+- ✅ **npm provenance**: Enhanced supply-chain security
+- ✅ **GitHub releases**: Automatic release creation with notes
+- ✅ **Zero configuration**: Works out-of-the-box with conventional commits
+- ✅ **Test locally**: `scripts/test-workflow.sh` (requires GitHub token for full test)
+
+**Key Benefits**: 
+- Industry-standard semantic versioning approach
+- Automatic changelog and release notes generation
+- Enhanced security with npm package provenance  
+- Robust error handling and rollback by semantic-release
+- Less custom code to maintain
 
 ### Manual Version Control
 For special cases, you can still manually control versions:

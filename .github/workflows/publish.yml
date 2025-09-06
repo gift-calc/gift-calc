@@ -9,8 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
+      pull-requests: write
+      id-token: write  # Required for npm provenance
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for semantic-release
+          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN for checkout
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,82 +30,95 @@ jobs:
       - name: Run tests
         run: npm test
       
-      - name: Check for script changes
-        id: changes
+      - name: Run semantic-release
+        id: semantic
         run: |
-          # Get the last published tag, or use initial commit if no tags exist
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
-          echo "Comparing changes since: $LAST_TAG"
-          
-          # Check if index.js, src/, or package.json (excluding version field) changed since last published version
-          if git diff $LAST_TAG...HEAD --name-only | grep -E '^(index\.js|src/|package\.json)$' | grep -v -E '\.(md|test\.js|spec\.js)$'; then
-            # If package.json changed, check if it's not just the version field
-            if git diff $LAST_TAG...HEAD --name-only | grep -q package.json; then
-              # Check if changes are more than just version
-              if git diff $LAST_TAG...HEAD package.json | grep -v '"version"' | grep -E '^[+-]' | grep -v -E '^[+-]{3}|^@@'; then
-                echo "script-changed=true" >> $GITHUB_OUTPUT
-                echo "core-changed=true" >> $GITHUB_OUTPUT
-              elif git diff $LAST_TAG...HEAD --name-only | grep -E '^(index\.js|src/)'; then
-                echo "script-changed=true" >> $GITHUB_OUTPUT
-                echo "core-changed=true" >> $GITHUB_OUTPUT
-              else
-                echo "script-changed=false" >> $GITHUB_OUTPUT
-                echo "core-changed=false" >> $GITHUB_OUTPUT
-              fi
-            else
-              echo "script-changed=true" >> $GITHUB_OUTPUT
-              echo "core-changed=true" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "script-changed=false" >> $GITHUB_OUTPUT
-            echo "core-changed=false" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Configure git
-        if: steps.changes.outputs.script-changed == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-      
-      - name: Build web bundle
-        if: steps.changes.outputs.core-changed == 'true'
-        run: |
-          # Create web-compatible bundle from core module
-          cp src/core-web.js src/core-bundle.js
-          
-      - name: Bump version and publish
-        if: steps.changes.outputs.script-changed == 'true'
-        run: |
-          npm version patch
-          git push origin master --tags
-          npm publish
+          echo "🚀 Running semantic-release..."
+          npx semantic-release
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           
-      - name: Trigger Homebrew formula update
-        if: steps.changes.outputs.script-changed == 'true'
+      - name: Get release info
+        if: always()  # Run even if semantic-release doesn't publish
+        id: release_info
         run: |
-          # Get the new version from package.json
-          NEW_VERSION=$(node -p "require('./package.json').version")
+          # Check if a new version was published by looking for the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
           
-          # Trigger the homebrew repository to update
-          curl -X POST \
+          if [ "$LATEST_TAG" != "$PREVIOUS_TAG" ] && [ -n "$LATEST_TAG" ]; then
+            echo "published=true" >> $GITHUB_OUTPUT
+            NEW_VERSION=${LATEST_TAG#v}  # Remove 'v' prefix if present
+            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "🎉 New version published: $NEW_VERSION"
+            
+            # Check if core files changed (for website sync)
+            CORE_FILES_CHANGED=$(git diff HEAD~1 --name-only | grep -E '^(index\.js|src/)' || true)
+            if [ -n "$CORE_FILES_CHANGED" ]; then
+              echo "core-changed=true" >> $GITHUB_OUTPUT
+              echo "✅ Core files changed, will sync to website"
+            else
+              echo "core-changed=false" >> $GITHUB_OUTPUT
+              echo "ℹ️ No core files changed"
+            fi
+          else
+            echo "published=false" >> $GITHUB_OUTPUT
+            echo "core-changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No new version published"
+          fi
+          
+      - name: Build web bundle
+        if: steps.release_info.outputs.core-changed == 'true'
+        run: |
+          echo "🌐 Building web bundle..."
+          if [ -f src/core-web.js ]; then
+            cp src/core-web.js src/core-bundle.js
+            echo "✅ Web bundle created from src/core-web.js"
+          else
+            echo "⚠️ src/core-web.js not found, skipping web bundle creation"
+          fi
+          
+      - name: Update Homebrew formula
+        if: steps.release_info.outputs.published == 'true'
+        run: |
+          echo "🍺 Updating Homebrew formula..."
+          NEW_VERSION="${{ steps.release_info.outputs.version }}"
+          echo "🔄 Triggering Homebrew update for version $NEW_VERSION"
+          
+          RESPONSE=$(curl -w "%{http_code}" -s -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ secrets.HOMEBREW_DISPATCH_TOKEN }}" \
             https://api.github.com/repos/gift-calc/homebrew-gift-calc/dispatches \
-            -d "{\"event_type\":\"version_update\",\"client_payload\":{\"version\":\"$NEW_VERSION\"}}"
+            -d "{\"event_type\":\"version_update\",\"client_payload\":{\"version\":\"$NEW_VERSION\"}}")
+          
+          if [ "$RESPONSE" -eq "204" ]; then
+            echo "✅ Homebrew update triggered successfully"
+          else
+            echo "⚠️ Homebrew update request returned status: $RESPONSE"
+          fi
           
       - name: Sync core to website
-        if: steps.changes.outputs.core-changed == 'true'
+        if: steps.release_info.outputs.core-changed == 'true'
         run: |
+          echo "🌍 Syncing core logic to website..."
+          
           # Clone the website repository
+          echo "📥 Cloning website repository..."
           git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/gift-calc/gift-calc.github.io.git website-repo
           
           # Create js directory if it doesn't exist
           mkdir -p website-repo/js
           
-          # Copy the web-compatible core
-          cp src/core-web.js website-repo/js/core.js
+          # Copy the web-compatible core if it exists
+          if [ -f src/core-web.js ]; then
+            cp src/core-web.js website-repo/js/core.js
+            echo "📋 Copied core-web.js to website/js/core.js"
+          else
+            echo "⚠️ src/core-web.js not found, skipping website sync"
+            exit 0
+          fi
           
           # Configure git for website repo
           cd website-repo
@@ -107,10 +126,13 @@ jobs:
           git config --local user.name "GitHub Action"
           
           # Commit and push if there are changes
-          if ! git diff --quiet js/core.js; then
+          if [ -n "$(git status --porcelain js/core.js)" ]; then
             git add js/core.js
-            git commit -m "Update core calculation logic from main repository"
+            git commit -m "chore: update core calculation logic from main repository"
             git push origin master
+            echo "✅ Website updated with new core logic"
+          else
+            echo "ℹ️ No changes in core logic, website already up to date"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
