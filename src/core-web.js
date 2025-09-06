@@ -121,11 +121,21 @@ function parseArguments(args, defaultConfig = {}) {
     return config;
   }
   
+  if (args[0] === '--version') {
+    config.command = 'version';
+    return config;
+  }
+  
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     
     if (arg === '-h' || arg === '--help') {
       config.showHelp = true;
+      break;
+    }
+    
+    if (arg === '--version') {
+      config.command = 'version';
       break;
     }
     
@@ -299,6 +309,7 @@ OPTIONS:
   --no-log                    Disable logging to file (logging enabled by default)
   -cp, --copy                 Copy amount (without currency) to clipboard
   -h, --help                  Show this help message
+  --version                   Show version information
 
 CONFIGURATION:
   Default values can be configured by running 'gift-calc init-config' or 'gcalc init-config'.

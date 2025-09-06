@@ -63,14 +63,15 @@ jobs:
             echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
             echo "🎉 New version published: $NEW_VERSION"
             
-            # Check if core files changed (for website sync)
-            CORE_FILES_CHANGED=$(git diff HEAD~1 --name-only | grep -E '^(index\.js|src/)' || true)
-            if [ -n "$CORE_FILES_CHANGED" ]; then
+            # Check if files affecting website demo changed
+            DEMO_FILES_CHANGED=$(git diff HEAD~1 --name-only | grep -E '^(index\.js|src/|package\.json)' || true)
+            if [ -n "$DEMO_FILES_CHANGED" ]; then
               echo "core-changed=true" >> $GITHUB_OUTPUT
-              echo "✅ Core files changed, will sync to website"
+              echo "✅ Demo-affecting files changed, will sync to website:"
+              echo "$DEMO_FILES_CHANGED"
             else
               echo "core-changed=false" >> $GITHUB_OUTPUT
-              echo "ℹ️ No core files changed"
+              echo "ℹ️ No demo-affecting files changed"
             fi
           else
             echo "published=false" >> $GITHUB_OUTPUT
@@ -111,7 +112,11 @@ jobs:
       - name: Sync core to website
         if: steps.release_info.outputs.core-changed == 'true'
         run: |
-          echo "🌍 Syncing core logic to website..."
+          echo "🌍 Syncing core logic and terminal to website..."
+          
+          # Get current version from package.json  
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Current version: $CURRENT_VERSION"
           
           # Clone the website repository
           echo "📥 Cloning website repository..."
@@ -125,8 +130,17 @@ jobs:
             cp src/core-web.js website-repo/js/core.js
             echo "📋 Copied core-web.js to website/js/core.js"
           else
-            echo "⚠️ src/core-web.js not found, skipping website sync"
-            exit 0
+            echo "⚠️ src/core-web.js not found, skipping core sync"
+          fi
+          
+          # Process terminal template and copy to website
+          if [ -f src/terminal-web.js ]; then
+            # Replace {{VERSION}} placeholder with actual version
+            sed "s/{{VERSION}}/$CURRENT_VERSION/g" src/terminal-web.js > website-repo/js/terminal.js
+            echo "📋 Processed terminal-web.js template and copied to website/js/terminal.js"
+            echo "🔄 Version $CURRENT_VERSION injected into terminal.js"
+          else
+            echo "⚠️ src/terminal-web.js not found, skipping terminal sync"
           fi
           
           # Configure git for website repo
@@ -134,14 +148,18 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Commit and push if there are changes
-          if [ -n "$(git status --porcelain js/core.js)" ]; then
-            git add js/core.js
-            git commit -m "chore: update core calculation logic from main repository"
+          # Check for any changes and commit
+          CHANGED_FILES=$(git status --porcelain js/)
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "📝 Changed files detected:"
+            echo "$CHANGED_FILES"
+            
+            git add js/
+            git commit -m "chore: sync core logic and terminal from main repository (v$CURRENT_VERSION)"
             git push origin master
-            echo "✅ Website updated with new core logic"
+            echo "✅ Website updated with new core logic and terminal"
           else
-            echo "ℹ️ No changes in core logic, website already up to date"
+            echo "ℹ️ No changes detected, website already up to date"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
