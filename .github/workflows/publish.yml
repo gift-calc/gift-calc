@@ -12,6 +12,7 @@ jobs:
       issues: write
       pull-requests: write
       id-token: write  # Required for npm provenance
+      actions: write   # Required to bypass branch protection
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,6 +35,14 @@ jobs:
         id: semantic
         run: |
           echo "🚀 Running semantic-release..."
+          # Configure git for semantic-release
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Set remote URL with token for authenticated pushes
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/gift-calc/gift-calc.git
+          
+          # Run semantic-release
           npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
