@@ -324,14 +324,13 @@ EXAMPLES:
   gcalc -b 100 -v 30 -d 0               # Base 100, 30% variation, no decimals
   gift-calc --name "Alice" -c USD       # Gift for Alice in USD currency
   gcalc -b 50 -f 9 --name "Bob"         # Gift for Bob (with logging by default)
-  gift-calc -c EUR -d 1 -cp --no-log     # Use defaults with EUR, copy but no log
+  gift-calc -c EUR -d 1 -cp --no-log    # Use defaults with EUR, copy but no log
   gcalc --name "Charlie" -b 80 -cp      # Gift for Charlie, copy to clipboard
   gift-calc -f 8 -n 9                   # High friend and nice scores
   gift-calc -n 0 -b 100                 # No gift (nice score 0)
   gift-calc --asshole --name "Kevin"    # No gift for asshole Kevin
-  gift-calc --dickhead -b 50            # No gift for dickhead
-  gift-calc -n 2 -b 100                 # Mean person (20 SEK from base 100)
   gift-calc -b 50 --dickhead            # No gift for terrible person
+  gift-calc -n 2 -b 100                 # Mean person (20 SEK from base 100)
   gift-calc -b 100 --max                # Set to maximum amount (120)
   gcalc -b 100 --min                    # Set to minimum amount (80)
   gift-calc --help                      # Shows this help message
