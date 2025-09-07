@@ -131,6 +131,11 @@ export function parseArguments(args, defaultConfig = {}) {
     return parseNaughtyListArguments(args.slice(1));
   }
   
+  // Check for budget commands
+  if (args[0] === 'budget' || args[0] === 'b') {
+    return parseBudgetArguments(args.slice(1));
+  }
+  
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     
@@ -383,17 +388,25 @@ USAGE:
   gift-calc naughty-list <name>      # Add person to naughty list
   gift-calc naughty-list list        # List all naughty people
   gift-calc naughty-list --remove <name>  # Remove from naughty list
+  gift-calc budget add <amount> <from-date> <to-date> [description]  # Add budget
+  gift-calc budget list              # List all budgets with status
+  gift-calc budget status            # Show current budget status
+  gift-calc budget edit <id> [options]  # Edit existing budget
   gcalc [options]              # Short alias
   gcalc nl <name>              # Add to naughty list (short form)
   gcalc nl list                # List naughty people
   gcalc nl --remove <name>     # Remove from naughty list
   gcalc nl --search <term>     # Search naughty list
+  gcalc b add 5000 2024-12-01 2024-12-31 "Christmas"  # Add budget (short)
+  gcalc b list                 # List budgets (short form)
+  gcalc b status               # Show budget status (short form)
 
 COMMANDS:
   init-config                 Setup configuration file with default values
   update-config               Update existing configuration file
   log                         Open gift calculation log file with less
   naughty-list, nl            Manage the naughty list (add/remove/list/search)
+  budget, b                   Manage budgets (add/list/status/edit)
 
 OPTIONS:
   -h, --help                  Show this help message
@@ -418,16 +431,28 @@ NAUGHTY LIST OPTIONS:
   --remove, -r                Remove person from naughty list (use with naughty-list command)
   --search <term>             Search naughty list for names starting with term
 
+BUDGET EDIT OPTIONS:
+  --amount <number>           Update budget amount (use with budget edit command)
+  --from-date <date>          Update start date in YYYY-MM-DD format (use with budget edit command)
+  --to-date <date>            Update end date in YYYY-MM-DD format (use with budget edit command)
+  --description <text>        Update budget description (use with budget edit command)
+
 CONFIGURATION:
   Default values can be configured by running 'gift-calc init-config' or 'gcalc init-config'.
   Config is stored at: ~/.config/gift-calc/.config.json
   Naughty list is stored at: ~/.config/gift-calc/naughty-list.json
+  Budgets are stored at: ~/.config/gift-calc/budgets.json
   Command line options override config file defaults.
   
   NAUGHTY LIST:
     When a recipient is on the naughty list, their gift amount is always 0,
     overriding all other calculation parameters (nice score, friend score, etc.).
     This is the highest priority check in the calculation logic.
+    
+  BUDGET SYSTEM:
+    Budget periods cannot overlap. Each budget has a unique time range.
+    Status shows ACTIVE (current), FUTURE (upcoming), or EXPIRED (past).
+    Budget amounts are displayed in your configured currency (default: SEK).
 
 EXAMPLES:
   gift-calc                             # Use config defaults or built-in defaults
@@ -457,6 +482,18 @@ EXAMPLES:
   gcalc nl -r Sven                      # Remove Sven from naughty list (short form)
   gcalc nl --search Dav                  # Search for names starting with "Dav"
   gift-calc --name "Sven" -b 100        # Returns "0 SEK for Sven (on naughty list!)"
+  
+  BUDGET EXAMPLES:
+  gift-calc budget add 5000 2024-12-01 2024-12-31 "Christmas gifts"      # Add Christmas budget
+  gcalc b add 2000 2024-11-01 2024-11-30 "Birthday gifts"                # Add birthday budget (short)
+  gift-calc budget list                                                   # List all budgets with status
+  gcalc b list                                                            # List budgets (short form)
+  gift-calc budget status                                                 # Show current active budget
+  gcalc b status                                                          # Show status (short form)
+  gift-calc budget edit 1 --amount 6000 --description "Updated Christmas" # Edit budget amount and description
+  gcalc b edit 1 --to-date 2025-01-15                                     # Extend budget end date (short)
+  gcalc b edit 2 --from-date 2024-10-15 --to-date 2024-11-15            # Change budget dates
+  gift-calc budget                                                        # Defaults to showing status
 
 FRIEND SCORE GUIDE:
   1-3: Acquaintance (bias toward lower amounts)
@@ -730,4 +767,500 @@ export function searchNaughtyList(searchTerm, naughtyListPath, fsModule) {
     const date = new Date(entry.addedAt).toLocaleString();
     return `${entry.name} (added: ${date})`;
   });
+}
+
+// Budget Management Functions
+// These functions require Node.js modules and should only be used in Node.js contexts
+
+/**
+ * Parse budget specific arguments
+ * @param {string[]} args - Array of command line arguments (without budget/b prefix)
+ * @returns {Object} Budget configuration object
+ */
+export function parseBudgetArguments(args) {
+  const config = {
+    command: 'budget',
+    action: null,        // 'add', 'edit', 'list', 'status'
+    amount: null,
+    fromDate: null,
+    toDate: null,
+    description: null,
+    budgetId: null,
+    updates: {},
+    success: true,
+    error: null
+  };
+  
+  // If no arguments provided, default to status
+  if (args.length === 0) {
+    config.action = 'status';
+    return config;
+  }
+  
+  // Check for actions first
+  const firstArg = args[0];
+  if (firstArg === 'add') {
+    config.action = 'add';
+    
+    // Parse add arguments: add <amount> <from-date> <to-date> [description]
+    if (args.length < 4) {
+      config.success = false;
+      config.error = 'add command requires: <amount> <from-date> <to-date> [description]';
+      return config;
+    }
+    
+    const amount = parseFloat(args[1]);
+    if (isNaN(amount) || amount <= 0) {
+      config.success = false;
+      config.error = 'Amount must be a positive number';
+      return config;
+    }
+    config.amount = amount;
+    
+    config.fromDate = args[2];
+    config.toDate = args[3];
+    
+    // Optional description (can have spaces)
+    if (args.length > 4) {
+      config.description = args.slice(4).join(' ');
+    }
+    
+  } else if (firstArg === 'list') {
+    config.action = 'list';
+    
+  } else if (firstArg === 'status') {
+    config.action = 'status';
+    
+  } else if (firstArg === 'edit') {
+    config.action = 'edit';
+    
+    if (args.length < 2) {
+      config.success = false;
+      config.error = 'edit command requires budget ID';
+      return config;
+    }
+    
+    const budgetId = parseInt(args[1]);
+    if (isNaN(budgetId)) {
+      config.success = false;
+      config.error = 'Budget ID must be a number';
+      return config;
+    }
+    config.budgetId = budgetId;
+    
+    // Parse edit options
+    for (let i = 2; i < args.length; i++) {
+      const arg = args[i];
+      
+      if (arg === '--amount') {
+        const nextArg = args[i + 1];
+        if (nextArg && !isNaN(nextArg)) {
+          const amount = parseFloat(nextArg);
+          if (amount > 0) {
+            config.updates.amount = amount;
+            i++; // Skip next argument
+          } else {
+            config.success = false;
+            config.error = 'Amount must be positive';
+            return config;
+          }
+        } else {
+          config.success = false;
+          config.error = '--amount requires a numeric value';
+          return config;
+        }
+      } else if (arg === '--from-date') {
+        const nextArg = args[i + 1];
+        if (nextArg && !nextArg.startsWith('-')) {
+          config.updates.fromDate = nextArg;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--from-date requires a date value (YYYY-MM-DD)';
+          return config;
+        }
+      } else if (arg === '--to-date') {
+        const nextArg = args[i + 1];
+        if (nextArg && !nextArg.startsWith('-')) {
+          config.updates.toDate = nextArg;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--to-date requires a date value (YYYY-MM-DD)';
+          return config;
+        }
+      } else if (arg === '--description') {
+        const nextArg = args[i + 1];
+        if (nextArg && !nextArg.startsWith('-')) {
+          config.updates.description = nextArg;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--description requires a description value';
+          return config;
+        }
+      } else {
+        config.success = false;
+        config.error = `Unknown option: ${arg}`;
+        return config;
+      }
+    }
+    
+  } else {
+    config.success = false;
+    config.error = `Unknown budget action: ${firstArg}. Use: add, list, status, edit`;
+  }
+  
+  return config;
+}
+
+/**
+ * Get the path to the budget JSON file
+ * @param {object} pathModule - Node.js path module
+ * @param {object} osModule - Node.js os module
+ * @returns {string} Path to budget file
+ */
+export function getBudgetPath(pathModule, osModule) {
+  if (!pathModule || !osModule) {
+    throw new Error('Path and os modules are required for budget operations');
+  }
+  return pathModule.join(osModule.homedir(), '.config', 'gift-calc', 'budgets.json');
+}
+
+/**
+ * Load the budget list from file
+ * @param {string} budgetPath - Path to budget file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object} Object containing budgets array, nextId, and loaded boolean
+ */
+export function loadBudgetList(budgetPath, fsModule) {
+  if (!fsModule) {
+    throw new Error('fs module is required for budget operations');
+  }
+  
+  if (fsModule.existsSync(budgetPath)) {
+    try {
+      const budgetData = fsModule.readFileSync(budgetPath, 'utf8');
+      const parsed = JSON.parse(budgetData);
+      return { 
+        budgets: parsed.budgets || [], 
+        nextId: parsed.nextId || 1,
+        loaded: true 
+      };
+    } catch (error) {
+      console.error(`Warning: Could not parse budget file at ${budgetPath}. Starting with empty budget list.`);
+      return { budgets: [], nextId: 1, loaded: false };
+    }
+  }
+  return { budgets: [], nextId: 1, loaded: false };
+}
+
+/**
+ * Save the budget list to file
+ * @param {Array} budgets - Array of budget objects
+ * @param {number} nextId - Next ID to use for new budgets
+ * @param {string} budgetPath - Path to budget file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {boolean} True if save was successful
+ */
+export function saveBudgetList(budgets, nextId, budgetPath, fsModule, pathModule) {
+  if (!fsModule || !pathModule) {
+    throw new Error('fs and path modules are required for budget operations');
+  }
+  
+  try {
+    // Ensure directory exists
+    const configDir = pathModule.dirname(budgetPath);
+    if (!fsModule.existsSync(configDir)) {
+      fsModule.mkdirSync(configDir, { recursive: true });
+    }
+    
+    const data = { budgets, nextId };
+    fsModule.writeFileSync(budgetPath, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error(`Error saving budget list: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Validate date format and range
+ * @param {string} dateStr - Date string to validate (YYYY-MM-DD)
+ * @returns {Object} Validation result with valid flag and parsed date
+ */
+export function validateDate(dateStr) {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateStr)) {
+    return { valid: false, error: 'Date must be in YYYY-MM-DD format' };
+  }
+  
+  // Parse the date components
+  const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+  
+  // Create a date and check if it matches the input
+  const date = new Date(year, month - 1, day); // month is 0-indexed
+  
+  // Verify the date components match (prevents auto-correction)
+  if (date.getFullYear() !== year || 
+      date.getMonth() !== month - 1 || 
+      date.getDate() !== day) {
+    return { valid: false, error: 'Invalid date' };
+  }
+  
+  if (isNaN(date.getTime())) {
+    return { valid: false, error: 'Invalid date' };
+  }
+  
+  return { valid: true, date };
+}
+
+/**
+ * Check for overlapping budget periods
+ * @param {string} fromDate - Start date (YYYY-MM-DD)
+ * @param {string} toDate - End date (YYYY-MM-DD)
+ * @param {Array} existingBudgets - Array of existing budgets
+ * @param {number|null} excludeId - Budget ID to exclude from overlap check (for editing)
+ * @returns {Object} Validation result
+ */
+export function validateBudgetDates(fromDate, toDate, existingBudgets, excludeId = null) {
+  // Validate date formats
+  const fromValidation = validateDate(fromDate);
+  if (!fromValidation.valid) {
+    return { valid: false, error: `From date error: ${fromValidation.error}` };
+  }
+  
+  const toValidation = validateDate(toDate);
+  if (!toValidation.valid) {
+    return { valid: false, error: `To date error: ${toValidation.error}` };
+  }
+  
+  // Check if from date is before or equal to to date (allow same-day budgets)
+  if (fromValidation.date > toValidation.date) {
+    return { valid: false, error: 'From date must be before or equal to to date' };
+  }
+  
+  // Check for overlaps with existing budgets
+  const newFrom = fromValidation.date;
+  const newTo = toValidation.date;
+  
+  for (const budget of existingBudgets) {
+    // Skip if this is the budget being edited
+    if (excludeId && budget.id === excludeId) {
+      continue;
+    }
+    
+    const existingFrom = new Date(budget.fromDate + 'T00:00:00');
+    const existingTo = new Date(budget.toDate + 'T00:00:00');
+    
+    // Check for overlap
+    if ((newFrom <= existingTo && newTo >= existingFrom)) {
+      return { 
+        valid: false, 
+        error: `Budget period overlaps with existing budget: "${budget.description || 'Unnamed'}" (${budget.fromDate} to ${budget.toDate})` 
+      };
+    }
+  }
+  
+  return { valid: true };
+}
+
+/**
+ * Add a new budget
+ * @param {number} amount - Budget amount
+ * @param {string} fromDate - Start date (YYYY-MM-DD)
+ * @param {string} toDate - End date (YYYY-MM-DD)
+ * @param {string} description - Budget description
+ * @param {string} budgetPath - Path to budget file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {Object} Result object with success, message, and budget data
+ */
+export function addBudget(amount, fromDate, toDate, description, budgetPath, fsModule, pathModule) {
+  // Load existing budgets
+  const { budgets: currentBudgets, nextId } = loadBudgetList(budgetPath, fsModule);
+  
+  // Validate dates and check for overlaps
+  const validation = validateBudgetDates(fromDate, toDate, currentBudgets);
+  if (!validation.valid) {
+    return {
+      success: false,
+      message: validation.error
+    };
+  }
+  
+  // Create new budget entry
+  const newBudget = {
+    id: nextId,
+    totalAmount: amount,
+    fromDate,
+    toDate,
+    description: description || `Budget ${nextId}`,
+    createdAt: new Date().toISOString()
+  };
+  
+  currentBudgets.push(newBudget);
+  const saved = saveBudgetList(currentBudgets, nextId + 1, budgetPath, fsModule, pathModule);
+  
+  if (saved) {
+    return {
+      success: true,
+      message: `Budget "${newBudget.description}" added successfully (ID: ${newBudget.id})`,
+      budget: newBudget
+    };
+  } else {
+    return {
+      success: false,
+      message: 'Failed to save budget'
+    };
+  }
+}
+
+/**
+ * Edit an existing budget
+ * @param {number} budgetId - Budget ID to edit
+ * @param {Object} updates - Updates to apply
+ * @param {string} budgetPath - Path to budget file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {Object} Result object with success, message, and budget data
+ */
+export function editBudget(budgetId, updates, budgetPath, fsModule, pathModule) {
+  // Load existing budgets
+  const { budgets: currentBudgets, nextId } = loadBudgetList(budgetPath, fsModule);
+  
+  // Find the budget to edit
+  const budgetIndex = currentBudgets.findIndex(b => b.id === budgetId);
+  if (budgetIndex === -1) {
+    return {
+      success: false,
+      message: `Budget with ID ${budgetId} not found`
+    };
+  }
+  
+  const budget = currentBudgets[budgetIndex];
+  
+  // Apply updates
+  const updatedBudget = { ...budget };
+  if (updates.amount !== undefined) updatedBudget.totalAmount = updates.amount;
+  if (updates.fromDate !== undefined) updatedBudget.fromDate = updates.fromDate;
+  if (updates.toDate !== undefined) updatedBudget.toDate = updates.toDate;
+  if (updates.description !== undefined) updatedBudget.description = updates.description;
+  
+  // Validate dates if they were updated
+  if (updates.fromDate !== undefined || updates.toDate !== undefined) {
+    const validation = validateBudgetDates(updatedBudget.fromDate, updatedBudget.toDate, currentBudgets, budgetId);
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.error
+      };
+    }
+  }
+  
+  // Update the budget
+  currentBudgets[budgetIndex] = updatedBudget;
+  const saved = saveBudgetList(currentBudgets, nextId, budgetPath, fsModule, pathModule);
+  
+  if (saved) {
+    return {
+      success: true,
+      message: `Budget "${updatedBudget.description}" updated successfully`,
+      budget: updatedBudget
+    };
+  } else {
+    return {
+      success: false,
+      message: 'Failed to save budget updates'
+    };
+  }
+}
+
+/**
+ * Get current active budget status
+ * @param {string} budgetPath - Path to budget file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object} Status object with current budget info or null if none active
+ */
+export function getBudgetStatus(budgetPath, fsModule) {
+  const { budgets } = loadBudgetList(budgetPath, fsModule);
+  
+  if (budgets.length === 0) {
+    return {
+      hasActiveBudget: false,
+      message: 'No budgets configured. Use "budget add" to create one.'
+    };
+  }
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Find active budget (today falls within the date range)
+  const activeBudget = budgets.find(budget => {
+    const fromDate = new Date(budget.fromDate + 'T00:00:00');
+    const toDate = new Date(budget.toDate + 'T00:00:00');
+    return today >= fromDate && today <= toDate;
+  });
+  
+  if (!activeBudget) {
+    return {
+      hasActiveBudget: false,
+      message: 'No active budget for today. Use "budget add" to create one.'
+    };
+  }
+  
+  // Calculate remaining days
+  const toDate = new Date(activeBudget.toDate + 'T00:00:00');
+  const remainingDays = Math.ceil((toDate - today) / (1000 * 60 * 60 * 24));
+  
+  return {
+    hasActiveBudget: true,
+    budget: activeBudget,
+    remainingDays: remainingDays,
+    totalDays: Math.ceil((new Date(activeBudget.toDate + 'T00:00:00') - new Date(activeBudget.fromDate + 'T00:00:00')) / (1000 * 60 * 60 * 24)) + 1
+  };
+}
+
+/**
+ * Get formatted list of all budgets with status
+ * @param {string} budgetPath - Path to budget file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Array} Array of formatted budget strings with status
+ */
+export function listBudgets(budgetPath, fsModule) {
+  const { budgets } = loadBudgetList(budgetPath, fsModule);
+  
+  if (budgets.length === 0) {
+    return [];
+  }
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  return budgets.map(budget => {
+    const fromDate = new Date(budget.fromDate + 'T00:00:00');
+    const toDate = new Date(budget.toDate + 'T00:00:00');
+    
+    let status;
+    if (today > toDate) {
+      status = 'EXPIRED';
+    } else if (today < fromDate) {
+      status = 'FUTURE';
+    } else {
+      status = 'ACTIVE';
+    }
+    
+    return `${budget.id}. ${budget.description}: ${budget.totalAmount} (${budget.fromDate} to ${budget.toDate}) [${status}]`;
+  });
+}
+
+/**
+ * Format budget amount with currency
+ * @param {number} amount - Amount to format
+ * @param {string} currency - Currency code
+ * @returns {string} Formatted amount string
+ */
+export function formatBudgetAmount(amount, currency) {
+  return `${amount} ${currency}`;
 }

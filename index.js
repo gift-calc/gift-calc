@@ -16,7 +16,14 @@ import {
   removeFromNaughtyList,
   isOnNaughtyList,
   listNaughtyList,
-  searchNaughtyList
+  searchNaughtyList,
+  parseBudgetArguments,
+  getBudgetPath,
+  addBudget,
+  editBudget,
+  getBudgetStatus,
+  listBudgets,
+  formatBudgetAmount
 } from './src/core.js';
 
 // Config utilities
@@ -118,6 +125,12 @@ if (parsedConfig.command === 'version') {
 // Handle naughty list commands
 if (parsedConfig.command === 'naughty-list') {
   handleNaughtyListCommand(parsedConfig);
+  process.exit(0);
+}
+
+// Handle budget commands
+if (parsedConfig.command === 'budget') {
+  handleBudgetCommand(parsedConfig);
   process.exit(0);
 }
 
@@ -443,6 +456,87 @@ function handleNaughtyListCommand(config) {
         searchResults.forEach(entry => {
           console.log(`  ${entry}`);
         });
+      }
+      break;
+      
+    default:
+      console.error('Unknown action:', config.action);
+      process.exit(1);
+  }
+}
+
+function handleBudgetCommand(config) {
+  // Check if parsing succeeded
+  if (!config.success) {
+    console.error('Error:', config.error);
+    console.log('\nUsage:');
+    console.log('  gift-calc budget add <amount> <from-date> <to-date> [description]  # Add new budget');
+    console.log('  gift-calc budget list                                            # List all budgets');
+    console.log('  gift-calc budget status                                          # Show current budget status');
+    console.log('  gift-calc budget edit <id> [--amount X] [--from-date X] [--to-date X] [--description X]  # Edit budget');
+    console.log('  gcalc b add 5000 2024-12-01 2024-12-31 "Christmas gifts"       # Add budget (short form)');
+    console.log('  gcalc b list                                                     # List budgets (short)');
+    console.log('  gcalc b status                                                   # Show status (short)');
+    console.log('  gcalc b edit 1 --amount 6000 --description "Updated Christmas" # Edit budget (short)');
+    process.exit(1);
+  }
+  
+  // Get budget file path
+  const budgetPath = getBudgetPath(path, os);
+  
+  // Load config for currency formatting
+  const configDefaults = loadConfig();
+  const currency = configDefaults.currency || 'SEK';
+  
+  // Handle different actions
+  switch (config.action) {
+    case 'add':
+      const addResult = addBudget(
+        config.amount, 
+        config.fromDate, 
+        config.toDate, 
+        config.description, 
+        budgetPath, 
+        fs, 
+        path
+      );
+      console.log(addResult.message);
+      break;
+      
+    case 'edit':
+      const editResult = editBudget(
+        config.budgetId,
+        config.updates,
+        budgetPath,
+        fs,
+        path
+      );
+      console.log(editResult.message);
+      break;
+      
+    case 'list':
+      const budgetList = listBudgets(budgetPath, fs);
+      if (budgetList.length === 0) {
+        console.log('No budgets configured. Use "budget add" to create one.');
+      } else {
+        console.log('Budgets:');
+        budgetList.forEach(entry => {
+          // Format amounts with currency - extract amount and add currency
+          const entryWithCurrency = entry.replace(/: (\d+(?:\.\d+)?) \(/g, (match, amount) => `: ${formatBudgetAmount(amount, currency)} (`);
+          console.log(`  ${entryWithCurrency}`);
+        });
+      }
+      break;
+      
+    case 'status':
+      const status = getBudgetStatus(budgetPath, fs);
+      if (!status.hasActiveBudget) {
+        console.log(status.message);
+      } else {
+        const budget = status.budget;
+        console.log(`Current Budget: ${budget.description}`);
+        console.log(`Total: ${formatBudgetAmount(budget.totalAmount, currency)} | Days Left: ${status.remainingDays}`);
+        console.log(`Period: ${budget.fromDate} to ${budget.toDate}`);
       }
       break;
       
