@@ -1,3 +1,10 @@
+## [2.2.1](https://github.com/gift-calc/gift-calc/compare/v2.2.0...v2.2.1) (2025-09-07)
+
+
+### Bug Fixes
+
+* correct Docker Hub repository name to davidnossebro/gift-calc ([cc418c1](https://github.com/gift-calc/gift-calc/commit/cc418c1be8a829122679a6c799ead4a1bc0a7734))
+
 # [2.2.0](https://github.com/gift-calc/gift-calc/compare/v2.1.0...v2.2.0) (2025-09-07)
 
 
