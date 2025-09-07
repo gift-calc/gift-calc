@@ -1,3 +1,35 @@
+# [2.0.0](https://github.com/gift-calc/gift-calc/compare/v1.4.0...v2.0.0) (2025-09-07)
+
+
+* feat!: standardize CLI parameters for POSIX/GNU compliance ([18be553](https://github.com/gift-calc/gift-calc/commit/18be553e1bb992a773645d67a7dbceefc1026185))
+
+
+### BREAKING CHANGES
+
+* Updated CLI parameter structure to follow universal standards
+
+- Changed -v from variation to version (universal CLI standard)
+- Changed variation parameter from -v to -r (POSIX single-char compliance)
+- Changed copy parameter from -cp to -C (POSIX single-char compliance)
+- Added -V as alternative version flag following conventions
+- Reordered help options to show version first (standard practice)
+
+Benefits:
+- Aligns with decades of CLI conventions users expect
+- Follows GNU/POSIX standards for parameter naming
+- Improves consistency with other command-line tools
+- Maintains all existing functionality via long-form options
+
+Updated documentation:
+- All help text and examples updated
+- CLAUDE.md synchronized with new parameters
+- All 160 tests updated and passing
+- Website documentation will be updated separately
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+
 # [1.4.0](https://github.com/gift-calc/gift-calc/compare/v1.3.2...v1.4.0) (2025-09-07)
 
 
