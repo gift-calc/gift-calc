@@ -55,7 +55,7 @@ The package will be available as both `gift-calc` and `gcalc` commands.
 
 ### Via Docker
 
-Install via Docker (no Node.js required):
+Install via Docker (no Node.js required - multi-platform support):
 ```bash
 # Pull the latest image
 docker pull david/gift-calc
