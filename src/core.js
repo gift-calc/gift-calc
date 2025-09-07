@@ -797,8 +797,13 @@ export function parseBudgetArguments(args) {
     return config;
   }
   
-  // Check for actions first
+  // Check for help flag first
   const firstArg = args[0];
+  if (firstArg === '--help' || firstArg === '-h') {
+    config.action = 'help';
+    return config;
+  }
+  
   if (firstArg === 'add') {
     config.action = 'add';
     
