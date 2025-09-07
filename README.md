@@ -53,6 +53,35 @@ npm install -g gift-calc
 
 The package will be available as both `gift-calc` and `gcalc` commands.
 
+### Via Docker
+
+Install via Docker (no Node.js required):
+```bash
+# Pull the latest image
+docker pull david/gift-calc
+
+# Quick calculation
+docker run --rm david/gift-calc -b 100 -r 30 -f 7
+
+# With persistent configuration
+docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc
+
+# Interactive setup
+docker run -it -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc init-config
+
+# Using environment variables
+docker run --rm -e GIFT_CALC_BASE_VALUE=100 -e GIFT_CALC_VARIATION=30 david/gift-calc
+
+# Create an alias for convenience
+alias gift-calc='docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc'
+alias gcalc='docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc'
+```
+
+**Docker Environment Variables:**
+- `GIFT_CALC_BASE_VALUE`: Base gift amount (overrides config file)
+- `GIFT_CALC_VARIATION`: Variation percentage (overrides config file)  
+- `GIFT_CALC_FRIEND_SCORE`: Friend score 1-10 (overrides config file)
+
 ### From Source
 
 1. Clone the repository:

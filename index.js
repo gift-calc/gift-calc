@@ -33,17 +33,34 @@ function ensureConfigDir() {
 }
 
 function loadConfig() {
+  const config = {};
+  
+  // Load from file first
   const configPath = getConfigPath();
   if (fs.existsSync(configPath)) {
     try {
       const configData = fs.readFileSync(configPath, 'utf8');
-      return JSON.parse(configData);
+      Object.assign(config, JSON.parse(configData));
     } catch (error) {
       console.error(`Warning: Could not parse config file at ${configPath}. Using defaults.`);
-      return {};
     }
   }
-  return {};
+  
+  // Environment variable overrides
+  if (process.env.GIFT_CALC_BASE_VALUE) {
+    const baseValue = parseInt(process.env.GIFT_CALC_BASE_VALUE);
+    if (!isNaN(baseValue)) config.baseValue = baseValue;
+  }
+  if (process.env.GIFT_CALC_VARIATION) {
+    const variation = parseInt(process.env.GIFT_CALC_VARIATION);
+    if (!isNaN(variation)) config.variation = variation;
+  }
+  if (process.env.GIFT_CALC_FRIEND_SCORE) {
+    const friendScore = parseInt(process.env.GIFT_CALC_FRIEND_SCORE);
+    if (!isNaN(friendScore)) config.friendScore = friendScore;
+  }
+  
+  return config;
 }
 
 function showVersion() {
