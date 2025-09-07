@@ -58,23 +58,23 @@ The package will be available as both `gift-calc` and `gcalc` commands.
 Install via Docker (no Node.js required - multi-platform support):
 ```bash
 # Pull the latest image
-docker pull david/gift-calc
+docker pull davidnossebro/gift-calc
 
 # Quick calculation
-docker run --rm david/gift-calc -b 100 -r 30 -f 7
+docker run --rm davidnossebro/gift-calc -b 100 -r 30 -f 7
 
 # With persistent configuration
-docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc
+docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc davidnossebro/gift-calc
 
 # Interactive setup
-docker run -it -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc init-config
+docker run -it -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc davidnossebro/gift-calc init-config
 
 # Using environment variables
-docker run --rm -e GIFT_CALC_BASE_VALUE=100 -e GIFT_CALC_VARIATION=30 david/gift-calc
+docker run --rm -e GIFT_CALC_BASE_VALUE=100 -e GIFT_CALC_VARIATION=30 davidnossebro/gift-calc
 
 # Create an alias for convenience
-alias gift-calc='docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc'
-alias gcalc='docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc david/gift-calc'
+alias gift-calc='docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc davidnossebro/gift-calc'
+alias gcalc='docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-calc davidnossebro/gift-calc'
 ```
 
 **Docker Environment Variables:**
