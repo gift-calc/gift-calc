@@ -154,7 +154,7 @@ describe('Configuration and File Handling Tests', () => {
       
       // But CLI validation should still fail for invalid CLI args
       expect(() => parseArguments(['-f', '11'], defaultConfig)).toThrow(/friend-score must be between 1 and 10/);
-      expect(() => parseArguments(['-v', '101'], defaultConfig)).toThrow(/variation must be between 0 and 100/);
+      expect(() => parseArguments(['-r', '101'], defaultConfig)).toThrow(/variation must be between 0 and 100/);
     });
   });
 
@@ -200,7 +200,7 @@ describe('Configuration and File Handling Tests', () => {
     });
 
     test('should handle boolean and special values', () => {
-      const config = parseArguments(['--no-log', '-cp', '--max']);
+      const config = parseArguments(['--no-log', '-C', '--max']);
       expect(config.logToFile).toBe(false);
       expect(config.copyToClipboard).toBe(true);
       expect(config.useMaximum).toBe(true);

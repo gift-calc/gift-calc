@@ -145,7 +145,7 @@ describe('Additional Coverage Tests', () => {
     test('should recognize clipboard copy flags', async () => {
       const { parseArguments } = await import(path.join(process.cwd(), 'src', 'core.js'));
       
-      const config1 = parseArguments(['-cp']);
+      const config1 = parseArguments(['-C']);
       expect(config1.copyToClipboard).toBe(true);
       
       const config2 = parseArguments(['--copy']);
@@ -369,7 +369,7 @@ describe('Additional Coverage Tests', () => {
     });
 
     test('should validate parameter ranges', () => {
-      const result1 = runCLI('-v 150');
+      const result1 = runCLI('-r 150');
       expect(result1.success).toBe(false);
       expect(result1.stderr).toMatch(/must be between 0 and 100/);
       
@@ -387,7 +387,7 @@ describe('Additional Coverage Tests', () => {
       expect(result1.success).toBe(false);
       expect(result1.stderr).toMatch(/requires a numeric value/);
       
-      const result2 = runCLI('-v xyz');
+      const result2 = runCLI('-r xyz');
       expect(result2.success).toBe(false);
       expect(result2.stderr).toMatch(/requires a numeric value/);
     });
@@ -398,11 +398,11 @@ describe('Additional Coverage Tests', () => {
       expect(result1.success).toBe(true);
       
       // Zero values
-      const result2 = runCLI('-v 0 -b 100 --no-log');
+      const result2 = runCLI('-r 0 -b 100 --no-log');
       expect(result2.success).toBe(true);
       
       // Maximum values
-      const result3 = runCLI('-v 100 -d 10 --no-log');
+      const result3 = runCLI('-r 100 -d 10 --no-log');
       expect(result3.success).toBe(true);
     });
   });

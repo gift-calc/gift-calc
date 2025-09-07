@@ -31,7 +31,7 @@ This project has two related repositories that should be kept synchronized:
 ```bash
 # Local development and testing
 node index.js --help                 # Test CLI locally
-node index.js -b 100 -v 30 -f 7     # Test with parameters
+node index.js -b 100 -r 30 -f 7     # Test with parameters
 node index.js init-config            # Test config initialization
 
 # Package management  
@@ -80,7 +80,7 @@ gcalc -b 50 -f 8
 
 **Command Structure:**
 - Both `gift-calc` and `gcalc` commands point to same `index.js`
-- Standard CLI options: `-b/--basevalue`, `-v/--variation`, `-f/--friend-score`
+- Standard CLI options: `-b/--basevalue`, `-r/--variation`, `-f/--friend-score`
 
 ## GitHub Tool Usage
 

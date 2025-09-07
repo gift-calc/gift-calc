@@ -204,12 +204,12 @@ describe('Gift Calculator Core Tests', () => {
   describe('Error Handling', () => {
     test('should validate numeric requirements', () => {
       expect(() => parseArguments(['-b', 'abc'])).toThrow(/requires a numeric value/);
-      expect(() => parseArguments(['-v', 'xyz'])).toThrow(/requires a numeric value/);
+      expect(() => parseArguments(['-r', 'xyz'])).toThrow(/requires a numeric value/);
       expect(() => parseArguments(['-f', 'bad'])).toThrow(/requires a numeric value/);
     });
 
     test('should validate ranges', () => {
-      expect(() => parseArguments(['-v', '101'])).toThrow(/must be between 0 and 100/);
+      expect(() => parseArguments(['-r', '101'])).toThrow(/must be between 0 and 100/);
       expect(() => parseArguments(['-d', '11'])).toThrow(/must be between 0 and 10/);
       expect(() => parseArguments(['-f', '0'])).toThrow(/must be between 1 and 10/);
     });
