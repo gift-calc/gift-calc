@@ -23,7 +23,10 @@ import {
   editBudget,
   getBudgetStatus,
   listBudgets,
-  formatBudgetAmount
+  formatBudgetAmount,
+  parseLogEntry,
+  calculateBudgetUsage,
+  formatBudgetSummary
 } from './src/core.js';
 
 // Config utilities
@@ -364,6 +367,49 @@ if (parsedConfig.recipientName) {
 // Format and display output
 const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
 console.log(output);
+
+// Display budget tracking if active budget exists
+try {
+  const budgetPath = getBudgetPath(path, os);
+  const budgetStatus = getBudgetStatus(budgetPath, fs);
+  
+  if (budgetStatus.hasActiveBudget) {
+    const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+    const budgetCurrency = parsedConfig.currency; // Use current calculation currency
+    
+    // Calculate budget usage with currency filtering
+    const usage = calculateBudgetUsage(logPath, budgetStatus.budget, budgetCurrency, fs);
+    
+    if (!usage.errorMessage) {
+      // Format and display budget summary
+      const budgetSummary = formatBudgetSummary(
+        usage.totalSpent,
+        suggestedAmount,
+        budgetStatus.budget.totalAmount,
+        budgetStatus.remainingDays,
+        budgetStatus.budget.toDate,
+        budgetCurrency,
+        usage.hasSkippedCurrencies
+      );
+      
+      console.log(budgetSummary);
+      
+      // Display skipped currency details if any
+      if (usage.skippedEntries.length > 0) {
+        const skippedDetails = usage.skippedEntries
+          .map(entry => {
+            const recipientPart = entry.recipient ? ` (${entry.recipient})` : '';
+            return `${entry.amount} ${entry.currency} (${entry.date})${recipientPart}`;
+          })
+          .join(', ');
+        
+        console.log(`Note: Excluded from budget calculation: ${skippedDetails}`);
+      }
+    }
+  }
+} catch (error) {
+  // Silently ignore budget tracking errors to avoid disrupting main functionality
+}
 
 // Copy to clipboard if requested
 if (parsedConfig.copyToClipboard) {

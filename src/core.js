@@ -453,6 +453,13 @@ CONFIGURATION:
     Budget periods cannot overlap. Each budget has a unique time range.
     Status shows ACTIVE (current), FUTURE (upcoming), or EXPIRED (past).
     Budget amounts are displayed in your configured currency (default: SEK).
+    
+  AUTOMATIC BUDGET TRACKING:
+    When an active budget exists, budget tracking is automatically displayed
+    after each gift calculation, showing real-time spending including the
+    newly calculated amount. Only amounts matching the budget currency are
+    included in calculations. Different currencies are tracked separately
+    and shown in a warning note. No configuration required.
 
 EXAMPLES:
   gift-calc                             # Use config defaults or built-in defaults
@@ -494,6 +501,23 @@ EXAMPLES:
   gcalc b edit 1 --to-date 2025-01-15                                     # Extend budget end date (short)
   gcalc b edit 2 --from-date 2024-10-15 --to-date 2024-11-15            # Change budget dates
   gift-calc budget                                                        # Defaults to showing status
+  
+  AUTOMATIC BUDGET TRACKING EXAMPLES:
+  # With active budget (automatic display after calculation):
+  gift-calc -b 100 --name "Alice"
+  # Output: 99.34 SEK for Alice
+  #         Budget: 1000 SEK | Used: 345.59 SEK | Remaining: 654.41 SEK | Ends: 2024-12-31 (25 days)
+  
+  # Budget exceeded warning:
+  gift-calc -b 200 --name "Bob"  
+  # Output: 201.25 SEK for Bob
+  #         ⚠️  BUDGET EXCEEDED! Budget: 1000 SEK | Used: 1096.73 SEK | Over by: 96.73 SEK | Ends: 2024-12-31 (25 days)
+  
+  # Mixed currencies (with warning):
+  gift-calc -b 150 -c USD --name "Charlie"
+  # Output: 149.99 USD for Charlie
+  #         Budget: 1000 SEK | Used: 500.25 SEK | Remaining: 499.75 SEK | Ends: 2024-12-31 (25 days) [*mixed currencies]
+  #         Note: Excluded from budget calculation: 149.99 USD (2024-12-15) (Charlie)
 
 FRIEND SCORE GUIDE:
   1-3: Acquaintance (bias toward lower amounts)
@@ -1268,4 +1292,149 @@ export function listBudgets(budgetPath, fsModule) {
  */
 export function formatBudgetAmount(amount, currency) {
   return `${amount} ${currency}`;
+}
+
+/**
+ * Parse a single log entry line to extract gift calculation details
+ * @param {string} logLine - Single line from the log file
+ * @returns {Object|null} Parsed entry object or null if invalid
+ */
+export function parseLogEntry(logLine) {
+  if (!logLine || typeof logLine !== 'string') {
+    return null;
+  }
+  
+  const trimmedLine = logLine.trim();
+  if (!trimmedLine) {
+    return null;
+  }
+  
+  // Expected format: "2025-09-07T18:42:08.399Z 99.34 SEK for Alice"
+  // or: "2025-09-07T18:42:08.399Z 99.34 SEK"
+  const timestampMatch = trimmedLine.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\s+(.+)$/);
+  if (!timestampMatch) {
+    return null;
+  }
+  
+  const timestamp = timestampMatch[1];
+  const outputPart = timestampMatch[2];
+  
+  // Extract amount and currency
+  // Formats to handle: "99.34 SEK for Alice", "99.34 SEK", "150.25 SEK for Bob (on naughty list!)"
+  const amountMatch = outputPart.match(/^(\d+(?:\.\d+)?)\s+([A-Z]{3})(?:\s+for\s+(.+?))?(?:\s+\(.*\))?$/);
+  if (!amountMatch) {
+    return null;
+  }
+  
+  const amount = parseFloat(amountMatch[1]);
+  const currency = amountMatch[2];
+  const recipient = amountMatch[3] || null;
+  
+  if (isNaN(amount)) {
+    return null;
+  }
+  
+  return {
+    timestamp: new Date(timestamp),
+    amount,
+    currency,
+    recipient,
+    rawOutput: outputPart
+  };
+}
+
+/**
+ * Calculate budget usage from log file with currency filtering
+ * @param {string} logPath - Path to the log file
+ * @param {Object} activeBudget - Active budget object
+ * @param {string} budgetCurrency - Currency to match for budget calculations
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object} Usage calculation result
+ */
+export function calculateBudgetUsage(logPath, activeBudget, budgetCurrency, fsModule) {
+  const result = {
+    totalSpent: 0,
+    skippedEntries: [],
+    hasSkippedCurrencies: false,
+    errorMessage: null
+  };
+  
+  // Check if log file exists
+  if (!fsModule.existsSync(logPath)) {
+    return result;
+  }
+  
+  let logContent;
+  try {
+    logContent = fsModule.readFileSync(logPath, 'utf8');
+  } catch (error) {
+    result.errorMessage = `Could not read log file: ${error.message}`;
+    return result;
+  }
+  
+  const lines = logContent.split('\n').filter(line => line.trim());
+  const budgetStartDate = new Date(activeBudget.fromDate + 'T00:00:00');
+  const budgetEndDate = new Date(activeBudget.toDate + 'T23:59:59');
+  
+  for (const line of lines) {
+    const entry = parseLogEntry(line);
+    if (!entry) {
+      continue; // Skip malformed lines silently
+    }
+    
+    // Check if entry falls within budget period
+    if (entry.timestamp < budgetStartDate || entry.timestamp > budgetEndDate) {
+      continue;
+    }
+    
+    // Check currency match
+    if (entry.currency === budgetCurrency) {
+      result.totalSpent += entry.amount;
+    } else {
+      // Track skipped entry
+      result.skippedEntries.push({
+        amount: entry.amount,
+        currency: entry.currency,
+        date: entry.timestamp.toISOString().split('T')[0], // YYYY-MM-DD format
+        recipient: entry.recipient
+      });
+      result.hasSkippedCurrencies = true;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Format budget summary with currency warnings
+ * @param {number} usedAmount - Amount spent in budget currency
+ * @param {number} newAmount - Newly calculated amount to include
+ * @param {number} totalBudget - Total budget amount
+ * @param {number} remainingDays - Days remaining in budget period
+ * @param {string} endDate - Budget end date (YYYY-MM-DD)
+ * @param {string} currency - Budget currency
+ * @param {boolean} hasSkippedCurrencies - Whether other currencies were found
+ * @returns {string} Formatted budget summary
+ */
+export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainingDays, endDate, currency, hasSkippedCurrencies) {
+  const totalUsed = usedAmount + newAmount;
+  const remaining = totalBudget - totalUsed;
+  const isOverBudget = totalUsed > totalBudget;
+  
+  let summary = '';
+  
+  if (isOverBudget) {
+    const overAmount = totalUsed - totalBudget;
+    summary = `⚠️  BUDGET EXCEEDED! Budget: ${formatBudgetAmount(totalBudget, currency)} | Used: ${formatBudgetAmount(totalUsed, currency)} | Over by: ${formatBudgetAmount(overAmount, currency)}`;
+  } else {
+    summary = `Budget: ${formatBudgetAmount(totalBudget, currency)} | Used: ${formatBudgetAmount(totalUsed, currency)} | Remaining: ${formatBudgetAmount(remaining, currency)}`;
+  }
+  
+  summary += ` | Ends: ${endDate} (${remainingDays} day${remainingDays === 1 ? '' : 's'})`;
+  
+  if (hasSkippedCurrencies) {
+    summary += ' [*mixed currencies]';
+  }
+  
+  return summary;
 }
