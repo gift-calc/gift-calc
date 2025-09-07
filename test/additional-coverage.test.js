@@ -14,6 +14,9 @@ function globalCleanup() {
   try {
     if (fs.existsSync(CONFIG_PATH)) fs.unlinkSync(CONFIG_PATH);
     if (fs.existsSync(LOG_PATH)) fs.unlinkSync(LOG_PATH);
+    // Clean up budget file to prevent interference with budget tracking tests
+    const BUDGET_PATH = path.join(CONFIG_DIR, 'budgets.json');
+    if (fs.existsSync(BUDGET_PATH)) fs.unlinkSync(BUDGET_PATH);
     // Also clean up any test artifacts that might interfere
     const testArtifacts = [
       path.join(CONFIG_DIR, 'test-config.json'),
