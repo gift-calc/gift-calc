@@ -12,10 +12,9 @@ Analyze current changes and create an appropriate conventional commit message, t
 
 1. **Check git status** to see staged and unstaged changes
 2. **Analyze the changes** to determine the appropriate commit type
-3. **Suggest commit message** following Conventional Commits standards
-4. **Ask for confirmation** of the suggested commit type and message
-5. **Stage all changes** (including unstaged files and untracked files if appropriate) and create commit
-6. **Push to remote** repository
+3. **Generate commit message** following Conventional Commits standards
+4. **Stage all changes** (including unstaged files and untracked files if appropriate) and create commit
+5. **Push to remote** repository
 
 ## Commit Types (Semantic Versioning)
 
@@ -36,11 +35,14 @@ Analyze current changes and create an appropriate conventional commit message, t
 
 ## Important Guidelines
 
-**🚨 NEVER Include Claude References:**
-- All commit messages MUST be clean and professional
-- NEVER include AI attribution, Claude references, or generated content mentions
-- Commit messages should appear as if written by a human developer
-- This is a strict requirement - no exceptions
+**🚨 CRITICAL: NEVER Include Claude References:**
+- **ABSOLUTE REQUIREMENT**: All commit messages MUST be clean and professional
+- **NEVER** include AI attribution, Claude references, or generated content mentions
+- **NEVER** mention "Claude", "AI", "generated", "LLM", or any tool references
+- **NEVER** include Co-Authored-By lines or any AI attribution
+- Commit messages **MUST** appear as if written by a human developer
+- **ZERO TOLERANCE** - This is a non-negotiable requirement with no exceptions
+- **FAILURE TO COMPLY** will result in unprofessional commit history and potential project rejection
 
 **Choose the Right Commit Type:**
 - **Does this change affect the published library functionality?**
@@ -58,10 +60,11 @@ Analyze current changes and create an appropriate conventional commit message, t
 - ❌ `fix: update README installation instructions` → Should be: `docs:`
 - ❌ `fix: update dependencies to latest versions` → Should be: `chore:`
 
-**Critical Rules:**
-- All commit messages MUST be clean and professional
-- NEVER include AI attribution, Claude references, or generated content mentions
-- Commit messages should appear as if written by a human developer
+**🚨 NON-NEGOTIABLE RULES:**
+- **ABSOLUTE PROHIBITION**: No AI attribution, Claude references, or tool mentions
+- **PROFESSIONAL STANDARD**: Commit messages must be human-written in appearance
+- **ZERO EXCEPTIONS**: This rule applies to ALL commits, regardless of type or scope
+- **CAREER IMPACT**: Unprofessional commits reflect poorly on the entire project
 - Use `fix:` for actual bugs and minor improvements that affect end users
 - Don't use `fix:` for tests, documentation, or CI issues
 
