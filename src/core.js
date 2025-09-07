@@ -121,7 +121,7 @@ export function parseArguments(args, defaultConfig = {}) {
     return config;
   }
   
-  if (args[0] === '--version') {
+  if (args[0] === '--version' || args[0] === '-v' || args[0] === '-V') {
     config.command = 'version';
     return config;
   }
@@ -139,7 +139,7 @@ export function parseArguments(args, defaultConfig = {}) {
       break;
     }
     
-    if (arg === '--version') {
+    if (arg === '--version' || arg === '-v' || arg === '-V') {
       config.command = 'version';
       break;
     }
@@ -154,7 +154,7 @@ export function parseArguments(args, defaultConfig = {}) {
       }
     }
     
-    if (arg === '-v' || arg === '--variation') {
+    if (arg === '-r' || arg === '--variation') {
       const nextArg = args[i + 1];
       if (nextArg && !isNaN(nextArg)) {
         const varValue = parseFloat(nextArg);
@@ -162,10 +162,10 @@ export function parseArguments(args, defaultConfig = {}) {
           config.variation = varValue;
           i++; // Skip the next argument as it's the value
         } else {
-          throw new Error('-v/--variation must be between 0 and 100');
+          throw new Error('-r/--variation must be between 0 and 100');
         }
       } else {
-        throw new Error('-v/--variation requires a numeric value');
+        throw new Error('-r/--variation requires a numeric value');
       }
     }
     
@@ -209,7 +209,7 @@ export function parseArguments(args, defaultConfig = {}) {
       }
     }
     
-    if (arg === '-cp' || arg === '--copy') {
+    if (arg === '-C' || arg === '--copy') {
       config.copyToClipboard = true;
     }
     
@@ -396,8 +396,10 @@ COMMANDS:
   naughty-list, nl            Manage the naughty list (add/remove/list/search)
 
 OPTIONS:
+  -h, --help                  Show this help message
+  -v, -V, --version           Show version information
   -b, --basevalue <number>    Set the base value for gift calculation (default: 70)
-  -v, --variation <percent>   Set variation percentage (0-100, default: 20)
+  -r, --variation <percent>   Set variation percentage (0-100, default: 20)
   -f, --friend-score <1-10>   Friend score affecting gift amount bias (default: 5)
                               Higher scores increase chance of higher amounts
   -n, --nice-score <0-10>     Nice score affecting gift amount bias (default: 5)
@@ -410,9 +412,7 @@ OPTIONS:
   --asshole                   Set nice score to 0 (no gift)
   --dickhead                  Set nice score to 0 (no gift)
   --no-log                    Disable logging to file (logging enabled by default)
-  -cp, --copy                 Copy amount (without currency) to clipboard
-  -h, --help                  Show this help message
-  --version                   Show version information
+  -C, --copy                  Copy amount (without currency) to clipboard
 
 NAUGHTY LIST OPTIONS:
   --remove, -r                Remove person from naughty list (use with naughty-list command)
@@ -435,11 +435,11 @@ EXAMPLES:
   gift-calc update-config               # Update existing configuration file
   gift-calc log                         # Open log file with less
   gift-calc -b 100                      # Base value of 100
-  gcalc -b 100 -v 30 -d 0               # Base 100, 30% variation, no decimals
+  gcalc -b 100 -r 30 -d 0               # Base 100, 30% variation, no decimals
   gift-calc --name "Alice" -c USD       # Gift for Alice in USD currency
   gcalc -b 50 -f 9 --name "Bob"         # Gift for Bob (with logging by default)
-  gift-calc -c EUR -d 1 -cp --no-log    # Use defaults with EUR, copy but no log
-  gcalc --name "Charlie" -b 80 -cp      # Gift for Charlie, copy to clipboard
+  gift-calc -c EUR -d 1 -C --no-log     # Use defaults with EUR, copy but no log
+  gcalc --name "Charlie" -b 80 -C       # Gift for Charlie, copy to clipboard
   gift-calc -f 8 -n 9                   # High friend and nice scores
   gift-calc -n 0 -b 100                 # No gift (nice score 0)
   gift-calc --asshole --name "Kevin"    # No gift for asshole Kevin
