@@ -1,3 +1,10 @@
+## [2.2.2](https://github.com/gift-calc/gift-calc/compare/v2.2.1...v2.2.2) (2025-09-07)
+
+
+### Bug Fixes
+
+* add proper semantic versioning tags for Docker images ([4a1e9da](https://github.com/gift-calc/gift-calc/commit/4a1e9dae407adf9d2d0060a0edc870ecf9b7fc66))
+
 ## [2.2.1](https://github.com/gift-calc/gift-calc/compare/v2.2.0...v2.2.1) (2025-09-07)
 
 

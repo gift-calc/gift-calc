@@ -1,6 +1,6 @@
 {
   "name": "gift-calc",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "The only gift amount calculation tool you'll ever need",
   "type": "module",
   "main": "index.js",
