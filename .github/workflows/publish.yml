@@ -126,9 +126,9 @@ jobs:
         with:
           images: davidnossebro/gift-calc
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},value=v${{ steps.release_info.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.release_info.outputs.version }}
+            type=semver,pattern={{major}},value=v${{ steps.release_info.outputs.version }}
             type=raw,value=latest
 
       - name: Build and push Docker image
