@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/gift-calc/gift-calc/compare/v2.0.0...v2.1.0) (2025-09-07)
+
+
+### Features
+
+* add Docker support with automated publishing to Docker Hub ([9aaaa80](https://github.com/gift-calc/gift-calc/commit/9aaaa80a24c4c547b37a36860076c6426c389a8f)), closes [#3](https://github.com/gift-calc/gift-calc/issues/3)
+
 # [2.0.0](https://github.com/gift-calc/gift-calc/compare/v1.4.0...v2.0.0) (2025-09-07)
 
 
