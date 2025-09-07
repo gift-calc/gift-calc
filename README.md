@@ -13,6 +13,8 @@ The only hackable open source gift calculation tool you´ll ever need. A CLI too
 - 📝 Automatic logging with log viewing functionality
 - 🎯 Percentage-based variation for realistic randomness
 - 📱 Simple command-line interface with dual command names
+- 👮 Naughty list management (add/remove/list/search) with zero gift override
+- 🎅 Automatic naughty list detection with "on naughty list!" notifications
 
 ## Installation
 
@@ -114,6 +116,15 @@ gift-calc update-config      # Update existing configuration
 gift-calc log                # Open log file with less
 gift-calc --help             # Show help message
 gift-calc --version          # Show version information
+
+# Naughty list management
+gift-calc naughty-list <name>      # Add person to naughty list
+gift-calc naughty-list list        # List all naughty people
+gift-calc naughty-list --remove <name>  # Remove from naughty list
+gcalc nl <name>                    # Add to naughty list (short form)
+gcalc nl list                      # List naughty people (short form)
+gcalc nl --remove <name>           # Remove from naughty list (short form)
+gcalc nl --search <term>           # Search naughty list (starts with)
 ```
 
 ### Command Options
@@ -135,6 +146,13 @@ gift-calc --version          # Show version information
 | `-cp` | `--copy` | Copy amount to clipboard | - | false |
 | `-h` | `--help` | Show help | - | - |
 | | `--version` | Show version information | - | - |
+
+### Naughty List Options
+
+| Option | Long Form | Description | Range | Default |
+|--------|-----------|-------------|-------|---------|
+| `-r` | `--remove` | Remove person from naughty list | - | - |
+| | `--search` | Search naughty list (starts with) | Any string | - |
 
 ### Examples
 
@@ -183,6 +201,36 @@ gift-calc -b 80 -n 8 --name "Maya" -cp
 # Combine friend and nice scores
 gcalc -b 120 -f 9 -n 8 -c USD --name "Nina"
 # Output: 134.8 USD for Nina
+
+# Add people to the naughty list
+gift-calc naughty-list Sven
+# Output: Sven added to naughty list
+gcalc nl David
+# Output: David added to naughty list
+
+# List all naughty people
+gcalc nl list
+# Output: 
+# Naughty List:
+#   Sven (added: 9/6/2025, 11:42:38 PM)
+#   David (added: 9/6/2025, 11:42:43 PM)
+
+# Search the naughty list
+gcalc nl --search Dav
+# Output:
+# Matching naughty people for "Dav":
+#   David (added: 9/6/2025, 11:42:43 PM)
+
+# Remove from naughty list
+gift-calc naughty-list --remove Sven
+# Output: Sven removed from naughty list
+gcalc nl -r David
+# Output: David removed from naughty list
+
+# Naughty list overrides all other calculations
+gift-calc naughty-list Kevin
+gcalc --name "Kevin" -b 100 -f 10 -n 10 --max
+# Output: 0 SEK for Kevin (on naughty list!)
 ```
 
 ## Commands
@@ -228,6 +276,79 @@ Opens `~/.config/gift-calc/gift-calc.log` with the `less` pager for easy browsin
 - q: Quit
 - /pattern: Search for pattern
 
+### Naughty List Commands
+
+The naughty list allows you to manage people who should receive no gifts, overriding all other calculation parameters.
+
+#### naughty-list / nl (Add Person)
+
+Add a person to the naughty list:
+```bash
+gift-calc naughty-list <name>
+gcalc nl <name>                    # Short form
+```
+
+**Examples:**
+```bash
+gift-calc naughty-list Sven        # Add Sven to naughty list
+gcalc nl David                      # Add David to naughty list
+```
+
+#### naughty-list / nl (List People)
+
+List all people on the naughty list:
+```bash
+gift-calc naughty-list list
+gcalc nl list                       # Short form
+```
+
+**Example output:**
+```
+Naughty List:
+  Sven (added: 9/6/2025, 11:42:38 PM)
+  David (added: 9/6/2025, 11:42:43 PM)
+```
+
+#### naughty-list / nl (Remove Person)
+
+Remove a person from the naughty list:
+```bash
+gift-calc naughty-list --remove <name>
+gcalc nl -r <name>                 # Short form
+```
+
+**Examples:**
+```bash
+gift-calc naughty-list --remove Sven
+gcalc nl -r David
+```
+
+#### naughty-list / nl (Search)
+
+Search for people on the naughty list by starting letters:
+```bash
+gcalc nl --search <term>
+```
+
+**Examples:**
+```bash
+gcalc nl --search Dav               # Find names starting with "Dav"
+gcalc nl --search A                 # Find names starting with "A"
+```
+
+### Naughty List Behavior
+
+When a person is on the naughty list:
+- Their gift amount is always **0**, regardless of all other parameters
+- This **overrides** friend score, nice score, --max, --min, and all other options
+- The output shows "(on naughty list!)" to indicate the override
+- The naughty list takes **highest priority** in the calculation logic
+
+**Storage:**
+- Naughty list is stored in: `~/.config/gift-calc/naughty-list.json`
+- Each entry includes the name and timestamp when they were added
+- File is created automatically when first person is added
+
 ## Scoring Systems
 
 ### Friend Score Guide
@@ -257,19 +378,21 @@ The nice score has special cases for low scores and bias for higher scores:
 
 **Special Cases:** Nice scores 0-3 override all other calculations (including friend score, variation, --max, --min) with fixed amounts.
 
+**Highest Priority:** The naughty list overrides everything, including nice score special cases and convenience parameters.
+
 ### Convenience Parameters
 
 For quick access to no-gift amounts:
 - `--asshole`: Sets nice score to 0 (amount = 0)
 - `--dickhead`: Sets nice score to 0 (amount = 0)
 
-These override any explicit nice score values.
+These override any explicit nice score values, but the naughty list has the highest priority of all.
 
 ## Configuration
 
-### Configuration File
+### Configuration Files
 
-The configuration is stored at: `~/.config/gift-calc/.config.json`
+**Configuration File:** `~/.config/gift-calc/.config.json`
 
 Example configuration:
 ```json
@@ -281,11 +404,24 @@ Example configuration:
 }
 ```
 
+**Naughty List File:** `~/.config/gift-calc/naughty-list.json`
+
+Example naughty list:
+```json
+{
+  "naughtyList": [
+    {"name": "Sven", "addedAt": "2024-09-06T22:56:00.000Z"},
+    {"name": "David", "addedAt": "2024-09-06T22:57:00.000Z"}
+  ]
+}
+```
+
 ### Configuration Precedence
 
-1. **Command line options** (highest priority)
-2. **Configuration file values**
-3. **Built-in defaults** (lowest priority)
+1. **Naughty list** (highest priority - overrides everything)
+2. **Command line options** 
+3. **Configuration file values**
+4. **Built-in defaults** (lowest priority)
 
 **Important**: Friend scores and nice scores are never stored in configuration and must be specified via command line each time.
 

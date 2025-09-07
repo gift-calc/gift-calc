@@ -5,7 +5,19 @@ import path from 'node:path';
 import os from 'node:os';
 import readline from 'node:readline';
 import { exec, spawnSync } from 'node:child_process';
-import { parseArguments, calculateFinalAmount, formatOutput, getHelpText } from './src/core.js';
+import { 
+  parseArguments, 
+  calculateFinalAmount, 
+  formatOutput, 
+  getHelpText,
+  parseNaughtyListArguments,
+  getNaughtyListPath,
+  addToNaughtyList,
+  removeFromNaughtyList,
+  isOnNaughtyList,
+  listNaughtyList,
+  searchNaughtyList
+} from './src/core.js';
 
 // Config utilities
 function getConfigPath() {
@@ -83,6 +95,12 @@ if (parsedConfig.showHelp) {
 
 if (parsedConfig.command === 'version') {
   showVersion();
+  process.exit(0);
+}
+
+// Handle naughty list commands
+if (parsedConfig.command === 'naughty-list') {
+  handleNaughtyListCommand(parsedConfig);
   process.exit(0);
 }
 
@@ -282,19 +300,39 @@ function displayLog() {
   }
 }
 
-// Calculate the suggested amount using shared core function
-const suggestedAmount = calculateFinalAmount(
-  parsedConfig.baseValue, 
-  parsedConfig.variation, 
-  parsedConfig.friendScore, 
-  parsedConfig.niceScore, 
-  parsedConfig.decimals,
-  parsedConfig.useMaximum,
-  parsedConfig.useMinimum
-);
+// Check if recipient is on naughty list (overrides all other calculations)
+let suggestedAmount;
+let naughtyListNote = '';
+if (parsedConfig.recipientName) {
+  const naughtyListPath = getNaughtyListPath(path, os);
+  if (isOnNaughtyList(parsedConfig.recipientName, naughtyListPath, fs)) {
+    suggestedAmount = 0;
+    naughtyListNote = ' (on naughty list!)';
+  } else {
+    suggestedAmount = calculateFinalAmount(
+      parsedConfig.baseValue, 
+      parsedConfig.variation, 
+      parsedConfig.friendScore, 
+      parsedConfig.niceScore, 
+      parsedConfig.decimals,
+      parsedConfig.useMaximum,
+      parsedConfig.useMinimum
+    );
+  }
+} else {
+  suggestedAmount = calculateFinalAmount(
+    parsedConfig.baseValue, 
+    parsedConfig.variation, 
+    parsedConfig.friendScore, 
+    parsedConfig.niceScore, 
+    parsedConfig.decimals,
+    parsedConfig.useMaximum,
+    parsedConfig.useMinimum
+  );
+}
 
 // Format and display output
-const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName);
+const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
 console.log(output);
 
 // Copy to clipboard if requested
@@ -335,5 +373,64 @@ if (parsedConfig.logToFile) {
     fs.appendFileSync(logPath, logEntry);
   } catch (error) {
     console.error(`Warning: Could not write to log file: ${error.message}`);
+  }
+}
+
+function handleNaughtyListCommand(config) {
+  // Check if parsing succeeded
+  if (!config.success) {
+    console.error('Error:', config.error);
+    console.log('\nUsage:');
+    console.log('  gift-calc naughty-list <name>        # Add person to naughty list');
+    console.log('  gcalc nl <name>                      # Add person to naughty list (short)');
+    console.log('  gcalc nl list                        # List all naughty people');
+    console.log('  gcalc nl --search <term>             # Search naughty list');
+    console.log('  gift-calc naughty-list --remove <name>  # Remove person from naughty list');
+    console.log('  gcalc nl -r <name>                   # Remove person from naughty list');
+    process.exit(1);
+  }
+  
+  // Get naughty list path
+  const naughtyListPath = getNaughtyListPath(path, os);
+  
+  // Handle different actions
+  switch (config.action) {
+    case 'add':
+      const addResult = addToNaughtyList(config.name, naughtyListPath, fs, path);
+      console.log(addResult.message);
+      break;
+      
+    case 'remove':
+      const removeResult = removeFromNaughtyList(config.name, naughtyListPath, fs, path);
+      console.log(removeResult.message);
+      break;
+      
+    case 'list':
+      const list = listNaughtyList(naughtyListPath, fs);
+      if (list.length === 0) {
+        console.log('No one on the naughty list. 🎅');
+      } else {
+        console.log('Naughty List:');
+        list.forEach(entry => {
+          console.log(`  ${entry}`);
+        });
+      }
+      break;
+      
+    case 'search':
+      const searchResults = searchNaughtyList(config.searchTerm, naughtyListPath, fs);
+      if (searchResults.length === 0) {
+        console.log(`No one found matching "${config.searchTerm}" on the naughty list.`);
+      } else {
+        console.log(`Matching naughty people for "${config.searchTerm}":`);
+        searchResults.forEach(entry => {
+          console.log(`  ${entry}`);
+        });
+      }
+      break;
+      
+    default:
+      console.error('Unknown action:', config.action);
+      process.exit(1);
   }
 }
