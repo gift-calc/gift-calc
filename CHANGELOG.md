@@ -1,3 +1,10 @@
+# [2.2.0](https://github.com/gift-calc/gift-calc/compare/v2.1.0...v2.2.0) (2025-09-07)
+
+
+### Features
+
+* add Docker security and platform details to documentation ([e94992f](https://github.com/gift-calc/gift-calc/commit/e94992fdd9e68829bd3322247eb3834e967b6518))
+
 # [2.1.0](https://github.com/gift-calc/gift-calc/compare/v2.0.0...v2.1.0) (2025-09-07)
 
 
