@@ -36,6 +36,12 @@ Analyze current changes and create an appropriate conventional commit message, t
 
 ## Important Guidelines
 
+**🚨 NEVER Include Claude References:**
+- All commit messages MUST be clean and professional
+- NEVER include AI attribution, Claude references, or generated content mentions
+- Commit messages should appear as if written by a human developer
+- This is a strict requirement - no exceptions
+
 **Choose the Right Commit Type:**
 - **Does this change affect the published library functionality?**
   - If YES → Use `feat:`, `fix:`, or `perf:` (triggers version bump)
