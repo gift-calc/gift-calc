@@ -1,3 +1,13 @@
+# [2.3.0](https://github.com/gift-calc/gift-calc/compare/v2.2.2...v2.3.0) (2025-09-07)
+
+
+### Features
+
+* add automatic budget tracking with real-time spending analysis ([8d9094f](https://github.com/gift-calc/gift-calc/commit/8d9094f0ebbdde204ce00e0199c13d8641947444))
+* add comprehensive budget management system ([02e9b7f](https://github.com/gift-calc/gift-calc/commit/02e9b7f1d0260b6999c0e180d0a8793055961bc3))
+* add comprehensive help system for budget commands ([1f8a93a](https://github.com/gift-calc/gift-calc/commit/1f8a93a1741a84004aa20e1cbe4b879970058056))
+* initialize budget management system branch ([18247bf](https://github.com/gift-calc/gift-calc/commit/18247bfd3565f1ad6216cd9a90b736bbcc5cf5f5)), closes [#6](https://github.com/gift-calc/gift-calc/issues/6)
+
 ## [2.2.2](https://github.com/gift-calc/gift-calc/compare/v2.2.1...v2.2.2) (2025-09-07)
 
 
