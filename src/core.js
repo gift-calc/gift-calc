@@ -569,10 +569,20 @@ export function saveNaughtyList(naughtyList, naughtyListPath, fsModule, pathModu
  * @returns {Object} Result object with success, message, and existing flags
  */
 export function addToNaughtyList(name, naughtyListPath, fsModule, pathModule) {
+  // Validate input
+  if (!name || name.trim() === '') {
+    return {
+      success: false,
+      message: 'Name cannot be empty',
+      existing: false
+    };
+  }
+  name = name.trim(); // Use trimmed name
+  
   const { naughtyList: currentList } = loadNaughtyList(naughtyListPath, fsModule);
   
-  // Check if person is already on the list
-  const existingEntry = currentList.find(entry => entry.name === name);
+  // Check if person is already on the list (case-insensitive)
+  const existingEntry = currentList.find(entry => entry.name.toLowerCase() === name.toLowerCase());
   if (existingEntry) {
     return {
       success: false,
@@ -616,10 +626,20 @@ export function addToNaughtyList(name, naughtyListPath, fsModule, pathModule) {
  * @returns {Object} Result object with success, message, and found flags
  */
 export function removeFromNaughtyList(name, naughtyListPath, fsModule, pathModule) {
+  // Validate input
+  if (!name || name.trim() === '') {
+    return {
+      success: false,
+      message: 'Name cannot be empty',
+      found: false
+    };
+  }
+  name = name.trim(); // Use trimmed name
+  
   const { naughtyList: currentList } = loadNaughtyList(naughtyListPath, fsModule);
   
-  // Find the person in the list
-  const entryIndex = currentList.findIndex(entry => entry.name === name);
+  // Find the person in the list (case-insensitive)
+  const entryIndex = currentList.findIndex(entry => entry.name.toLowerCase() === name.toLowerCase());
   if (entryIndex === -1) {
     return {
       success: false,
@@ -655,8 +675,14 @@ export function removeFromNaughtyList(name, naughtyListPath, fsModule, pathModul
  * @returns {boolean} True if person is on naughty list
  */
 export function isOnNaughtyList(name, naughtyListPath, fsModule) {
+  // Handle empty/invalid names
+  if (!name || name.trim() === '') {
+    return false;
+  }
+  name = name.trim(); // Use trimmed name
+  
   const { naughtyList: currentList } = loadNaughtyList(naughtyListPath, fsModule);
-  return currentList.some(entry => entry.name === name);
+  return currentList.some(entry => entry.name.toLowerCase() === name.toLowerCase());
 }
 
 /**

@@ -173,6 +173,40 @@ describe('Naughty List Functions', () => {
       expect(loaded.naughtyList[0].name).toBe('Sven');
       expect(loaded.naughtyList[1].name).toBe('David');
     });
+
+    it('should validate empty name input', () => {
+      const result = addToNaughtyList('', testNaughtyListPath, fs, path);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Name cannot be empty');
+      expect(result.existing).toBe(false);
+    });
+
+    it('should validate null name input', () => {
+      const result = addToNaughtyList(null, testNaughtyListPath, fs, path);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Name cannot be empty');
+      expect(result.existing).toBe(false);
+    });
+
+    it('should validate whitespace-only name input', () => {
+      const result = addToNaughtyList('   ', testNaughtyListPath, fs, path);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Name cannot be empty');
+      expect(result.existing).toBe(false);
+    });
+
+    it('should trim whitespace from valid names', () => {
+      const result = addToNaughtyList('  Sven  ', testNaughtyListPath, fs, path);
+      
+      expect(result.success).toBe(true);
+      expect(result.entry.name).toBe('Sven'); // Should be trimmed
+      
+      const loaded = loadNaughtyList(testNaughtyListPath, fs);
+      expect(loaded.naughtyList[0].name).toBe('Sven');
+    });
   });
 
   describe('removeFromNaughtyList', () => {
@@ -208,15 +242,42 @@ describe('Naughty List Functions', () => {
       expect(loaded.naughtyList).toHaveLength(3);
     });
 
-    it('should handle case-sensitive matching', () => {
+    it('should handle case-insensitive matching', () => {
+      // Should find 'David' when searching for 'david' (case-insensitive)
       const result = removeFromNaughtyList('david', testNaughtyListPath, fs, path);
       
-      expect(result.success).toBe(false);
-      expect(result.found).toBe(false);
+      expect(result.success).toBe(true);
+      expect(result.removed).toBe(true);
+      expect(result.message).toBe('david removed from naughty list');
       
-      // Verify list remains unchanged
+      // Verify 'David' was actually removed from list
       const loaded = loadNaughtyList(testNaughtyListPath, fs);
-      expect(loaded.naughtyList).toHaveLength(3);
+      expect(loaded.naughtyList).toHaveLength(2);
+      expect(loaded.naughtyList.some(entry => entry.name.toLowerCase() === 'david')).toBe(false);
+    });
+
+    it('should validate empty name input', () => {
+      const result = removeFromNaughtyList('', testNaughtyListPath, fs, path);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Name cannot be empty');
+      expect(result.found).toBe(false);
+    });
+
+    it('should validate null name input', () => {
+      const result = removeFromNaughtyList(null, testNaughtyListPath, fs, path);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Name cannot be empty');
+      expect(result.found).toBe(false);
+    });
+
+    it('should validate whitespace-only name input', () => {
+      const result = removeFromNaughtyList('   ', testNaughtyListPath, fs, path);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Name cannot be empty');
+      expect(result.found).toBe(false);
     });
   });
 
@@ -252,9 +313,24 @@ describe('Naughty List Functions', () => {
       expect(isOnNaughtyList('Sven', testNaughtyListPath, fs)).toBe(false);
     });
 
-    it('should handle case-sensitive matching', () => {
-      expect(isOnNaughtyList('sven', testNaughtyListPath, fs)).toBe(false);
-      expect(isOnNaughtyList('DAVID', testNaughtyListPath, fs)).toBe(false);
+    it('should handle case-insensitive matching', () => {
+      // Should find 'Sven' when searching for 'sven' and 'David' when searching for 'DAVID'
+      expect(isOnNaughtyList('sven', testNaughtyListPath, fs)).toBe(true);
+      expect(isOnNaughtyList('DAVID', testNaughtyListPath, fs)).toBe(true);
+      expect(isOnNaughtyList('alice', testNaughtyListPath, fs)).toBe(true);
+      expect(isOnNaughtyList('ALICE', testNaughtyListPath, fs)).toBe(true);
+    });
+
+    it('should handle empty name input', () => {
+      expect(isOnNaughtyList('', testNaughtyListPath, fs)).toBe(false);
+    });
+
+    it('should handle null name input', () => {
+      expect(isOnNaughtyList(null, testNaughtyListPath, fs)).toBe(false);
+    });
+
+    it('should handle whitespace-only name input', () => {
+      expect(isOnNaughtyList('   ', testNaughtyListPath, fs)).toBe(false);
     });
   });
 
