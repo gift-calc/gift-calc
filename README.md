@@ -82,6 +82,11 @@ alias gcalc='docker run --rm -v ~/.config/gift-calc:/home/nodejs/.config/gift-ca
 - `GIFT_CALC_VARIATION`: Variation percentage (overrides config file)  
 - `GIFT_CALC_FRIEND_SCORE`: Friend score 1-10 (overrides config file)
 
+**Docker Features:**
+- Multi-platform support (AMD64 and ARM64)
+- Automatic security updates via Alpine Linux
+- Non-root user for enhanced security
+
 ### From Source
 
 1. Clone the repository:
