@@ -102,7 +102,9 @@ export function parseArguments(args, defaultConfig = {}) {
     showHelp: false,
     useMaximum: false,
     useMinimum: false,
-    command: null
+    command: null,
+    matchPreviousGift: false,
+    matchRecipientName: null
   };
   
   // Check for special commands first
@@ -257,6 +259,17 @@ export function parseArguments(args, defaultConfig = {}) {
     
     if (arg === '--no-log') {
       config.logToFile = false;
+    }
+    
+    if (arg === '-m' || arg === '--match') {
+      config.matchPreviousGift = true;
+      
+      // Check if next argument is a name (not starting with '-' and exists)
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        config.matchRecipientName = nextArg;
+        i++; // Skip the next argument as it's the recipient name
+      }
     }
   }
   
@@ -420,6 +433,8 @@ OPTIONS:
   -c, --currency <code>       Currency code to display (default: SEK)
   -d, --decimals <0-10>       Number of decimal places (default: 2)
   --name <name>               Name of gift recipient to include in output
+  -m, --match [name]          Match previous gift amount. If name provided, matches
+                              last gift for that recipient. Otherwise matches last gift.
   --max                       Set amount to maximum (baseValue + 20%)
   --min                       Set amount to minimum (baseValue - 20%)
   --asshole                   Set nice score to 0 (no gift)
@@ -442,6 +457,7 @@ CONFIGURATION:
   Config is stored at: ~/.config/gift-calc/.config.json
   Naughty list is stored at: ~/.config/gift-calc/naughty-list.json
   Budgets are stored at: ~/.config/gift-calc/budgets.json
+  Gift calculations are logged at: ~/.config/gift-calc/gift-calc.log
   Command line options override config file defaults.
   
   NAUGHTY LIST:
@@ -453,6 +469,12 @@ CONFIGURATION:
     Budget periods cannot overlap. Each budget has a unique time range.
     Status shows ACTIVE (current), FUTURE (upcoming), or EXPIRED (past).
     Budget amounts are displayed in your configured currency (default: SEK).
+    
+  GIFT MATCHING:
+    Gift calculations are automatically logged when using the default logging.
+    Use -m/--match to repeat previous gift amounts from the log instead of calculating new ones.
+    Match by recipient name or use the most recent gift overall.
+    Gift matching uses the existing calculation log for a single source of truth.
     
   AUTOMATIC BUDGET TRACKING:
     When an active budget exists, budget tracking is automatically displayed
@@ -480,6 +502,13 @@ EXAMPLES:
   gift-calc -b 100 --max                # Set to maximum amount (120)
   gcalc -b 100 --min                    # Set to minimum amount (80)
   gift-calc --help                      # Shows this help message
+  
+  GIFT MATCHING EXAMPLES:
+  gift-calc -m                          # Match the last gift amount (any recipient)
+  gcalc --match                         # Same as above (short form)
+  gift-calc --match David               # Match last gift amount for David
+  gcalc -m Alice                        # Match last gift amount for Alice
+  gift-calc -m Bob --copy               # Match Bob's last gift and copy to clipboard
   
   NAUGHTY LIST EXAMPLES:
   gift-calc naughty-list Sven           # Add Sven to naughty list
@@ -1437,4 +1466,98 @@ export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainin
   }
   
   return summary;
+}
+
+/**
+ * Format a matched gift for display
+ * @param {Object} gift - Gift object from log parsing
+ * @returns {string} Formatted string describing the matched gift
+ */
+export function formatMatchedGift(gift) {
+  const date = new Date(gift.timestamp).toLocaleDateString();
+  let matchText = `Matched previous gift: ${gift.amount} ${gift.currency}`;
+  
+  if (gift.recipient) {
+    matchText += ` for ${gift.recipient}`;
+  }
+  
+  matchText += ` (${date})`;
+  return matchText;
+}
+
+/**
+ * Find the last gift from the log file
+ * @param {string} logPath - Path to the log file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object|null} Last gift object or null if no valid entries found
+ */
+export function findLastGiftFromLog(logPath, fsModule) {
+  if (!fsModule) {
+    throw new Error('fs module is required for log operations');
+  }
+  
+  // Check if log file exists
+  if (!fsModule.existsSync(logPath)) {
+    return null;
+  }
+  
+  let logContent;
+  try {
+    logContent = fsModule.readFileSync(logPath, 'utf8');
+  } catch (error) {
+    return null;
+  }
+  
+  const lines = logContent.split('\n').filter(line => line.trim());
+  
+  // Search backwards through the log for the most recent valid entry
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const entry = parseLogEntry(lines[i]);
+    if (entry) {
+      return entry;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Find the last gift for a specific recipient from the log file
+ * @param {string} recipientName - Name of the recipient to search for
+ * @param {string} logPath - Path to the log file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object|null} Last gift object for recipient or null if not found
+ */
+export function findLastGiftForRecipientFromLog(recipientName, logPath, fsModule) {
+  if (!fsModule) {
+    throw new Error('fs module is required for log operations');
+  }
+  
+  if (!recipientName) {
+    return null;
+  }
+  
+  // Check if log file exists
+  if (!fsModule.existsSync(logPath)) {
+    return null;
+  }
+  
+  let logContent;
+  try {
+    logContent = fsModule.readFileSync(logPath, 'utf8');
+  } catch (error) {
+    return null;
+  }
+  
+  const lines = logContent.split('\n').filter(line => line.trim());
+  
+  // Search backwards through the log for the most recent gift to this recipient
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const entry = parseLogEntry(lines[i]);
+    if (entry && entry.recipient && entry.recipient.toLowerCase() === recipientName.toLowerCase()) {
+      return entry;
+    }
+  }
+  
+  return null;
 }
