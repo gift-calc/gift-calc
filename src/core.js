@@ -154,7 +154,11 @@ export function parseArguments(args, defaultConfig = {}) {
     if (arg === '-b' || arg === '--basevalue') {
       const nextArg = args[i + 1];
       if (nextArg && !isNaN(nextArg)) {
-        config.baseValue = parseFloat(nextArg);
+        const baseValue = parseFloat(nextArg);
+        if (baseValue <= 0) {
+          throw new Error('-b/--basevalue must be positive');
+        }
+        config.baseValue = baseValue;
         i++; // Skip the next argument as it's the value
       } else {
         throw new Error('-b/--basevalue requires a numeric value');

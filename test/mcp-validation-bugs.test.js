@@ -72,14 +72,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently returns successful calculation instead of validation error
-      expect(response.result).toBeDefined();
-      expect(response.result.content[0].text).toMatch(/-.*SEK/);  // Negative amount
-      
-      // EXPECTED BEHAVIOR: Should return validation error
-      // expect(response.error).toBeDefined();
-      // expect(response.error.code).toBe(-32602);
-      // expect(response.error.message).toContain('baseValue');
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('baseValue');
     });
     
     it('should REJECT variation > 100 but currently ACCEPTS it', async () => {
@@ -100,11 +96,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently accepts invalid variation
-      expect(response.result).toBeDefined();
-      expect(response.result.content[0].text).toMatch(/\d+.*SEK/);
-      
-      // EXPECTED: Should return validation error for variation > 100
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('variation');
     });
     
     it('should REJECT friendScore > 10 but currently ACCEPTS it', async () => {
@@ -125,9 +120,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently accepts invalid friend score
-      expect(response.result).toBeDefined();
-      expect(response.result.content[0].text).toMatch(/\d+.*SEK/);
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('friendScore');
     });
     
     it('should REJECT friendScore = 0 but currently ACCEPTS it', async () => {
@@ -148,8 +144,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently accepts friendScore = 0
-      expect(response.result).toBeDefined();
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('friendScore');
     });
   });
 
@@ -171,10 +169,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently creates budget with negative amount
-      expect(response.result).toBeDefined();
-      expect(response.result.content[0].text).toContain('Budget');
-      expect(response.result.content[0].text).toContain('added successfully');
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('amount');
       
       // EXPECTED: Should return validation error for negative amount
     });
@@ -196,8 +194,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently accepts limit > 50
-      expect(response.result).toBeDefined();
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('limit');
     });
     
     it('should REJECT limit = 0 but currently ACCEPTS it', async () => {
@@ -215,8 +215,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently accepts limit = 0
-      expect(response.result).toBeDefined();
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('limit');
     });
   });
 
@@ -236,9 +238,10 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
       
       const { response } = await sendMCPRequest(message);
       
-      // BUG: Currently accepts decimals > 10
-      expect(response.result).toBeDefined();
-      expect(response.result.content[0].text).toContain('decimals: 15');
+      // FIXED: Now returns validation error as expected
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe(-32602);
+      expect(response.error.message).toContain('decimals');
     });
   });
 

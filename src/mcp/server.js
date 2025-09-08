@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { validateToolArguments as validateToolArgumentsProtocol } from './protocol.js';
 
 // MCP Server Configuration
 export const SERVER_INFO = {
@@ -195,7 +196,7 @@ export class MCPServer {
 
     // Validate arguments against schema
     if (tool.inputSchema) {
-      const validation = this.validateToolArguments(args, tool.inputSchema);
+      const validation = this.validateToolArgumentsLocal(args, tool.inputSchema);
       if (!validation.valid) {
         this.sendError(id, -32602, `Invalid arguments: ${validation.error}`);
         return;
@@ -210,16 +211,8 @@ export class MCPServer {
     }
   }
 
-  validateToolArguments(args, schema) {
-    if (schema.type === 'object' && schema.required) {
-      for (const field of schema.required) {
-        if (args[field] === undefined || args[field] === null) {
-          return { valid: false, error: `Missing required field: ${field}` };
-        }
-      }
-    }
-    
-    return { valid: true };
+  validateToolArgumentsLocal(args, schema) {
+    return validateToolArgumentsProtocol(args, schema);
   }
 
   registerTool(name, toolDefinition) {

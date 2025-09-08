@@ -187,10 +187,10 @@ describe('MCP Server Tests', () => {
         required: ['required_field']
       };
 
-      const validation1 = server.validateToolArguments({ required_field: 'test' }, schema);
+      const validation1 = server.validateToolArgumentsLocal({ required_field: 'test' }, schema);
       expect(validation1.valid).toBe(true);
 
-      const validation2 = server.validateToolArguments({}, schema);
+      const validation2 = server.validateToolArgumentsLocal({}, schema);
       expect(validation2.valid).toBe(false);
       expect(validation2.error).toContain('required_field');
     });

@@ -43,21 +43,17 @@ describe('CRITICAL BUG - CLI Validation Issues', () => {
     it('should REJECT negative base value but currently ACCEPTS it', async () => {
       const result = await executeCLI(['-b', '-50', '-r', '20', '-f', '5', '-n', '5']);
       
-      // BUG: Currently accepts negative base value and calculates negative gift
-      expect(result.code).toBe(0);  // Success code 
-      expect(result.stdout).toMatch(/-.*SEK/);  // Negative amount in output
-      
-      // EXPECTED BEHAVIOR: Should exit with error code and show validation message
-      // expect(result.code).not.toBe(0);
-      // expect(result.stderr).toContain('basevalue must be positive');
+      // FIXED: Now rejects negative base value as expected
+      expect(result.code).not.toBe(0);  // Error code
+      expect(result.stderr).toContain('basevalue must be positive');
     });
     
     it('should REJECT zero base value but currently ACCEPTS it', async () => {
       const result = await executeCLI(['-b', '0', '-r', '20', '-f', '5', '-n', '5']);
       
-      // BUG: Currently accepts zero base value
-      expect(result.code).toBe(0);
-      expect(result.stdout).toMatch(/0.*SEK/);  // Zero or very small amount
+      // FIXED: Now rejects zero base value as expected
+      expect(result.code).not.toBe(0);
+      expect(result.stderr).toContain('basevalue must be positive');
       
       // EXPECTED: Should require positive base value
     });
