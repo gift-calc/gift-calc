@@ -38,6 +38,8 @@ gift-calc -b 100 -f 8 --name "Alice"
 - 📱 Simple command-line interface with dual command names
 - 👮 Naughty list management (add/remove/list/search) with zero gift override
 - 🎅 Automatic naughty list detection with "on naughty list!" notifications
+- 🎁 Gift matching functionality to repeat previous gift amounts
+- 💰 Automatic budget tracking with real-time spending analysis
 
 ## Installation
 
@@ -94,6 +96,11 @@ gift-calc --asshole --name "Kevin"
 # Maximum amount for best friend
 gift-calc -b 100 --max --name "Diana"
 
+# Gift matching examples
+gift-calc --match                      # Match last gift amount (any recipient)
+gcalc -m Alice                        # Match last gift for Alice
+gift-calc --match Bob --copy           # Match Bob's last gift and copy to clipboard
+
 # Naughty list management
 gift-calc naughty-list Sven           # Add to naughty list
 gift-calc naughty-list list           # List naughty people
@@ -105,7 +112,7 @@ gift-calc naughty-list --remove Sven  # Remove from naughty list
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-b, --basevalue` | Base gift amount | 70 |
-| `-v, --variation` | Variation percentage | 20 |
+| `-r, --variation` | Variation percentage | 20 |
 | `-f, --friend-score` | Relationship closeness (1-10) | 5 |
 | `-n, --nice-score` | Person's niceness (0-10) | 5 |
 | `-c, --currency` | Currency code | SEK |
@@ -113,6 +120,7 @@ gift-calc naughty-list --remove Sven  # Remove from naughty list
 | `--max` | Set to maximum amount | - |
 | `--min` | Set to minimum amount | - |
 | `--asshole` | Set nice score to 0 (no gift) | - |
+| `-m, --match [name]` | Match previous gift amount (optionally for specific recipient) | - |
 | `--no-log` | Disable logging | false |
 | `--copy` | Copy amount to clipboard | false |
 
@@ -151,6 +159,47 @@ gcalc nl list                      # List all naughty people
 gift-calc naughty-list --remove <name>  # Remove person
 gcalc nl --search <term>           # Search naughty list
 ```
+
+## Budget Management
+
+Manage gift budgets with automatic tracking and real-time spending analysis:
+
+```bash
+# Budget management
+gift-calc budget add <amount> <from-date> <to-date> [description]  # Add new budget
+gcalc b list                                                      # List all budgets  
+gift-calc budget status                                          # Show current budget status
+gift-calc budget edit <id> [options]                             # Edit existing budget
+
+# Budget examples
+gift-calc budget add 5000 2024-12-01 2024-12-31 "Christmas gifts"      # Add Christmas budget
+gcalc b add 2000 2024-11-01 2024-11-30 "Birthday gifts"                # Add birthday budget
+gift-calc budget edit 1 --amount 6000 --description "Updated Christmas" # Edit budget
+gcalc b edit 1 --to-date 2025-01-15                                     # Extend budget
+```
+
+### Automatic Budget Tracking
+
+When an active budget exists, budget tracking is automatically displayed after each gift calculation:
+
+```bash
+# Normal calculation with budget tracking
+gift-calc -b 100 --name "Alice"
+# Output: 99.34 SEK for Alice
+#         Budget: 1000 SEK | Used: 345.59 SEK | Remaining: 654.41 SEK | Ends: 2024-12-31 (25 days)
+
+# Budget exceeded warning
+gift-calc -b 200 --name "Bob"  
+# Output: 201.25 SEK for Bob
+#         ⚠️  BUDGET EXCEEDED! Budget: 1000 SEK | Used: 1096.73 SEK | Over by: 96.73 SEK | Ends: 2024-12-31 (25 days)
+```
+
+**Features:**
+- **Real-time tracking**: Automatic display after each calculation
+- **Currency filtering**: Only amounts matching budget currency are included
+- **Multi-currency support**: Different currencies tracked separately with warnings
+- **Status indicators**: Clear visual feedback for budget status
+- **Flexible periods**: Support for overlapping and non-overlapping budget periods
 
 ## Development
 
