@@ -102,7 +102,9 @@ export function parseArguments(args, defaultConfig = {}) {
     showHelp: false,
     useMaximum: false,
     useMinimum: false,
-    command: null
+    command: null,
+    matchPreviousGift: false,
+    matchRecipientName: null
   };
   
   // Check for special commands first
@@ -257,6 +259,17 @@ export function parseArguments(args, defaultConfig = {}) {
     
     if (arg === '--no-log') {
       config.logToFile = false;
+    }
+    
+    if (arg === '-m' || arg === '--match') {
+      config.matchPreviousGift = true;
+      
+      // Check if next argument is a name (not starting with '-' and exists)
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        config.matchRecipientName = nextArg;
+        i++; // Skip the next argument as it's the recipient name
+      }
     }
   }
   
@@ -420,6 +433,8 @@ OPTIONS:
   -c, --currency <code>       Currency code to display (default: SEK)
   -d, --decimals <0-10>       Number of decimal places (default: 2)
   --name <name>               Name of gift recipient to include in output
+  -m, --match [name]          Match previous gift amount. If name provided, matches
+                              last gift for that recipient. Otherwise matches last gift.
   --max                       Set amount to maximum (baseValue + 20%)
   --min                       Set amount to minimum (baseValue - 20%)
   --asshole                   Set nice score to 0 (no gift)
@@ -442,6 +457,7 @@ CONFIGURATION:
   Config is stored at: ~/.config/gift-calc/.config.json
   Naughty list is stored at: ~/.config/gift-calc/naughty-list.json
   Budgets are stored at: ~/.config/gift-calc/budgets.json
+  Gift history is stored at: ~/.config/gift-calc/gift-history.json
   Command line options override config file defaults.
   
   NAUGHTY LIST:
@@ -453,6 +469,12 @@ CONFIGURATION:
     Budget periods cannot overlap. Each budget has a unique time range.
     Status shows ACTIVE (current), FUTURE (upcoming), or EXPIRED (past).
     Budget amounts are displayed in your configured currency (default: SEK).
+    
+  GIFT MATCHING:
+    Every calculated gift amount is automatically saved to gift history.
+    Use -m/--match to repeat previous gift amounts instead of calculating new ones.
+    Match by recipient name or use the most recent gift overall.
+    Gift history includes amount, currency, recipient, and timestamp.
     
   AUTOMATIC BUDGET TRACKING:
     When an active budget exists, budget tracking is automatically displayed
@@ -480,6 +502,13 @@ EXAMPLES:
   gift-calc -b 100 --max                # Set to maximum amount (120)
   gcalc -b 100 --min                    # Set to minimum amount (80)
   gift-calc --help                      # Shows this help message
+  
+  GIFT MATCHING EXAMPLES:
+  gift-calc -m                          # Match the last gift amount (any recipient)
+  gcalc --match                         # Same as above (short form)
+  gift-calc --match David               # Match last gift amount for David
+  gcalc -m Alice                        # Match last gift amount for Alice
+  gift-calc -m Bob --copy               # Match Bob's last gift and copy to clipboard
   
   NAUGHTY LIST EXAMPLES:
   gift-calc naughty-list Sven           # Add Sven to naughty list
@@ -1437,4 +1466,202 @@ export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainin
   }
   
   return summary;
+}
+
+// Gift History Management Functions
+// These functions require Node.js modules and should only be used in Node.js contexts
+
+/**
+ * Get the path to the gift history JSON file
+ * @param {object} pathModule - Node.js path module
+ * @param {object} osModule - Node.js os module
+ * @returns {string} Path to gift history file
+ */
+export function getGiftHistoryPath(pathModule, osModule) {
+  if (!pathModule || !osModule) {
+    throw new Error('Path and os modules are required for gift history operations');
+  }
+  return pathModule.join(osModule.homedir(), '.config', 'gift-calc', 'gift-history.json');
+}
+
+/**
+ * Load the gift history from file
+ * @param {string} giftHistoryPath - Path to gift history file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object} Object containing giftHistory array and loaded boolean
+ */
+export function loadGiftHistory(giftHistoryPath, fsModule) {
+  if (!fsModule) {
+    throw new Error('fs module is required for gift history operations');
+  }
+  
+  if (fsModule.existsSync(giftHistoryPath)) {
+    try {
+      const giftHistoryData = fsModule.readFileSync(giftHistoryPath, 'utf8');
+      const parsed = JSON.parse(giftHistoryData);
+      return { 
+        giftHistory: parsed.giftHistory || [], 
+        loaded: true 
+      };
+    } catch (error) {
+      console.error(`Warning: Could not parse gift history file at ${giftHistoryPath}. Starting with empty history.`);
+      return { giftHistory: [], loaded: false };
+    }
+  }
+  return { giftHistory: [], loaded: false };
+}
+
+/**
+ * Save the gift history to file
+ * @param {Array} giftHistory - Array of gift history objects
+ * @param {string} giftHistoryPath - Path to gift history file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {boolean} True if save was successful
+ */
+export function saveGiftHistory(giftHistory, giftHistoryPath, fsModule, pathModule) {
+  if (!fsModule || !pathModule) {
+    throw new Error('fs and path modules are required for gift history operations');
+  }
+  
+  try {
+    // Ensure directory exists
+    const configDir = pathModule.dirname(giftHistoryPath);
+    if (!fsModule.existsSync(configDir)) {
+      fsModule.mkdirSync(configDir, { recursive: true });
+    }
+    
+    const data = { giftHistory };
+    fsModule.writeFileSync(giftHistoryPath, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error(`Error saving gift history: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Add a gift to the history
+ * @param {number} amount - Gift amount
+ * @param {string} currency - Currency code
+ * @param {string|null} recipient - Optional recipient name
+ * @param {string} giftHistoryPath - Path to gift history file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {Object} Result object with success flag and message
+ */
+export function addGiftToHistory(amount, currency, recipient, giftHistoryPath, fsModule, pathModule) {
+  const { giftHistory: currentHistory } = loadGiftHistory(giftHistoryPath, fsModule);
+  
+  // Create new gift entry
+  const newGift = {
+    amount,
+    currency,
+    recipient: recipient || null,
+    timestamp: new Date().toISOString()
+  };
+  
+  currentHistory.push(newGift);
+  const saved = saveGiftHistory(currentHistory, giftHistoryPath, fsModule, pathModule);
+  
+  if (saved) {
+    return {
+      success: true,
+      message: 'Gift added to history',
+      gift: newGift
+    };
+  } else {
+    return {
+      success: false,
+      message: 'Failed to save gift history'
+    };
+  }
+}
+
+/**
+ * Find the last gift from history
+ * @param {string} giftHistoryPath - Path to gift history file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object|null} Last gift object or null if no history
+ */
+export function findLastGift(giftHistoryPath, fsModule) {
+  const { giftHistory } = loadGiftHistory(giftHistoryPath, fsModule);
+  
+  if (giftHistory.length === 0) {
+    return null;
+  }
+  
+  // Return the most recent gift (last in array)
+  return giftHistory[giftHistory.length - 1];
+}
+
+/**
+ * Find the last gift for a specific recipient
+ * @param {string} recipientName - Name of the recipient to search for
+ * @param {string} giftHistoryPath - Path to gift history file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object|null} Last gift object for recipient or null if not found
+ */
+export function findLastGiftForRecipient(recipientName, giftHistoryPath, fsModule) {
+  const { giftHistory } = loadGiftHistory(giftHistoryPath, fsModule);
+  
+  if (!recipientName || giftHistory.length === 0) {
+    return null;
+  }
+  
+  // Search backwards through history for the most recent gift to this recipient
+  for (let i = giftHistory.length - 1; i >= 0; i--) {
+    const gift = giftHistory[i];
+    if (gift.recipient && gift.recipient.toLowerCase() === recipientName.toLowerCase()) {
+      return gift;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Format a matched gift for display
+ * @param {Object} gift - Gift object from history
+ * @returns {string} Formatted string describing the matched gift
+ */
+export function formatMatchedGift(gift) {
+  const date = new Date(gift.timestamp).toLocaleDateString();
+  let matchText = `Matched previous gift: ${gift.amount} ${gift.currency}`;
+  
+  if (gift.recipient) {
+    matchText += ` for ${gift.recipient}`;
+  }
+  
+  matchText += ` (${date})`;
+  return matchText;
+}
+
+/**
+ * Prompt user if they want to generate a new gift when no match is found
+ * @param {string|null} recipientName - Optional recipient name for the message
+ * @param {object} readlineModule - Node.js readline module
+ * @returns {Promise<boolean>} True if user wants to generate new gift
+ */
+export async function promptForNewGift(recipientName, readlineModule) {
+  if (!readlineModule) {
+    throw new Error('readline module is required for interactive prompts');
+  }
+  
+  const rl = readlineModule.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const question = recipientName 
+    ? `No previous gift found for ${recipientName}. Generate a new gift amount? (y/n): `
+    : `No previous gift found. Generate a new gift amount? (y/n): `;
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      const response = answer.toLowerCase().trim();
+      resolve(response === 'y' || response === 'yes');
+    });
+  });
 }

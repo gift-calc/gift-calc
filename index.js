@@ -26,7 +26,13 @@ import {
   formatBudgetAmount,
   parseLogEntry,
   calculateBudgetUsage,
-  formatBudgetSummary
+  formatBudgetSummary,
+  getGiftHistoryPath,
+  addGiftToHistory,
+  findLastGift,
+  findLastGiftForRecipient,
+  formatMatchedGift,
+  promptForNewGift
 } from './src/core.js';
 
 // Config utilities
@@ -333,14 +339,66 @@ function displayLog() {
   }
 }
 
-// Check if recipient is on naughty list (overrides all other calculations)
+// Main execution function
+async function main() {
+  // Handle gift matching if requested
 let suggestedAmount;
 let naughtyListNote = '';
-if (parsedConfig.recipientName) {
-  const naughtyListPath = getNaughtyListPath(path, os);
-  if (isOnNaughtyList(parsedConfig.recipientName, naughtyListPath, fs)) {
-    suggestedAmount = 0;
-    naughtyListNote = ' (on naughty list!)';
+let matchedGiftText = '';
+
+if (parsedConfig.matchPreviousGift) {
+  const giftHistoryPath = getGiftHistoryPath(path, os);
+  
+  let matchedGift = null;
+  if (parsedConfig.matchRecipientName) {
+    // Match last gift for specific recipient
+    matchedGift = findLastGiftForRecipient(parsedConfig.matchRecipientName, giftHistoryPath, fs);
+  } else {
+    // Match last gift overall
+    matchedGift = findLastGift(giftHistoryPath, fs);
+  }
+  
+  if (matchedGift) {
+    // Found a match - use the matched amount
+    suggestedAmount = matchedGift.amount;
+    parsedConfig.currency = matchedGift.currency; // Use the currency from matched gift
+    matchedGiftText = formatMatchedGift(matchedGift);
+  } else {
+    // No match found - prompt user
+    const recipientForPrompt = parsedConfig.matchRecipientName || null;
+    try {
+      const shouldGenerateNew = await promptForNewGift(recipientForPrompt, readline);
+      if (!shouldGenerateNew) {
+        console.log('No gift generated.');
+        process.exit(0);
+      }
+      // Continue to normal calculation if user wants new gift
+    } catch (error) {
+      console.error('Error with interactive prompt:', error.message);
+      process.exit(1);
+    }
+  }
+}
+
+// If not matching or no match found (and user wants new gift), proceed with calculation
+if (!parsedConfig.matchPreviousGift || !matchedGiftText) {
+  // Check if recipient is on naughty list (overrides all other calculations)
+  if (parsedConfig.recipientName) {
+    const naughtyListPath = getNaughtyListPath(path, os);
+    if (isOnNaughtyList(parsedConfig.recipientName, naughtyListPath, fs)) {
+      suggestedAmount = 0;
+      naughtyListNote = ' (on naughty list!)';
+    } else {
+      suggestedAmount = calculateFinalAmount(
+        parsedConfig.baseValue, 
+        parsedConfig.variation, 
+        parsedConfig.friendScore, 
+        parsedConfig.niceScore, 
+        parsedConfig.decimals,
+        parsedConfig.useMaximum,
+        parsedConfig.useMinimum
+      );
+    }
   } else {
     suggestedAmount = calculateFinalAmount(
       parsedConfig.baseValue, 
@@ -352,21 +410,33 @@ if (parsedConfig.recipientName) {
       parsedConfig.useMinimum
     );
   }
-} else {
-  suggestedAmount = calculateFinalAmount(
-    parsedConfig.baseValue, 
-    parsedConfig.variation, 
-    parsedConfig.friendScore, 
-    parsedConfig.niceScore, 
-    parsedConfig.decimals,
-    parsedConfig.useMaximum,
-    parsedConfig.useMinimum
-  );
 }
 
 // Format and display output
 const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
 console.log(output);
+
+// Display matched gift information if applicable
+if (matchedGiftText) {
+  console.log(matchedGiftText);
+}
+
+// Add gift to history (only if it's a new calculation, not a match)
+if (!matchedGiftText && suggestedAmount > 0) {
+  try {
+    const giftHistoryPath = getGiftHistoryPath(path, os);
+    addGiftToHistory(
+      suggestedAmount, 
+      parsedConfig.currency, 
+      parsedConfig.recipientName, 
+      giftHistoryPath, 
+      fs, 
+      path
+    );
+  } catch (error) {
+    // Silently ignore history saving errors to avoid disrupting main functionality
+  }
+}
 
 // Display budget tracking if active budget exists
 try {
@@ -622,3 +692,12 @@ function handleBudgetCommand(config) {
       process.exit(1);
   }
 }
+
+// Close the main function
+}
+
+// Call the main function and handle any errors
+main().catch(error => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});
