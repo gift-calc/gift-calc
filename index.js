@@ -336,61 +336,98 @@ function displayLog() {
   }
 }
 
-// Handle gift matching if requested
-let suggestedAmount;
-let matchedGiftText = '';
-let naughtyListNote = '';
+function determineGiftAmount(config) {
+  // Handle gift matching first - early return if successful
+  if (config.matchPreviousGift) {
+    const matchResult = handleGiftMatching(config);
+    if (matchResult.matched) {
+      return matchResult;
+    }
+  }
+  
+  // Handle normal calculation with naughty list check
+  return handleNormalCalculation(config);
+}
 
-if (parsedConfig.matchPreviousGift) {
+function handleGiftMatching(config) {
   const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
   
   let matchedGift = null;
-  if (parsedConfig.matchRecipientName) {
-    // Match last gift for specific recipient
-    matchedGift = findLastGiftForRecipientFromLog(parsedConfig.matchRecipientName, logPath, fs);
+  if (config.matchRecipientName) {
+    // Validate recipient name - handle edge cases
+    const recipientName = validateRecipientName(config.matchRecipientName);
+    if (recipientName) {
+      matchedGift = findLastGiftForRecipientFromLog(recipientName, logPath, fs);
+    }
   } else {
-    // Match last gift overall
     matchedGift = findLastGiftFromLog(logPath, fs);
   }
   
   if (matchedGift) {
-    // Found a match - use the matched amount but preserve user's currency preference
-    suggestedAmount = matchedGift.amount;
-    matchedGiftText = formatMatchedGift(matchedGift);
+    return {
+      matched: true,
+      amount: matchedGift.amount,
+      matchedGiftText: formatMatchedGift(matchedGift),
+      naughtyListNote: ''
+    };
   }
+  
+  return { matched: false };
 }
 
-// If not matching or no match found, proceed with normal calculation
-if (!matchedGiftText) {
-  // Check if recipient is on naughty list (overrides all other calculations)
-  if (parsedConfig.recipientName) {
-    const naughtyListPath = getNaughtyListPath(path, os);
-    if (isOnNaughtyList(parsedConfig.recipientName, naughtyListPath, fs)) {
-      suggestedAmount = 0;
-      naughtyListNote = ' (on naughty list!)';
-    } else {
-      suggestedAmount = calculateFinalAmount(
-        parsedConfig.baseValue, 
-        parsedConfig.variation, 
-        parsedConfig.friendScore, 
-        parsedConfig.niceScore, 
-        parsedConfig.decimals,
-        parsedConfig.useMaximum,
-        parsedConfig.useMinimum
-      );
-    }
-  } else {
-    suggestedAmount = calculateFinalAmount(
-      parsedConfig.baseValue, 
-      parsedConfig.variation, 
-      parsedConfig.friendScore, 
-      parsedConfig.niceScore, 
-      parsedConfig.decimals,
-      parsedConfig.useMaximum,
-      parsedConfig.useMinimum
-    );
-  }
+function validateRecipientName(name) {
+  // Handle edge cases for recipient names
+  if (typeof name !== 'string') return null;
+  
+  // Trim whitespace and check for empty string
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return null;
+  
+  // Return cleaned name (preserves special characters but ensures it's valid)
+  return trimmed;
 }
+
+function handleNormalCalculation(config) {
+  // Check naughty list first - early return if on list
+  if (config.recipientName) {
+    const recipientName = validateRecipientName(config.recipientName);
+    if (recipientName) {
+      const naughtyListPath = getNaughtyListPath(path, os);
+      if (isOnNaughtyList(recipientName, naughtyListPath, fs)) {
+        return {
+          matched: false,
+          amount: 0,
+          matchedGiftText: '',
+          naughtyListNote: ' (on naughty list!)'
+        };
+      }
+    }
+  }
+  
+  // Normal calculation
+  const amount = calculateFinalAmount(
+    config.baseValue, 
+    config.variation, 
+    config.friendScore, 
+    config.niceScore, 
+    config.decimals,
+    config.useMaximum,
+    config.useMinimum
+  );
+  
+  return {
+    matched: false,
+    amount: amount,
+    matchedGiftText: '',
+    naughtyListNote: ''
+  };
+}
+
+// Determine gift amount using clean, separated logic
+const result = determineGiftAmount(parsedConfig);
+const suggestedAmount = result.amount;
+const matchedGiftText = result.matchedGiftText;
+const naughtyListNote = result.naughtyListNote;
 
 // Format and display output
 const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
