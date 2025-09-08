@@ -1,3 +1,10 @@
+# [2.4.0](https://github.com/gift-calc/gift-calc/compare/v2.3.0...v2.4.0) (2025-09-08)
+
+
+### Features
+
+* Add gift matching functionality with history tracking ([#8](https://github.com/gift-calc/gift-calc/issues/8)) ([fe27ce3](https://github.com/gift-calc/gift-calc/commit/fe27ce3b6cab4576b68671b37b0dc959904f905d))
+
 # [2.3.0](https://github.com/gift-calc/gift-calc/compare/v2.2.2...v2.3.0) (2025-09-07)
 
 
