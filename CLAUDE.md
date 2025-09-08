@@ -63,15 +63,18 @@ gcalc -b 50 -f 8
 
 ## Architecture
 
-**Single-file CLI structure** (`index.js`):
-- Pure Node.js CLI tool with no external dependencies
+**Modular CLI structure** (`index.js` + `src/core.js`):
+- Pure Node.js CLI tool with no external runtime dependencies
 - Uses native Node.js modules: `fs`, `path`, `os`, `readline`
+- Separates core logic from CLI interface for better testability
 
 **Key Components:**
 - **Config System**: Loads/saves user defaults from `~/.config/gift-calc/.config.json`
 - **Command Parser**: Manual argument parsing with support for `init-config` command
 - **Interactive Setup**: Uses `readline` for `init-config` prompts
-- **Algorithm**: `calculateGiftAmount()` applies variation and friend-score bias
+- **Algorithm**: `calculateFinalAmount()` applies variation and friend-score bias
+- **Core Logic**: `src/core.js` contains pure functions for calculations and parsing
+- **CLI Interface**: `index.js` handles command-line interface and file operations
 
 **Configuration Flow:**
 - Config loaded at startup via `loadConfig()`
@@ -139,4 +142,4 @@ For manual version control: `npm version patch|minor|major && git push origin ma
 - **Algorithm**: Friend score creates bias by adjusting random variation probability
 - **Error Handling**: Graceful fallback to defaults if config file is corrupted
 - **Help System**: Comprehensive help with examples for both command names
-- **Version Compatibility**: Requires Node.js >= 14.0.0
+- **Version Compatibility**: Requires Node.js >= 20.8.1
