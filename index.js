@@ -343,36 +343,59 @@ function displayLog() {
 function determineGiftAmount(config) {
   // Try gift matching first if requested
   if (config.matchPreviousGift) {
-    const logPath = getLogPath();
-    let matchedGift = null;
-    
-    if (config.matchRecipientName) {
-      const recipientName = validateRecipientName(config.matchRecipientName);
-      if (recipientName) {
-        matchedGift = findLastGiftForRecipientFromLog(recipientName, logPath, fs);
+    const matchResult = tryGiftMatching(config);
+    if (matchResult.found) {
+      // Apply business rules (naughty list) to matched recipient
+      const matchedRecipient = matchResult.gift.recipient;
+      if (matchedRecipient) {
+        const naughtyListPath = getNaughtyListPath(path, os);
+        if (isOnNaughtyList(matchedRecipient, naughtyListPath, fs)) {
+          // Return result with naughty list override but preserve matched gift info
+          return {
+            amount: 0,
+            currency: matchResult.gift.currency,
+            recipient: matchedRecipient,
+            isMatched: true,
+            matchedGift: matchResult.gift,
+            naughtyListOverride: true
+          };
+        }
       }
+      
+      // Return matched gift with preserved currency
+      return {
+        amount: matchResult.gift.amount,
+        currency: matchResult.gift.currency, // Preserve original currency!
+        recipient: matchResult.gift.recipient,
+        isMatched: true,
+        matchedGift: matchResult.gift
+      };
     } else {
-      matchedGift = findLastGiftFromLog(logPath, fs);
-    }
-    
-    if (matchedGift) {
-      return matchedGift.amount;
+      // No match found - return special value to indicate this
+      return null;
     }
   }
   
-  // Check naughty list
+  // Normal calculation path (not matching)
+  // Check naughty list for normal calculations
   if (config.recipientName) {
     const recipientName = validateRecipientName(config.recipientName);
     if (recipientName) {
       const naughtyListPath = getNaughtyListPath(path, os);
       if (isOnNaughtyList(recipientName, naughtyListPath, fs)) {
-        return 0;
+        return {
+          amount: 0,
+          currency: config.currency,
+          recipient: recipientName,
+          isMatched: false,
+          naughtyList: true
+        };
       }
     }
   }
   
   // Normal calculation
-  return calculateFinalAmount(
+  const calculatedAmount = calculateFinalAmount(
     config.baseValue, 
     config.variation, 
     config.friendScore, 
@@ -381,8 +404,46 @@ function determineGiftAmount(config) {
     config.useMaximum,
     config.useMinimum
   );
+  
+  return {
+    amount: calculatedAmount,
+    currency: config.currency,
+    recipient: config.recipientName,
+    isMatched: false
+  };
 }
 
+function tryGiftMatching(config) {
+  const logPath = getLogPath();
+  let matchedGift = null;
+  
+  if (config.matchRecipientName) {
+    const recipientName = validateRecipientName(config.matchRecipientName);
+    if (recipientName) {
+      matchedGift = findLastGiftForRecipientFromLog(recipientName, logPath, fs);
+    }
+  } else {
+    matchedGift = findLastGiftFromLog(logPath, fs);
+  }
+  
+  return {
+    found: matchedGift !== null,
+    gift: matchedGift
+  };
+}
+
+function handleNoMatchFound(config) {
+  if (config.matchRecipientName) {
+    const recipientName = validateRecipientName(config.matchRecipientName);
+    console.log(`No previous gift found for ${recipientName}.`);
+    
+    // Future enhancement: Interactive prompt
+    // console.log('Generate new gift? (y/n):');
+    // For now, just indicate no match found
+  } else {
+    console.log('No previous gifts found in log.');
+  }
+}
 
 function validateRecipientName(name) {
   return name?.trim() || null;
@@ -422,17 +483,20 @@ function getNaughtyListInfo(config) {
   return isOnNaughtyList(recipientName, naughtyListPath, fs) ? ' (on naughty list!)' : '';
 }
 
-function displayResults(amount, config) {
-  // Get additional information
-  const matchedGiftText = getMatchInfo(config);
-  const naughtyListNote = getNaughtyListInfo(config);
+function displayResults(result, config) {
+  // Format naughty list note
+  let naughtyListNote = '';
+  if (result.naughtyList || result.naughtyListOverride) {
+    naughtyListNote = ' (on naughty list!)';
+  }
   
-  // Format and display main output
-  const output = formatOutput(amount, config.currency, config.recipientName) + naughtyListNote;
+  // Format and display main output using result's currency and recipient
+  const output = formatOutput(result.amount, result.currency, result.recipient) + naughtyListNote;
   console.log(output);
   
   // Display matched gift information if applicable
-  if (matchedGiftText) {
+  if (result.isMatched && result.matchedGift) {
+    const matchedGiftText = formatMatchedGift(result.matchedGift);
     console.log(matchedGiftText);
   }
   
@@ -443,7 +507,7 @@ function displayResults(amount, config) {
     
     if (budgetStatus.hasActiveBudget) {
       const logPath = getLogPath();
-      const budgetCurrency = config.currency; // Use current calculation currency
+      const budgetCurrency = result.currency; // Use actual gift currency
       
       // Calculate budget usage with currency filtering
       const usage = calculateBudgetUsage(logPath, budgetStatus.budget, budgetCurrency, fs);
@@ -452,7 +516,7 @@ function displayResults(amount, config) {
         // Format and display budget summary
         const budgetSummary = formatBudgetSummary(
           usage.totalSpent,
-          amount,
+          result.amount,
           budgetStatus.budget.totalAmount,
           budgetStatus.remainingDays,
           budgetStatus.budget.toDate,
@@ -482,12 +546,19 @@ function displayResults(amount, config) {
 
 
 // Calculate and display gift amount using simplified architecture
-const suggestedAmount = determineGiftAmount(parsedConfig);
-displayResults(suggestedAmount, parsedConfig);
+const result = determineGiftAmount(parsedConfig);
+
+// Handle "no match found" scenario
+if (result === null) {
+  handleNoMatchFound(parsedConfig);
+  process.exit(0);
+}
+
+displayResults(result, parsedConfig);
 
 // Copy to clipboard if requested
 if (parsedConfig.copyToClipboard) {
-  const copyText = suggestedAmount.toString();
+  const copyText = result.amount.toString();
   const platform = os.platform();
   
   let copyCommand;
@@ -513,8 +584,14 @@ if (parsedConfig.copyToClipboard) {
 if (parsedConfig.logToFile) {
   const logPath = getLogPath();
   const timestamp = new Date().toISOString();
-  const naughtyListNote = getNaughtyListInfo(parsedConfig);
-  const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
+  
+  // Format naughty list note
+  let naughtyListNote = '';
+  if (result.naughtyList || result.naughtyListOverride) {
+    naughtyListNote = ' (on naughty list!)';
+  }
+  
+  const output = formatOutput(result.amount, result.currency, result.recipient) + naughtyListNote;
   const logEntry = `${timestamp} ${output}\n`;
   
   // Ensure log directory exists

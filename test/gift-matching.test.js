@@ -298,12 +298,13 @@ describe('CLI Integration Tests', () => {
     expect(result.stdout).toContain('Matched previous gift: ' + expectedAliceAmount);
   });
 
-  test('should fall back to normal calculation when no match found', () => {
-    // Try to match when no log exists - need to specify --name separately since -m Alice consumes the Alice as recipient name
-    const result = runCLI('-m Alice --name Alice -b 100 --max -d 0');
+  test('should show no match found message when no match exists', () => {
+    // Try to match when no log exists
+    const result = runCLI('-m Alice -b 100 --max -d 0');
     expect(result.success).toBe(true);
-    expect(result.stdout).toBe('120 SEK for Alice'); // Normal calculation
+    expect(result.stdout).toBe('No previous gift found for Alice.'); // Proper no-match message
     expect(result.stdout).not.toContain('Matched previous gift');
+    expect(result.stdout).not.toContain('SEK'); // No calculation fallback
   });
 
   test('should show help text with matching options', () => {
