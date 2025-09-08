@@ -1,3 +1,9 @@
+# Gift Calculator Changelog
+
+📖 **View Full Release History**: [GitHub Releases](https://github.com/gift-calc/gift-calc/releases)
+
+---
+
 # [2.4.0](https://github.com/gift-calc/gift-calc/compare/v2.3.0...v2.4.0) (2025-09-08)
 
 
