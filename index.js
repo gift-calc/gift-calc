@@ -45,6 +45,10 @@ function ensureConfigDir() {
   }
 }
 
+function getLogPath() {
+  return path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+}
+
 function loadConfig() {
   const config = {};
   
@@ -310,7 +314,7 @@ async function initConfig() {
 }
 
 function displayLog() {
-  const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+  const logPath = getLogPath();
   
   // Check if log file exists
   if (!fs.existsSync(logPath)) {
@@ -337,75 +341,38 @@ function displayLog() {
 }
 
 function determineGiftAmount(config) {
-  // Handle gift matching first - early return if successful
+  // Try gift matching first if requested
   if (config.matchPreviousGift) {
-    const matchResult = handleGiftMatching(config);
-    if (matchResult.matched) {
-      return matchResult;
+    const logPath = getLogPath();
+    let matchedGift = null;
+    
+    if (config.matchRecipientName) {
+      const recipientName = validateRecipientName(config.matchRecipientName);
+      if (recipientName) {
+        matchedGift = findLastGiftForRecipientFromLog(recipientName, logPath, fs);
+      }
+    } else {
+      matchedGift = findLastGiftFromLog(logPath, fs);
+    }
+    
+    if (matchedGift) {
+      return matchedGift.amount;
     }
   }
   
-  // Handle normal calculation with naughty list check
-  return handleNormalCalculation(config);
-}
-
-function handleGiftMatching(config) {
-  const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
-  
-  let matchedGift = null;
-  if (config.matchRecipientName) {
-    // Validate recipient name - handle edge cases
-    const recipientName = validateRecipientName(config.matchRecipientName);
-    if (recipientName) {
-      matchedGift = findLastGiftForRecipientFromLog(recipientName, logPath, fs);
-    }
-  } else {
-    matchedGift = findLastGiftFromLog(logPath, fs);
-  }
-  
-  if (matchedGift) {
-    return {
-      matched: true,
-      amount: matchedGift.amount,
-      matchedGiftText: formatMatchedGift(matchedGift),
-      naughtyListNote: ''
-    };
-  }
-  
-  return { matched: false };
-}
-
-function validateRecipientName(name) {
-  // Handle edge cases for recipient names
-  if (typeof name !== 'string') return null;
-  
-  // Trim whitespace and check for empty string
-  const trimmed = name.trim();
-  if (trimmed.length === 0) return null;
-  
-  // Return cleaned name (preserves special characters but ensures it's valid)
-  return trimmed;
-}
-
-function handleNormalCalculation(config) {
-  // Check naughty list first - early return if on list
+  // Check naughty list
   if (config.recipientName) {
     const recipientName = validateRecipientName(config.recipientName);
     if (recipientName) {
       const naughtyListPath = getNaughtyListPath(path, os);
       if (isOnNaughtyList(recipientName, naughtyListPath, fs)) {
-        return {
-          matched: false,
-          amount: 0,
-          matchedGiftText: '',
-          naughtyListNote: ' (on naughty list!)'
-        };
+        return 0;
       }
     }
   }
   
   // Normal calculation
-  const amount = calculateFinalAmount(
+  return calculateFinalAmount(
     config.baseValue, 
     config.variation, 
     config.friendScore, 
@@ -414,73 +381,109 @@ function handleNormalCalculation(config) {
     config.useMaximum,
     config.useMinimum
   );
-  
-  return {
-    matched: false,
-    amount: amount,
-    matchedGiftText: '',
-    naughtyListNote: ''
-  };
 }
 
-// Determine gift amount using clean, separated logic
-const result = determineGiftAmount(parsedConfig);
-const suggestedAmount = result.amount;
-const matchedGiftText = result.matchedGiftText;
-const naughtyListNote = result.naughtyListNote;
 
-// Format and display output
-const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
-console.log(output);
-
-
-// Display matched gift information if applicable
-if (matchedGiftText) {
-  console.log(matchedGiftText);
+function validateRecipientName(name) {
+  return name?.trim() || null;
 }
 
-// Display budget tracking if active budget exists
-try {
-  const budgetPath = getBudgetPath(path, os);
-  const budgetStatus = getBudgetStatus(budgetPath, fs);
+function getMatchInfo(config) {
+  if (!config.matchPreviousGift) {
+    return null;
+  }
   
-  if (budgetStatus.hasActiveBudget) {
-    const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
-    const budgetCurrency = parsedConfig.currency; // Use current calculation currency
+  const logPath = getLogPath();
+  let matchedGift = null;
+  
+  if (config.matchRecipientName) {
+    const recipientName = validateRecipientName(config.matchRecipientName);
+    if (recipientName) {
+      matchedGift = findLastGiftForRecipientFromLog(recipientName, logPath, fs);
+    }
+  } else {
+    matchedGift = findLastGiftFromLog(logPath, fs);
+  }
+  
+  return matchedGift ? formatMatchedGift(matchedGift) : null;
+}
+
+function getNaughtyListInfo(config) {
+  if (!config.recipientName) {
+    return '';
+  }
+  
+  const recipientName = validateRecipientName(config.recipientName);
+  if (!recipientName) {
+    return '';
+  }
+  
+  const naughtyListPath = getNaughtyListPath(path, os);
+  return isOnNaughtyList(recipientName, naughtyListPath, fs) ? ' (on naughty list!)' : '';
+}
+
+function displayResults(amount, config) {
+  // Get additional information
+  const matchedGiftText = getMatchInfo(config);
+  const naughtyListNote = getNaughtyListInfo(config);
+  
+  // Format and display main output
+  const output = formatOutput(amount, config.currency, config.recipientName) + naughtyListNote;
+  console.log(output);
+  
+  // Display matched gift information if applicable
+  if (matchedGiftText) {
+    console.log(matchedGiftText);
+  }
+  
+  // Display budget tracking if active budget exists
+  try {
+    const budgetPath = getBudgetPath(path, os);
+    const budgetStatus = getBudgetStatus(budgetPath, fs);
     
-    // Calculate budget usage with currency filtering
-    const usage = calculateBudgetUsage(logPath, budgetStatus.budget, budgetCurrency, fs);
-    
-    if (!usage.errorMessage) {
-      // Format and display budget summary
-      const budgetSummary = formatBudgetSummary(
-        usage.totalSpent,
-        suggestedAmount,
-        budgetStatus.budget.totalAmount,
-        budgetStatus.remainingDays,
-        budgetStatus.budget.toDate,
-        budgetCurrency,
-        usage.hasSkippedCurrencies
-      );
+    if (budgetStatus.hasActiveBudget) {
+      const logPath = getLogPath();
+      const budgetCurrency = config.currency; // Use current calculation currency
       
-      console.log(budgetSummary);
+      // Calculate budget usage with currency filtering
+      const usage = calculateBudgetUsage(logPath, budgetStatus.budget, budgetCurrency, fs);
       
-      // Display skipped currency details if any
-      if (usage.skippedEntries.length > 0) {
-        const skippedDetails = usage.skippedEntries
-          .map(entry => {
-            const recipientPart = entry.recipient ? ` (${entry.recipient})` : '';
-            return `${entry.amount} ${entry.currency} (${entry.date})${recipientPart}`;
-          })
-          .join(', ');
+      if (!usage.errorMessage) {
+        // Format and display budget summary
+        const budgetSummary = formatBudgetSummary(
+          usage.totalSpent,
+          amount,
+          budgetStatus.budget.totalAmount,
+          budgetStatus.remainingDays,
+          budgetStatus.budget.toDate,
+          budgetCurrency,
+          usage.hasSkippedCurrencies
+        );
         
-        console.log(`Note: Excluded from budget calculation: ${skippedDetails}`);
+        console.log(budgetSummary);
+        
+        // Display skipped currency details if any
+        if (usage.skippedEntries.length > 0) {
+          const skippedDetails = usage.skippedEntries
+            .map(entry => {
+              const recipientPart = entry.recipient ? ` (${entry.recipient})` : '';
+              return `${entry.amount} ${entry.currency} (${entry.date})${recipientPart}`;
+            })
+            .join(', ');
+          
+          console.log(`Note: Excluded from budget calculation: ${skippedDetails}`);
+        }
       }
     }
+  } catch (error) {
+    // Silently ignore budget tracking errors to avoid disrupting main functionality
   }
-} catch (error) {
-  // Silently ignore budget tracking errors to avoid disrupting main functionality
 }
+
+
+// Calculate and display gift amount using simplified architecture
+const suggestedAmount = determineGiftAmount(parsedConfig);
+displayResults(suggestedAmount, parsedConfig);
 
 // Copy to clipboard if requested
 if (parsedConfig.copyToClipboard) {
@@ -508,8 +511,10 @@ if (parsedConfig.copyToClipboard) {
 
 // Log to file if requested
 if (parsedConfig.logToFile) {
-  const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+  const logPath = getLogPath();
   const timestamp = new Date().toISOString();
+  const naughtyListNote = getNaughtyListInfo(parsedConfig);
+  const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
   const logEntry = `${timestamp} ${output}\n`;
   
   // Ensure log directory exists
