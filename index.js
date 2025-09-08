@@ -336,12 +336,10 @@ function displayLog() {
   }
 }
 
-// Main execution function
-function main() {
-  // Handle gift matching if requested
+// Handle gift matching if requested
 let suggestedAmount;
-let naughtyListNote = '';
 let matchedGiftText = '';
+let naughtyListNote = '';
 
 if (parsedConfig.matchPreviousGift) {
   const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
@@ -356,18 +354,14 @@ if (parsedConfig.matchPreviousGift) {
   }
   
   if (matchedGift) {
-    // Found a match - use the matched amount
+    // Found a match - use the matched amount but preserve user's currency preference
     suggestedAmount = matchedGift.amount;
-    parsedConfig.currency = matchedGift.currency; // Use the currency from matched gift
     matchedGiftText = formatMatchedGift(matchedGift);
-  } else {
-    // No match found - fall back to normal calculation
-    // This provides a simple, non-interactive experience
   }
 }
 
-// If not matching or no match found (and user wants new gift), proceed with calculation
-if (!parsedConfig.matchPreviousGift || !matchedGiftText) {
+// If not matching or no match found, proceed with normal calculation
+if (!matchedGiftText) {
   // Check if recipient is on naughty list (overrides all other calculations)
   if (parsedConfig.recipientName) {
     const naughtyListPath = getNaughtyListPath(path, os);
@@ -401,6 +395,7 @@ if (!parsedConfig.matchPreviousGift || !matchedGiftText) {
 // Format and display output
 const output = formatOutput(suggestedAmount, parsedConfig.currency, parsedConfig.recipientName) + naughtyListNote;
 console.log(output);
+
 
 // Display matched gift information if applicable
 if (matchedGiftText) {
@@ -662,13 +657,3 @@ function handleBudgetCommand(config) {
   }
 }
 
-// Close the main function
-}
-
-// Call the main function and handle any errors
-try {
-  main();
-} catch (error) {
-  console.error('Error:', error.message);
-  process.exit(1);
-}
