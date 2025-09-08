@@ -27,12 +27,9 @@ import {
   parseLogEntry,
   calculateBudgetUsage,
   formatBudgetSummary,
-  getGiftHistoryPath,
-  addGiftToHistory,
-  findLastGift,
-  findLastGiftForRecipient,
   formatMatchedGift,
-  promptForNewGift
+  findLastGiftFromLog,
+  findLastGiftForRecipientFromLog
 } from './src/core.js';
 
 // Config utilities
@@ -340,22 +337,22 @@ function displayLog() {
 }
 
 // Main execution function
-async function main() {
+function main() {
   // Handle gift matching if requested
 let suggestedAmount;
 let naughtyListNote = '';
 let matchedGiftText = '';
 
 if (parsedConfig.matchPreviousGift) {
-  const giftHistoryPath = getGiftHistoryPath(path, os);
+  const logPath = path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
   
   let matchedGift = null;
   if (parsedConfig.matchRecipientName) {
     // Match last gift for specific recipient
-    matchedGift = findLastGiftForRecipient(parsedConfig.matchRecipientName, giftHistoryPath, fs);
+    matchedGift = findLastGiftForRecipientFromLog(parsedConfig.matchRecipientName, logPath, fs);
   } else {
     // Match last gift overall
-    matchedGift = findLastGift(giftHistoryPath, fs);
+    matchedGift = findLastGiftFromLog(logPath, fs);
   }
   
   if (matchedGift) {
@@ -364,19 +361,8 @@ if (parsedConfig.matchPreviousGift) {
     parsedConfig.currency = matchedGift.currency; // Use the currency from matched gift
     matchedGiftText = formatMatchedGift(matchedGift);
   } else {
-    // No match found - prompt user
-    const recipientForPrompt = parsedConfig.matchRecipientName || null;
-    try {
-      const shouldGenerateNew = await promptForNewGift(recipientForPrompt, readline);
-      if (!shouldGenerateNew) {
-        console.log('No gift generated.');
-        process.exit(0);
-      }
-      // Continue to normal calculation if user wants new gift
-    } catch (error) {
-      console.error('Error with interactive prompt:', error.message);
-      process.exit(1);
-    }
+    // No match found - fall back to normal calculation
+    // This provides a simple, non-interactive experience
   }
 }
 
@@ -419,23 +405,6 @@ console.log(output);
 // Display matched gift information if applicable
 if (matchedGiftText) {
   console.log(matchedGiftText);
-}
-
-// Add gift to history (only if it's a new calculation, not a match)
-if (!matchedGiftText && suggestedAmount > 0) {
-  try {
-    const giftHistoryPath = getGiftHistoryPath(path, os);
-    addGiftToHistory(
-      suggestedAmount, 
-      parsedConfig.currency, 
-      parsedConfig.recipientName, 
-      giftHistoryPath, 
-      fs, 
-      path
-    );
-  } catch (error) {
-    // Silently ignore history saving errors to avoid disrupting main functionality
-  }
 }
 
 // Display budget tracking if active budget exists
@@ -697,7 +666,9 @@ function handleBudgetCommand(config) {
 }
 
 // Call the main function and handle any errors
-main().catch(error => {
+try {
+  main();
+} catch (error) {
   console.error('Error:', error.message);
   process.exit(1);
-});
+}

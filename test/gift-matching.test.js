@@ -6,19 +6,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import {
-  getGiftHistoryPath,
-  loadGiftHistory,
-  saveGiftHistory,
-  addGiftToHistory,
-  findLastGift,
-  findLastGiftForRecipient,
+  findLastGiftFromLog,
+  findLastGiftForRecipientFromLog,
   formatMatchedGift,
   parseArguments
 } from '../src/core.js';
 
 const CLI_PATH = path.join(process.cwd(), 'index.js');
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'gift-calc');
-const GIFT_HISTORY_PATH = path.join(CONFIG_DIR, 'gift-history.json');
+const LOG_PATH = path.join(CONFIG_DIR, 'gift-calc.log');
 
 // Helper function to run CLI commands
 function runCLI(args = '', options = {}) {
@@ -42,22 +38,22 @@ function runCLI(args = '', options = {}) {
 // Helper to clean up test files
 function cleanup() {
   try {
-    if (fs.existsSync(GIFT_HISTORY_PATH)) fs.unlinkSync(GIFT_HISTORY_PATH);
+    if (fs.existsSync(LOG_PATH)) fs.unlinkSync(LOG_PATH);
   } catch (e) {
     // Ignore cleanup errors
   }
 }
 
-// Helper to create test gift history
-function createTestGiftHistory(gifts) {
+// Helper to create test log entries
+function createTestLogFile(entries) {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
   }
-  const data = { giftHistory: gifts };
-  fs.writeFileSync(GIFT_HISTORY_PATH, JSON.stringify(data, null, 2));
+  const logContent = entries.join('\n') + '\n';
+  fs.writeFileSync(LOG_PATH, logContent);
 }
 
-describe('Gift History Core Functions', () => {
+describe('Log-Based Gift Matching Core Functions', () => {
   beforeEach(() => {
     cleanup();
   });
@@ -66,140 +62,139 @@ describe('Gift History Core Functions', () => {
     cleanup();
   });
 
-  describe('Gift History Path and Loading', () => {
-    test('should get correct gift history path', () => {
-      const giftHistoryPath = getGiftHistoryPath(path, os);
-      expect(giftHistoryPath).toBe(GIFT_HISTORY_PATH);
+  describe('findLastGiftFromLog', () => {
+    test('should return null when log file does not exist', () => {
+      const lastGift = findLastGiftFromLog(LOG_PATH, fs);
+      expect(lastGift).toBe(null);
     });
 
-    test('should load empty history when file does not exist', () => {
-      const { giftHistory, loaded } = loadGiftHistory(GIFT_HISTORY_PATH, fs);
-      expect(giftHistory).toEqual([]);
-      expect(loaded).toBe(false);
+    test('should return null when log file is empty', () => {
+      createTestLogFile([]);
+      const lastGift = findLastGiftFromLog(LOG_PATH, fs);
+      expect(lastGift).toBe(null);
     });
 
-    test('should load existing gift history', () => {
-      const testGifts = [
-        { amount: 100, currency: 'SEK', recipient: 'Alice', timestamp: '2023-12-01T10:00:00.000Z' },
-        { amount: 75, currency: 'USD', recipient: null, timestamp: '2023-12-02T11:00:00.000Z' }
+    test('should find the last gift from log file', () => {
+      const testEntries = [
+        '2023-12-01T10:00:00.000Z 100.50 SEK for Alice',
+        '2023-12-02T11:00:00.000Z 75.25 USD',
+        '2023-12-03T12:00:00.000Z 95.75 EUR for Bob'
       ];
-      createTestGiftHistory(testGifts);
+      createTestLogFile(testEntries);
 
-      const { giftHistory, loaded } = loadGiftHistory(GIFT_HISTORY_PATH, fs);
-      expect(giftHistory).toEqual(testGifts);
-      expect(loaded).toBe(true);
-    });
-
-    test('should handle corrupted gift history file', () => {
-      if (!fs.existsSync(CONFIG_DIR)) {
-        fs.mkdirSync(CONFIG_DIR, { recursive: true });
-      }
-      fs.writeFileSync(GIFT_HISTORY_PATH, 'invalid json');
-
-      const { giftHistory, loaded } = loadGiftHistory(GIFT_HISTORY_PATH, fs);
-      expect(giftHistory).toEqual([]);
-      expect(loaded).toBe(false);
-    });
-  });
-
-  describe('Gift History Saving and Adding', () => {
-    test('should save gift history successfully', () => {
-      const testGifts = [
-        { amount: 123, currency: 'EUR', recipient: 'Bob', timestamp: '2023-12-03T12:00:00.000Z' }
-      ];
-      
-      const result = saveGiftHistory(testGifts, GIFT_HISTORY_PATH, fs, path);
-      expect(result).toBe(true);
-      
-      const saved = JSON.parse(fs.readFileSync(GIFT_HISTORY_PATH, 'utf8'));
-      expect(saved.giftHistory).toEqual(testGifts);
-    });
-
-    test('should add gift to history', () => {
-      const result = addGiftToHistory(150, 'USD', 'Charlie', GIFT_HISTORY_PATH, fs, path);
-      expect(result.success).toBe(true);
-      expect(result.gift.amount).toBe(150);
-      expect(result.gift.currency).toBe('USD');
-      expect(result.gift.recipient).toBe('Charlie');
-      expect(result.gift.timestamp).toBeDefined();
-
-      const { giftHistory } = loadGiftHistory(GIFT_HISTORY_PATH, fs);
-      expect(giftHistory).toHaveLength(1);
-      expect(giftHistory[0].amount).toBe(150);
-    });
-
-    test('should add gift without recipient', () => {
-      const result = addGiftToHistory(90, 'SEK', null, GIFT_HISTORY_PATH, fs, path);
-      expect(result.success).toBe(true);
-      expect(result.gift.recipient).toBe(null);
-    });
-  });
-
-  describe('Gift Finding Functions', () => {
-    beforeEach(() => {
-      const testGifts = [
-        { amount: 80, currency: 'SEK', recipient: 'Alice', timestamp: '2023-12-01T10:00:00.000Z' },
-        { amount: 120, currency: 'USD', recipient: 'Bob', timestamp: '2023-12-02T11:00:00.000Z' },
-        { amount: 95, currency: 'EUR', recipient: 'Alice', timestamp: '2023-12-03T12:00:00.000Z' },
-        { amount: 200, currency: 'SEK', recipient: null, timestamp: '2023-12-04T13:00:00.000Z' }
-      ];
-      createTestGiftHistory(testGifts);
-    });
-
-    test('should find last gift overall', () => {
-      const lastGift = findLastGift(GIFT_HISTORY_PATH, fs);
+      const lastGift = findLastGiftFromLog(LOG_PATH, fs);
       expect(lastGift).not.toBe(null);
-      expect(lastGift.amount).toBe(200);
-      expect(lastGift.currency).toBe('SEK');
+      expect(lastGift.amount).toBe(95.75);
+      expect(lastGift.currency).toBe('EUR');
+      expect(lastGift.recipient).toBe('Bob');
+      expect(lastGift.timestamp).toEqual(new Date('2023-12-03T12:00:00.000Z'));
+    });
+
+    test('should find last gift without recipient', () => {
+      const testEntries = [
+        '2023-12-01T10:00:00.000Z 100.50 SEK for Alice',
+        '2023-12-02T11:00:00.000Z 75.25 USD'
+      ];
+      createTestLogFile(testEntries);
+
+      const lastGift = findLastGiftFromLog(LOG_PATH, fs);
+      expect(lastGift).not.toBe(null);
+      expect(lastGift.amount).toBe(75.25);
+      expect(lastGift.currency).toBe('USD');
       expect(lastGift.recipient).toBe(null);
     });
 
+    test('should ignore malformed log entries', () => {
+      const testEntries = [
+        '2023-12-01T10:00:00.000Z 100.50 SEK for Alice',
+        'invalid log entry',
+        '2023-12-03T12:00:00.000Z 95.75 EUR for Bob'
+      ];
+      createTestLogFile(testEntries);
+
+      const lastGift = findLastGiftFromLog(LOG_PATH, fs);
+      expect(lastGift).not.toBe(null);
+      expect(lastGift.amount).toBe(95.75);
+      expect(lastGift.recipient).toBe('Bob');
+    });
+
+    test('should handle naughty list entries', () => {
+      const testEntries = [
+        '2023-12-01T10:00:00.000Z 100.50 SEK for Alice',
+        '2023-12-02T11:00:00.000Z 0 SEK for Charlie (on naughty list!)'
+      ];
+      createTestLogFile(testEntries);
+
+      const lastGift = findLastGiftFromLog(LOG_PATH, fs);
+      expect(lastGift).not.toBe(null);
+      expect(lastGift.amount).toBe(0);
+      expect(lastGift.recipient).toBe('Charlie');
+    });
+  });
+
+  describe('findLastGiftForRecipientFromLog', () => {
+    beforeEach(() => {
+      const testEntries = [
+        '2023-12-01T10:00:00.000Z 80.00 SEK for Alice',
+        '2023-12-02T11:00:00.000Z 120.00 USD for Bob',
+        '2023-12-03T12:00:00.000Z 95.50 EUR for Alice',
+        '2023-12-04T13:00:00.000Z 200.00 SEK'
+      ];
+      createTestLogFile(testEntries);
+    });
+
     test('should find last gift for specific recipient', () => {
-      const aliceGift = findLastGiftForRecipient('Alice', GIFT_HISTORY_PATH, fs);
+      const aliceGift = findLastGiftForRecipientFromLog('Alice', LOG_PATH, fs);
       expect(aliceGift).not.toBe(null);
-      expect(aliceGift.amount).toBe(95);
+      expect(aliceGift.amount).toBe(95.50);
       expect(aliceGift.currency).toBe('EUR');
       expect(aliceGift.recipient).toBe('Alice');
     });
 
-    test('should find last gift case insensitive', () => {
-      const bobGift = findLastGiftForRecipient('bob', GIFT_HISTORY_PATH, fs);
+    test('should find gift case insensitive', () => {
+      const bobGift = findLastGiftForRecipientFromLog('bob', LOG_PATH, fs);
       expect(bobGift).not.toBe(null);
       expect(bobGift.recipient).toBe('Bob');
+      expect(bobGift.amount).toBe(120.00);
     });
 
     test('should return null when no gift found for recipient', () => {
-      const charlieGift = findLastGiftForRecipient('Charlie', GIFT_HISTORY_PATH, fs);
+      const charlieGift = findLastGiftForRecipientFromLog('Charlie', LOG_PATH, fs);
       expect(charlieGift).toBe(null);
     });
 
-    test('should return null when history is empty', () => {
+    test('should return null when recipient name is empty', () => {
+      const emptyGift = findLastGiftForRecipientFromLog('', LOG_PATH, fs);
+      expect(emptyGift).toBe(null);
+    });
+
+    test('should return null when log file does not exist', () => {
       cleanup();
-      const lastGift = findLastGift(GIFT_HISTORY_PATH, fs);
-      expect(lastGift).toBe(null);
+      const gift = findLastGiftForRecipientFromLog('Alice', LOG_PATH, fs);
+      expect(gift).toBe(null);
     });
   });
 
-  describe('Gift Formatting', () => {
+  describe('formatMatchedGift', () => {
     test('should format matched gift with recipient', () => {
       const gift = {
-        amount: 125,
+        amount: 125.50,
         currency: 'USD',
         recipient: 'Alice',
-        timestamp: '2023-12-01T10:00:00.000Z'
+        timestamp: new Date('2023-12-01T10:00:00.000Z')
       };
 
       const formatted = formatMatchedGift(gift);
-      expect(formatted).toContain('Matched previous gift: 125 USD for Alice');
+      expect(formatted).toContain('Matched previous gift: 125.5 USD for Alice');
       expect(formatted).toContain('(12/1/2023)');
     });
 
     test('should format matched gift without recipient', () => {
       const gift = {
-        amount: 88,
+        amount: 88.00,
         currency: 'SEK',
         recipient: null,
-        timestamp: '2023-12-02T15:30:00.000Z'
+        timestamp: new Date('2023-12-02T15:30:00.000Z')
       };
 
       const formatted = formatMatchedGift(gift);
@@ -260,20 +255,19 @@ describe('CLI Integration Tests', () => {
     cleanup();
   });
 
-  test('should generate and save gift to history', () => {
+  test('should generate and log gift', () => {
     const result = runCLI('-b 100 --name Alice');
     expect(result.success).toBe(true);
     expect(result.stdout).toMatch(/\d+(\.\d+)? SEK for Alice/);
 
-    // Check history was created
-    expect(fs.existsSync(GIFT_HISTORY_PATH)).toBe(true);
-    const { giftHistory } = loadGiftHistory(GIFT_HISTORY_PATH, fs);
-    expect(giftHistory).toHaveLength(1);
-    expect(giftHistory[0].recipient).toBe('Alice');
+    // Check that log file was created and has entry
+    expect(fs.existsSync(LOG_PATH)).toBe(true);
+    const logContent = fs.readFileSync(LOG_PATH, 'utf8');
+    expect(logContent).toContain('SEK for Alice');
   });
 
   test('should match previous gift without recipient name', () => {
-    // First, generate a gift to create history (use --max for deterministic result)
+    // First, generate a gift to create log entry (use --max for deterministic result)
     const firstResult = runCLI('-b 150 --max -d 0');
     expect(firstResult.success).toBe(true);
     const expectedAmount = '180'; // 150 * 1.2 = 180
@@ -302,6 +296,14 @@ describe('CLI Integration Tests', () => {
     expect(result.stdout).toContain(expectedAliceAmount);
     expect(result.stdout).toContain('for Alice');
     expect(result.stdout).toContain('Matched previous gift: ' + expectedAliceAmount);
+  });
+
+  test('should fall back to normal calculation when no match found', () => {
+    // Try to match when no log exists - need to specify --name separately since -m Alice consumes the Alice as recipient name
+    const result = runCLI('-m Alice --name Alice -b 100 --max -d 0');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toBe('120 SEK for Alice'); // Normal calculation
+    expect(result.stdout).not.toContain('Matched previous gift');
   });
 
   test('should show help text with matching options', () => {
