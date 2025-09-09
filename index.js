@@ -627,6 +627,9 @@ function handleNaughtyListCommand(config) {
     case 'add':
       const addResult = addToNaughtyList(config.name, naughtyListPath, fs, path);
       console.log(addResult.message);
+      if (!addResult.success) {
+        process.exit(1);
+      }
       break;
       
     case 'remove':
@@ -726,6 +729,9 @@ function handleBudgetCommand(config) {
         path
       );
       console.log(addResult.message);
+      if (!addResult.success) {
+        process.exit(1);
+      }
       break;
       
     case 'edit':
