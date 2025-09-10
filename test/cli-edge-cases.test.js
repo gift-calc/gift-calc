@@ -15,15 +15,19 @@ describe('CLI Edge Cases', () => {
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gift-calc-cli-edge-test-'));
-    originalHome = process.env.HOME;
-    process.env.HOME = tempDir;
+    originalHome = process.env?.HOME;
+    if (process.env) {
+      process.env.HOME = tempDir;
+    }
   });
 
   afterEach(() => {
-    if (originalHome !== undefined) {
-      process.env.HOME = originalHome;
-    } else {
-      delete process.env.HOME;
+    if (process.env) {
+      if (originalHome !== undefined) {
+        process.env.HOME = originalHome;
+      } else if ('HOME' in process.env) {
+        delete process.env.HOME;
+      }
     }
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
