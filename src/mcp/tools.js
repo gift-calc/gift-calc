@@ -121,7 +121,7 @@ export function registerAllTools(server) {
         giftAmount = calculateFinalAmount(baseValue, variation, friendScore, niceScore, decimals, useMaximum, useMinimum);
       }
 
-      const output = formatOutput(giftAmount, currency, recipientName) + notes;
+      const output = formatOutput(giftAmount, currency, recipientName, decimals) + notes;
 
       return {
         content: [

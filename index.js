@@ -491,7 +491,7 @@ function displayResults(result, config) {
   }
   
   // Format and display main output using result's currency and recipient
-  const output = formatOutput(result.amount, result.currency, result.recipient) + naughtyListNote;
+  const output = formatOutput(result.amount, result.currency, result.recipient, config.decimals) + naughtyListNote;
   console.log(output);
   
   // Display matched gift information if applicable
@@ -591,7 +591,7 @@ if (parsedConfig.logToFile) {
     naughtyListNote = ' (on naughty list!)';
   }
   
-  const output = formatOutput(result.amount, result.currency, result.recipient) + naughtyListNote;
+  const output = formatOutput(result.amount, result.currency, result.recipient, parsedConfig.decimals) + naughtyListNote;
   const logEntry = `${timestamp} ${output}\n`;
   
   // Ensure log directory exists

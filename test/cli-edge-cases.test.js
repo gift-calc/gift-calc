@@ -20,7 +20,11 @@ describe('CLI Edge Cases', () => {
   });
 
   afterEach(() => {
-    process.env.HOME = originalHome;
+    if (originalHome !== undefined) {
+      process.env.HOME = originalHome;
+    } else {
+      delete process.env.HOME;
+    }
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
