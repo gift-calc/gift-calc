@@ -38,7 +38,7 @@ describe('CLI Edge Cases', () => {
     test('should return exit code 1 on validation errors', async () => {
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '-b', '-50'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         cli.on('exit', (code) => {
@@ -52,7 +52,7 @@ describe('CLI Edge Cases', () => {
     test('should return exit code 0 on successful calculations', async () => {
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '-b', '100', '--no-log'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         cli.on('exit', (code) => {
@@ -66,7 +66,7 @@ describe('CLI Edge Cases', () => {
     test('should return exit code 1 on budget validation errors', async () => {
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', 'budget', 'add', '0', '2024-01-01', '2024-01-02'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let errorOutput = '';
@@ -86,7 +86,7 @@ describe('CLI Edge Cases', () => {
     test('should return exit code 1 on naughty list validation errors', async () => {
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', 'naughty-list', ''], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let errorOutput = '';
@@ -111,7 +111,7 @@ describe('CLI Edge Cases', () => {
       for (let i = 0; i < 10; i++) {
         const promise = new Promise((resolve) => {
           const cli = spawn('node', ['index.js', '-b', '100', '--no-log'], {
-            cwd: process.cwd()
+            cwd: process.cwd?.() || '.'
           });
 
           let output = '';
@@ -140,7 +140,7 @@ describe('CLI Edge Cases', () => {
     test('should display version without errors', async () => {
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '--version'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let output = '';
@@ -160,7 +160,7 @@ describe('CLI Edge Cases', () => {
     test('should display help without errors', async () => {
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '--help'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let output = '';
@@ -196,7 +196,7 @@ describe('CLI Edge Cases', () => {
 
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '--no-log'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let output = '';
@@ -220,7 +220,7 @@ describe('CLI Edge Cases', () => {
       // CLI should still work even if there are extra directories
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '--no-log'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let output = '';
@@ -243,7 +243,7 @@ describe('CLI Edge Cases', () => {
       const longName = 'A'.repeat(1000);
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '-b', '100', '--name', longName, '--no-log'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let output = '';
@@ -264,7 +264,7 @@ describe('CLI Edge Cases', () => {
       const specialName = 'Test User åäö @#$%^&*()';
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '-b', '100', '--name', specialName, '--no-log'], {
-          cwd: process.cwd()
+          cwd: process.cwd?.() || '.'
         });
 
         let output = '';
