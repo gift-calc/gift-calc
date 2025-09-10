@@ -10,10 +10,10 @@ export default {
     include: ['test/**/*.test.js'],
     
     // Run tests sequentially to avoid file system conflicts
-    pool: 'forks',
+    pool: 'threads',
     poolOptions: {
-      forks: {
-        singleFork: true
+      threads: {
+        singleThread: true
       }
     },
     
