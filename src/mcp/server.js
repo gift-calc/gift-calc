@@ -28,12 +28,16 @@ const registeredTools = new Map();
 
 // Helper functions
 export function getConfigPath() {
-  const configDir = path.join(os.homedir(), '.config', 'gift-calc');
+  // Use process.env.HOME if available (important for tests), otherwise fall back to os.homedir()
+  const homeDir = process.env.HOME || os.homedir();
+  const configDir = path.join(homeDir, '.config', 'gift-calc');
   return path.join(configDir, '.config.json');
 }
 
 export function getLogPath() {
-  return path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+  // Use process.env.HOME if available (important for tests), otherwise fall back to os.homedir()
+  const homeDir = process.env.HOME || os.homedir();
+  return path.join(homeDir, '.config', 'gift-calc', 'gift-calc.log');
 }
 
 export function loadConfig() {
