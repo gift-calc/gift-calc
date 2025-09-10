@@ -203,93 +203,9 @@ gift-calc -b 200 --name "Bob"
 
 ## MCP (Model Context Protocol) Support
 
-Gift-calc includes built-in MCP server support, enabling direct integration with AI assistants like Claude, GPT, and other LLMs. This allows AI assistants to use gift-calc tools directly in conversations.
+Gift-calc includes built-in MCP server support, enabling direct integration with AI assistants like Claude, GPT, and other LLMs. Use gift-calc tools directly in AI conversations for natural gift calculations, budget management, and naughty list operations.
 
-### What is MCP?
-
-The Model Context Protocol (MCP) is an open protocol developed by Anthropic that enables seamless integration between LLM applications and external tools. With MCP support, you can use gift-calc directly from within AI conversations.
-
-### Setup
-
-The MCP server is automatically included when you install gift-calc:
-
-```bash
-npm install -g gift-calc
-```
-
-### Using with Claude Desktop
-
-Add gift-calc to your Claude Desktop MCP configuration:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
-**Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "gift-calc": {
-      "command": "gift-calc-mcp",
-      "args": []
-    }
-  }
-}
-```
-
-### Using with Other MCP Clients
-
-For other MCP-compatible tools, run the server directly:
-
-```bash
-gift-calc-mcp
-```
-
-The server uses STDIO transport and follows the MCP 2025-06-18 specification.
-
-### Available MCP Tools
-
-| Tool Name | Description | Type |
-|-----------|-------------|------|
-| `calculate_gift_amount` | Calculate gift amount with all parameters | Read-only |
-| `match_previous_gift` | Match previous gift from calculation history | Read-only |
-| `check_naughty_list` | Check if someone is on the naughty list | Read-only |
-| `get_config` | Get current gift-calc configuration | Read-only |
-| `get_budget_status` | Show current budget status and progress | Read-only |
-| `get_calculation_history` | View recent gift calculations | Read-only |
-| `set_budget` | Add new budget for spending tracking | Destructive |
-| `add_to_naughty_list` | Add person to naughty list | Destructive |
-| `remove_from_naughty_list` | Remove person from naughty list | Destructive |
-| `init_config` | Initialize configuration with specified values | Destructive |
-
-### Example AI Conversations
-
-Once configured, you can have natural conversations with AI assistants:
-
-**User**: "Calculate a gift amount for my friend Alice. I usually spend around 100 SEK, and she's a good friend with a nice score of 8."
-
-**Claude**: *Uses calculate_gift_amount tool*  
-"I calculated a gift amount for Alice: **94.50 SEK for Alice**. This is based on a base value of 100 SEK with normal variation, factoring in that she's a good friend (nice score 8 gives a positive bias toward higher amounts)."
-
-**User**: "Add Bob to the naughty list, he was mean to me last week."
-
-**Claude**: *Uses add_to_naughty_list tool*  
-"😈 Bob has been added to the naughty list. Now if you calculate a gift for Bob, he'll automatically get 0 (no gift) regardless of other parameters."
-
-**User**: "What's my current budget status?"
-
-**Claude**: *Uses get_budget_status tool*  
-"📊 Active Budget: "Christmas gifts"  
-💰 Amount: 5000 (currency from config)  
-📅 Period: 2024-12-01 to 2024-12-31  
-⏰ Remaining: 15 days  
-📈 Total days: 31"
-
-### Security & Safety
-
-MCP tools are properly annotated for safety:
-- **Read-only tools**: Safe operations that don't modify any data
-- **Destructive tools**: Operations that modify files or configuration (require user consent in most MCP clients)
-
-All tools reuse the existing gift-calc core logic ensuring consistent behavior between CLI and MCP usage.
+📖 **Complete documentation**: [MCP.md](MCP.md) - installation, setup, troubleshooting, and examples
 
 ## Development
 
