@@ -92,7 +92,10 @@ The `mcp-server.js` file implements Model Context Protocol support for gift-calc
 ### MCP Architecture
 
 **File Structure:**
-- `mcp-server.js` - Main MCP server implementation (pure Node.js, no external deps)
+- `mcp-server.js` - Main MCP server entry point (pure Node.js, no external deps)
+- `src/mcp/server.js` - Core MCP server class and protocol handling
+- `src/mcp/tools.js` - Tool registration and handler implementations
+- `src/mcp/protocol.js` - Protocol utilities and message handling
 - Uses existing functions from `src/core.js` - no code duplication
 - Follows JSON-RPC 2.0 protocol with MCP 2025-06-18 specification
 - STDIO transport for maximum LLM compatibility
