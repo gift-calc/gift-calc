@@ -381,11 +381,11 @@ export function formatOutput(amount, currency, recipientName = null, decimals = 
   let formattedAmount;
   
   if (decimals !== null) {
-    if (amount % 1 === 0) {
-      // Whole number - never show trailing zeros
+    if (amount % 1 === 0 && decimals === 2) {
+      // Whole number with default decimals (2) - don't show trailing zeros
       formattedAmount = amount.toString();
     } else {
-      // Non-whole number - show with specified precision
+      // Either non-whole number or explicitly configured decimals - show with precision
       formattedAmount = amount.toFixed(decimals);
     }
   } else {
