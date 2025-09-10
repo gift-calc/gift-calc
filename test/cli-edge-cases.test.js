@@ -203,7 +203,7 @@ describe('CLI Edge Cases', () => {
       const result = await new Promise((resolve) => {
         const cli = spawn('node', ['index.js', '--no-log'], {
           cwd: process.cwd?.() || '.',
-          env: process.env
+          env: { ...process.env, HOME: tempDir }
         });
 
         let output = '';
