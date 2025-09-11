@@ -1,3 +1,10 @@
+## [2.4.1](https://github.com/gift-calc/gift-calc/compare/v2.4.0...v2.4.1) (2025-09-11)
+
+
+### Bug Fixes
+
+* ensure src directory is included in published npm package ([93946d1](https://github.com/gift-calc/gift-calc/commit/93946d15355ef847415c13c15ce7feaf04b90057))
+
 # Gift Calculator Changelog
 
 📖 **View Full Release History**: [GitHub Releases](https://github.com/gift-calc/gift-calc/releases)
