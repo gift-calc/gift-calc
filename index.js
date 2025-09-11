@@ -34,7 +34,9 @@ import {
 
 // Config utilities
 function getConfigPath() {
-  const configDir = path.join(os.homedir(), '.config', 'gift-calc');
+  // Use process.env.HOME if available (important for tests), otherwise fall back to os.homedir()
+  const homeDir = process.env.HOME || os.homedir();
+  const configDir = path.join(homeDir, '.config', 'gift-calc');
   return path.join(configDir, '.config.json');
 }
 
@@ -46,7 +48,9 @@ function ensureConfigDir() {
 }
 
 function getLogPath() {
-  return path.join(os.homedir(), '.config', 'gift-calc', 'gift-calc.log');
+  // Use process.env.HOME if available (important for tests), otherwise fall back to os.homedir()
+  const homeDir = process.env.HOME || os.homedir();
+  return path.join(homeDir, '.config', 'gift-calc', 'gift-calc.log');
 }
 
 function loadConfig() {
@@ -491,7 +495,7 @@ function displayResults(result, config) {
   }
   
   // Format and display main output using result's currency and recipient
-  const output = formatOutput(result.amount, result.currency, result.recipient) + naughtyListNote;
+  const output = formatOutput(result.amount, result.currency, result.recipient, config.decimals) + naughtyListNote;
   console.log(output);
   
   // Display matched gift information if applicable
@@ -591,7 +595,7 @@ if (parsedConfig.logToFile) {
     naughtyListNote = ' (on naughty list!)';
   }
   
-  const output = formatOutput(result.amount, result.currency, result.recipient) + naughtyListNote;
+  const output = formatOutput(result.amount, result.currency, result.recipient, parsedConfig.decimals) + naughtyListNote;
   const logEntry = `${timestamp} ${output}\n`;
   
   // Ensure log directory exists
@@ -627,6 +631,9 @@ function handleNaughtyListCommand(config) {
     case 'add':
       const addResult = addToNaughtyList(config.name, naughtyListPath, fs, path);
       console.log(addResult.message);
+      if (!addResult.success) {
+        process.exit(1);
+      }
       break;
       
     case 'remove':
@@ -726,6 +733,9 @@ function handleBudgetCommand(config) {
         path
       );
       console.log(addResult.message);
+      if (!addResult.success) {
+        process.exit(1);
+      }
       break;
       
     case 'edit':

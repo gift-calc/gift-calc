@@ -319,7 +319,7 @@ describe('Additional Coverage Tests', () => {
       
       const result2 = runCLI('-b 100 -d 5 --max --no-log');
       expect(result2.success).toBe(true);
-      expect(result2.stdout).toBe('120 SEK');
+      expect(result2.stdout).toBe('120.00000 SEK'); // Should show 5 decimal places when explicitly requested
     });
 
     test('should handle currency case conversion', () => {

@@ -260,8 +260,23 @@ function parseArguments(args, defaultConfig = {}) {
  * @param {string|null} recipientName - Optional recipient name
  * @returns {string} Formatted output string
  */
-function formatOutput(amount, currency, recipientName = null) {
-  let output = `${amount} ${currency}`;
+function formatOutput(amount, currency, recipientName = null, decimals = null) {
+  let formattedAmount;
+  
+  if (decimals !== null) {
+    if (amount % 1 === 0 && decimals === 2) {
+      // Whole number with default decimals (2) - don't show trailing zeros
+      formattedAmount = amount.toString();
+    } else {
+      // Either non-whole number or explicitly configured decimals - show with precision
+      formattedAmount = amount.toFixed(decimals);
+    }
+  } else {
+    // Backward compatibility - no decimals parameter provided
+    formattedAmount = amount.toString();
+  }
+  
+  let output = `${formattedAmount} ${currency}`;
   if (recipientName) {
     output += ` for ${recipientName}`;
   }

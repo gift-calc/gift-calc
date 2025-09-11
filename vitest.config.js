@@ -9,11 +9,13 @@ export default {
     // Test file patterns
     include: ['test/**/*.test.js'],
     
-    // Run tests sequentially to avoid file system conflicts
+    // Use forks pool but with maxForks: 1 to run sequentially
     pool: 'forks',
     poolOptions: {
       forks: {
-        singleFork: true
+        maxForks: 1,
+        minForks: 1,
+        isolate: true
       }
     },
     
@@ -35,6 +37,12 @@ export default {
     },
     
     // Clear mocks between tests
-    clearMocks: true
+    clearMocks: true,
+    
+    // Custom setup to handle process.exit issues
+    setupFiles: ['test/setup.js'],
+    
+    // Handle teardown better
+    teardownTimeout: 30000
   }
 };

@@ -154,7 +154,11 @@ export function parseArguments(args, defaultConfig = {}) {
     if (arg === '-b' || arg === '--basevalue') {
       const nextArg = args[i + 1];
       if (nextArg && !isNaN(nextArg)) {
-        config.baseValue = parseFloat(nextArg);
+        const baseValue = parseFloat(nextArg);
+        if (baseValue <= 0) {
+          throw new Error('-b/--basevalue must be positive');
+        }
+        config.baseValue = baseValue;
         i++; // Skip the next argument as it's the value
       } else {
         throw new Error('-b/--basevalue requires a numeric value');
@@ -370,10 +374,26 @@ export function parseNaughtyListArguments(args) {
  * @param {number} amount - Gift amount
  * @param {string} currency - Currency code
  * @param {string|null} recipientName - Optional recipient name
+ * @param {number} decimals - Number of decimal places to display (optional)
  * @returns {string} Formatted output string
  */
-export function formatOutput(amount, currency, recipientName = null) {
-  let output = `${amount} ${currency}`;
+export function formatOutput(amount, currency, recipientName = null, decimals = null) {
+  let formattedAmount;
+  
+  if (decimals !== null) {
+    if (amount % 1 === 0 && decimals === 2) {
+      // Whole number with default decimals (2) - don't show trailing zeros
+      formattedAmount = amount.toString();
+    } else {
+      // Either non-whole number or explicitly configured decimals - show with precision
+      formattedAmount = amount.toFixed(decimals);
+    }
+  } else {
+    // Backward compatibility - no decimals parameter provided
+    formattedAmount = amount.toString();
+  }
+  
+  let output = `${formattedAmount} ${currency}`;
   if (recipientName) {
     output += ` for ${recipientName}`;
   }

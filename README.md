@@ -201,6 +201,12 @@ gift-calc -b 200 --name "Bob"
 - **Status indicators**: Clear visual feedback for budget status
 - **Flexible periods**: Support for overlapping and non-overlapping budget periods
 
+## MCP (Model Context Protocol) Support
+
+Gift-calc includes built-in MCP server support, enabling direct integration with AI assistants like Claude, GPT, and other LLMs. Use gift-calc tools directly in AI conversations for natural gift calculations, budget management, and naughty list operations.
+
+📖 **Complete documentation**: [MCP.md](MCP.md) - installation, setup, troubleshooting, and examples
+
 ## Development
 
 ```bash
