@@ -9,13 +9,15 @@ export default {
     // Test file patterns
     include: ['test/**/*.test.js'],
     
-    // Run tests sequentially to avoid file system conflicts
+    // Run tests in main thread to avoid process isolation issues in CI
     pool: 'threads',
     poolOptions: {
       threads: {
         singleThread: true
       }
     },
+    // Disable isolation to prevent exit code issues
+    isolate: false,
     
     // Timeout for long-running CLI tests
     testTimeout: 10000,
