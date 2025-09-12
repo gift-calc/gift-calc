@@ -16,7 +16,7 @@ Systematically analyze failing tests, determine root causes, and implement clean
 ## Systematic Approach
 
 ### **Step 1: Execute Tests and Identify Failures**
-- Run the project's test suite to identify failing tests
+- Run the project's test suite using commands defined in CLAUDE.md
 - Gather detailed failure information and error messages
 - Document which specific tests are failing and why
 
@@ -90,9 +90,9 @@ Systematically analyze failing tests, determine root causes, and implement clean
 - Ensure test setup and teardown are appropriate
 
 ### **Step 6: Validation**
-- Run the specific fixed tests to verify they pass
-- Execute the full test suite to ensure no regressions
-- Verify test coverage remains adequate
+- Run the specific fixed tests using commands from CLAUDE.md
+- Execute the full test suite using commands from CLAUDE.md
+- Verify test coverage remains adequate using coverage commands from CLAUDE.md
 - Confirm all related functionality still works correctly
 
 ## Quality Principles

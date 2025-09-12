@@ -17,7 +17,7 @@ Launch three specialized sub-agents in parallel to execute the existing PR revie
 
 ```
 /pr-review 42
-/pr-review https://github.com/gift-calc/gift-calc/pull/15
+/pr-review https://github.com/owner/repo/pull/15
 /pr-review #23
 ```
 

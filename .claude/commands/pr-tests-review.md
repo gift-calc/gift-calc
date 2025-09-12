@@ -12,7 +12,7 @@ Conduct a comprehensive test review focusing on test coverage, quality, edge cas
 
 ```
 /pr-tests-review 42
-/pr-tests-review https://github.com/gift-calc/gift-calc/pull/15
+/pr-tests-review https://github.com/owner/repo/pull/15
 /pr-tests-review #23
 ```
 
@@ -36,7 +36,7 @@ Conduct a comprehensive test review focusing on test coverage, quality, edge cas
    - Identify test files and production code changes
 
 2. **Test Discovery**
-   - Locate all test files in the PR (*.test.js, *.spec.js, test/, etc.)
+   - Locate all test files in the PR using common patterns (test/, spec/, *test*, *spec*, etc.)
    - Identify which production code changes have corresponding tests
    - Map test files to the functionality they're testing
 

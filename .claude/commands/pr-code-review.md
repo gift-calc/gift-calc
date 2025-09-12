@@ -12,7 +12,7 @@ Conduct a comprehensive code review focusing on architecture, code structure, re
 
 ```
 /pr-code-review 42
-/pr-code-review https://github.com/gift-calc/gift-calc/pull/15
+/pr-code-review https://github.com/owner/repo/pull/15
 /pr-code-review #23
 ```
 

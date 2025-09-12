@@ -12,7 +12,7 @@ Conduct a comprehensive documentation review focusing on accuracy, completeness,
 
 ```
 /pr-docs-review 42
-/pr-docs-review https://github.com/gift-calc/gift-calc/pull/15
+/pr-docs-review https://github.com/owner/repo/pull/15
 /pr-docs-review #23
 ```
 
@@ -36,7 +36,7 @@ Conduct a comprehensive documentation review focusing on accuracy, completeness,
    - Identify all documentation files (*.md, *.rst, *.txt, docs/, etc.)
 
 2. **Documentation Discovery**
-   - Locate README files, API docs, user guides, and inline documentation
+   - Locate documentation files (README, docs/, *.md, *.rst, *.txt, etc.)
    - Identify which code changes require documentation updates
    - Map documentation to corresponding functionality
    - Check for new files that need documentation

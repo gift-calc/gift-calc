@@ -73,8 +73,8 @@ Safely sync the current feature branch with the latest master changes using reba
 
 ### **Step 5: Verification**
 ```bash
-# Run project tests
-!npm test
+# Run project tests (check CLAUDE.md for test command)
+# Command will be determined from project configuration
 
 # Check branch status
 !git status
@@ -146,19 +146,14 @@ Safely sync the current feature branch with the latest master changes using reba
 # Check GitHub authentication
 !gh auth status
 
-# Verify push permissions
-!gh repo view gift-calc/gift-calc
+# Verify push permissions (use current repository)
+!gh repo view
 ```
 
 ### **Test Failures**
 ```bash
-# Run specific test suites
-!npm run test:core
-!npm run test:config
-!npm run test:algorithm
-
-# Get detailed test output
-!npm run test:verbose
+# Run project tests (check CLAUDE.md for specific test commands)
+# Commands will be determined from project configuration
 ```
 
 ## Safety Procedures
@@ -188,8 +183,8 @@ Safely sync the current feature branch with the latest master changes using reba
 
 ### **Pre-Sync Validation**
 ```bash
-# Ensure tests pass before sync
-!npm test
+# Ensure tests pass before sync (check CLAUDE.md for test command)
+# Command will be determined from project configuration
 
 # Check current branch status
 !git branch --show-current
@@ -198,8 +193,8 @@ Safely sync the current feature branch with the latest master changes using reba
 
 ### **Post-Sync Verification**
 ```bash
-# Verify all tests pass
-!npm test
+# Verify all tests pass (check CLAUDE.md for test command)
+# Command will be determined from project configuration
 
 # Check commit history
 !git log --oneline -10
@@ -208,28 +203,13 @@ Safely sync the current feature branch with the latest master changes using reba
 !git status
 ```
 
-## Project-Specific Integration
+## Project Integration
 
-### **Gift-Calc Project Notes**
-- Uses `npm test` for validation (vitest framework)
-- Follows conventional commits for semantic-release
-- Has dual command structure (`gift-calc` and `gcalc`)
-- Uses `gh` CLI for GitHub operations
-
-### **Testing Commands**
-```bash
-# Run all tests
-!npm test
-
-# Run with coverage
-!npm run test:coverage
-
-# Run specific test suites
-!npm run test:core
-!npm run test:config
-!npm run test:algorithm
-!npm run test:interactive
-```
+### **Project Configuration**
+- Test commands are defined in CLAUDE.md
+- Build commands are defined in CLAUDE.md  
+- Dependency installation commands are defined in CLAUDE.md
+- Uses `gh` CLI for GitHub operations when available
 
 ### **Commit Workflow**
 ```bash
