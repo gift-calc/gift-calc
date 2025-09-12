@@ -201,7 +201,7 @@ export class MCPServer {
     // Validate arguments against schema
     if (tool.inputSchema) {
       const validation = this.validateToolArgumentsLocal(args, tool.inputSchema);
-      if (!validation.valid) {
+      if (!validation.isValid) {
         this.sendError(id, -32602, `Invalid arguments: ${validation.error}`);
         return;
       }
@@ -226,6 +226,27 @@ export class MCPServer {
       inputSchema: toolDefinition.inputSchema,
       handler: toolDefinition.handler
     });
+  }
+
+  /**
+   * Execute a tool directly (for testing purposes)
+   */
+  async executeTool(toolName, args) {
+    const tool = registeredTools.get(toolName);
+    if (!tool) {
+      throw new Error(`Tool '${toolName}' not found`);
+    }
+
+    // Validate arguments if schema is provided
+    if (tool.inputSchema) {
+      const validation = validateToolArgumentsProtocol(args, tool.inputSchema);
+      if (!validation.isValid) {
+        throw new Error(`Invalid arguments: ${validation.error}`);
+      }
+    }
+
+    // Execute the tool handler
+    return await tool.handler(args);
   }
 
   sendResponse(id, result) {

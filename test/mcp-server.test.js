@@ -188,10 +188,10 @@ describe('MCP Server Tests', () => {
       };
 
       const validation1 = server.validateToolArgumentsLocal({ required_field: 'test' }, schema);
-      expect(validation1.valid).toBe(true);
+      expect(validation1.isValid).toBe(true);
 
       const validation2 = server.validateToolArgumentsLocal({}, schema);
-      expect(validation2.valid).toBe(false);
+      expect(validation2.isValid).toBe(false);
       expect(validation2.error).toContain('required_field');
     });
 
@@ -402,18 +402,18 @@ describe('JSON-RPC Protocol Utilities', () => {
 
       // Valid arguments
       const valid1 = validateToolArguments({ name: 'John', age: 30, active: true }, schema);
-      expect(valid1.valid).toBe(true);
+      expect(valid1.isValid).toBe(true);
 
       const valid2 = validateToolArguments({ name: 'Jane' }, schema);
-      expect(valid2.valid).toBe(true);
+      expect(valid2.isValid).toBe(true);
 
       // Invalid arguments
       const invalid1 = validateToolArguments({}, schema);
-      expect(invalid1.valid).toBe(false);
+      expect(invalid1.isValid).toBe(false);
       expect(invalid1.error).toContain('name');
 
       const invalid2 = validateToolArguments({ name: 'John', age: -5 }, schema);
-      expect(invalid2.valid).toBe(false);
+      expect(invalid2.isValid).toBe(false);
       expect(invalid2.error).toContain('age');
     });
   });
