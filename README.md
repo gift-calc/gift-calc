@@ -40,6 +40,7 @@ gift-calc -b 100 -f 8 --name "Alice"
 - 🎅 Automatic naughty list detection with "on naughty list!" notifications
 - 🎁 Gift matching functionality to repeat previous gift amounts
 - 💰 Automatic budget tracking with real-time spending analysis
+- 📊 Spending pattern analysis with flexible time periods
 
 ## Installation
 
@@ -78,6 +79,8 @@ gift-calc                    # Calculate with defaults/config
 gcalc                        # Short alias
 gift-calc init-config        # Setup configuration
 gift-calc log                # View calculation history
+gift-calc spendings          # Track spending patterns over time
+gcalc s                      # Short alias for spending tracking
 gift-calc --help             # Show help
 ```
 
@@ -101,6 +104,11 @@ gift-calc --match                      # Match last gift amount (any recipient)
 gcalc -m Alice                        # Match last gift for Alice
 gift-calc --match Bob --copy           # Match Bob's last gift and copy to clipboard
 
+# Spending analysis
+gift-calc spendings --days 30                        # Last 30 days spending
+gcalc s --from 2024-01-01 --to 2024-12-31            # Date range spending  
+gift-calc spendings --months 3                       # Last 3 months spending
+
 # Naughty list management
 gift-calc naughty-list Sven           # Add to naughty list
 gift-calc naughty-list list           # List naughty people
@@ -123,6 +131,18 @@ gift-calc naughty-list --remove Sven  # Remove from naughty list
 | `-m, --match [name]` | Match previous gift amount (optionally for specific recipient) | - |
 | `--no-log` | Disable logging | false |
 | `--copy` | Copy amount to clipboard | false |
+
+### Spending Tracking Options
+
+| Option | Description | Default |
+|--------|-------------|---------|  
+| `spendings, s` | Track and analyze spending patterns over time | - |
+| `--from, -f` | Start date for spending analysis (YYYY-MM-DD) | - |
+| `--to, -t` | End date for spending analysis (YYYY-MM-DD) | - |
+| `--days` | Show spending for last N days | - |
+| `--weeks` | Show spending for last N weeks | - |
+| `--months` | Show spending for last N months | - |
+| `--years` | Show spending for last N years | - |
 
 ## Configuration
 
