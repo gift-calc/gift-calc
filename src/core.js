@@ -138,6 +138,11 @@ export function parseArguments(args, defaultConfig = {}) {
     return parseBudgetArguments(args.slice(1));
   }
   
+  // Check for spendings commands
+  if (args[0] === 'spendings' || args[0] === 's') {
+    return parseSpendingsArguments(args.slice(1));
+  }
+  
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     
@@ -425,6 +430,8 @@ USAGE:
   gift-calc budget list              # List all budgets with status
   gift-calc budget status            # Show current budget status
   gift-calc budget edit <id> [options]  # Edit existing budget
+  gift-calc spendings --from <date> --to <date>  # Show spending in date range
+  gift-calc spendings --days <n>     # Show spending in last n days
   gcalc [options]              # Short alias
   gcalc nl <name>              # Add to naughty list (short form)
   gcalc nl list                # List naughty people
@@ -433,6 +440,7 @@ USAGE:
   gcalc b add 5000 2024-12-01 2024-12-31 "Christmas"  # Add budget (short)
   gcalc b list                 # List budgets (short form)
   gcalc b status               # Show budget status (short form)
+  gcalc s --weeks 4            # Show spending in last 4 weeks (short form)
 
 COMMANDS:
   init-config                 Setup configuration file with default values
@@ -440,6 +448,7 @@ COMMANDS:
   log                         Open gift calculation log file with less
   naughty-list, nl            Manage the naughty list (add/remove/list/search)
   budget, b                   Manage budgets (add/list/status/edit)
+  spendings, s                Track and analyze spending patterns over time
 
 OPTIONS:
   -h, --help                  Show this help message
@@ -550,6 +559,16 @@ EXAMPLES:
   gcalc b edit 1 --to-date 2025-01-15                                     # Extend budget end date (short)
   gcalc b edit 2 --from-date 2024-10-15 --to-date 2024-11-15            # Change budget dates
   gift-calc budget                                                        # Defaults to showing status
+  
+  SPENDINGS EXAMPLES:
+  gift-calc spendings --from 2024-01-01 --to 2024-12-31                   # All spending in 2024
+  gift-calc spendings -f 2024-12-01 -t 2024-12-31                         # December 2024 spending (short form)
+  gcalc spendings --days 30                                               # Last 30 days spending
+  gcalc s --weeks 4                                                       # Last 4 weeks spending (short alias)
+  gift-calc spendings --months 3                                          # Last 3 months spending
+  gcalc spendings --years 1                                               # Last year spending
+  # Output shows total per currency and itemized chronological list
+  # Multi-currency spending is grouped by currency for easy analysis
   
   AUTOMATIC BUDGET TRACKING EXAMPLES:
   # With active budget (automatic display after calculation):
@@ -1580,4 +1599,327 @@ export function findLastGiftForRecipientFromLog(recipientName, logPath, fsModule
   }
   
   return null;
+}
+
+// Spending Tracking Functions
+// These functions require Node.js modules and should only be used in Node.js contexts
+
+/**
+ * Parse spendings specific arguments
+ * @param {string[]} args - Array of command line arguments (without spendings/s prefix)
+ * @returns {Object} Spendings configuration object
+ */
+export function parseSpendingsArguments(args) {
+  const config = {
+    command: 'spendings',
+    success: true,
+    error: null,
+    fromDate: null,
+    toDate: null,
+    days: null,
+    weeks: null,
+    months: null,
+    years: null
+  };
+  
+  // If no arguments provided, show help or default behavior
+  if (args.length === 0) {
+    config.success = false;
+    config.error = 'No time period specified. Use --from/--to dates or --days/--weeks/--months/--years.';
+    return config;
+  }
+  
+  // Parse arguments
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    if (arg === '-f' || arg === '--from') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        config.fromDate = nextArg;
+        i++;
+      } else {
+        config.success = false;
+        config.error = '--from requires a date value (YYYY-MM-DD)';
+        return config;
+      }
+    } else if (arg === '-t' || arg === '--to') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        config.toDate = nextArg;
+        i++;
+      } else {
+        config.success = false;
+        config.error = '--to requires a date value (YYYY-MM-DD)';
+        return config;
+      }
+    } else if (arg === '--days') {
+      const nextArg = args[i + 1];
+      if (nextArg && !isNaN(nextArg)) {
+        const days = parseInt(nextArg);
+        if (days > 0) {
+          config.days = days;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--days must be a positive number';
+          return config;
+        }
+      } else {
+        config.success = false;
+        config.error = '--days requires a numeric value';
+        return config;
+      }
+    } else if (arg === '--weeks') {
+      const nextArg = args[i + 1];
+      if (nextArg && !isNaN(nextArg)) {
+        const weeks = parseInt(nextArg);
+        if (weeks > 0) {
+          config.weeks = weeks;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--weeks must be a positive number';
+          return config;
+        }
+      } else {
+        config.success = false;
+        config.error = '--weeks requires a numeric value';
+        return config;
+      }
+    } else if (arg === '--months') {
+      const nextArg = args[i + 1];
+      if (nextArg && !isNaN(nextArg)) {
+        const months = parseInt(nextArg);
+        if (months > 0) {
+          config.months = months;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--months must be a positive number';
+          return config;
+        }
+      } else {
+        config.success = false;
+        config.error = '--months requires a numeric value';
+        return config;
+      }
+    } else if (arg === '--years') {
+      const nextArg = args[i + 1];
+      if (nextArg && !isNaN(nextArg)) {
+        const years = parseInt(nextArg);
+        if (years > 0) {
+          config.years = years;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--years must be a positive number';
+          return config;
+        }
+      } else {
+        config.success = false;
+        config.error = '--years requires a numeric value';
+        return config;
+      }
+    } else {
+      config.success = false;
+      config.error = `Unknown argument: ${arg}`;
+      return config;
+    }
+  }
+  
+  // Validate configuration - ensure exactly one time period method is specified
+  const hasFromDate = config.fromDate !== null;
+  const hasToDate = config.toDate !== null;
+  const absoluteMethod = hasFromDate && hasToDate;
+  const partialAbsolute = hasFromDate || hasToDate;
+  const relativeMethod = config.days || config.weeks || config.months || config.years;
+  
+  // Check for mixing methods first (highest priority)
+  if (partialAbsolute && relativeMethod) {
+    config.success = false;
+    config.error = 'Cannot combine absolute dates (--from/--to) with relative periods (--days/--weeks/--months/--years)';
+    return config;
+  }
+  
+  // Check for incomplete absolute date specification
+  if (partialAbsolute && !absoluteMethod) {
+    config.success = false;
+    config.error = 'Both --from and --to dates are required for absolute date range';
+    return config;
+  }
+  
+  // Check that at least one method is specified
+  if (!absoluteMethod && !relativeMethod) {
+    config.success = false;
+    config.error = 'Must specify either absolute dates (--from/--to) or relative period (--days/--weeks/--months/--years)';
+    return config;
+  }
+  
+  // Ensure only one relative period is specified
+  const relativeCount = [config.days, config.weeks, config.months, config.years].filter(v => v !== null).length;
+  if (relativeCount > 1) {
+    config.success = false;
+    config.error = 'Can only specify one relative period (--days, --weeks, --months, or --years)';
+    return config;
+  }
+  
+  return config;
+}
+
+/**
+ * Calculate relative date from current date
+ * @param {string} timeUnit - Time unit: 'days', 'weeks', 'months', 'years'
+ * @param {number} timeValue - Number of time units
+ * @returns {string} Date string in YYYY-MM-DD format
+ */
+export function calculateRelativeDate(timeUnit, timeValue) {
+  const now = new Date();
+  let fromDate = new Date(now);
+  
+  switch (timeUnit) {
+    case 'days':
+      fromDate.setDate(now.getDate() - timeValue);
+      break;
+    case 'weeks':
+      fromDate.setDate(now.getDate() - (timeValue * 7));
+      break;
+    case 'months':
+      fromDate.setMonth(now.getMonth() - timeValue);
+      break;
+    case 'years':
+      fromDate.setFullYear(now.getFullYear() - timeValue);
+      break;
+    default:
+      throw new Error(`Unknown time unit: ${timeUnit}`);
+  }
+  
+  // Format as YYYY-MM-DD
+  return fromDate.toISOString().split('T')[0];
+}
+
+/**
+ * Get spendings between dates from log file
+ * @param {string} logPath - Path to the log file
+ * @param {string} fromDate - Start date (YYYY-MM-DD)
+ * @param {string} toDate - End date (YYYY-MM-DD)
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object} Spendings data with entries grouped by currency
+ */
+export function getSpendingsBetweenDates(logPath, fromDate, toDate, fsModule) {
+  const result = {
+    entries: [],
+    currencyTotals: {},
+    errorMessage: null,
+    hasData: false
+  };
+  
+  // Check if log file exists
+  if (!fsModule.existsSync(logPath)) {
+    result.errorMessage = 'No spending data found. Start logging with gift calculations to track spending.';
+    return result;
+  }
+  
+  let logContent;
+  try {
+    logContent = fsModule.readFileSync(logPath, 'utf8');
+  } catch (error) {
+    result.errorMessage = `Could not read log file: ${error.message}`;
+    return result;
+  }
+  
+  const lines = logContent.split('\n').filter(line => line.trim());
+  const startDate = new Date(fromDate + 'T00:00:00');
+  const endDate = new Date(toDate + 'T23:59:59');
+  
+  for (const line of lines) {
+    const entry = parseLogEntry(line);
+    if (!entry) {
+      continue;
+    }
+    
+    // Check if entry falls within specified date range
+    if (entry.timestamp >= startDate && entry.timestamp <= endDate) {
+      result.entries.push(entry);
+      result.hasData = true;
+      
+      // Update currency totals
+      if (!result.currencyTotals[entry.currency]) {
+        result.currencyTotals[entry.currency] = 0;
+      }
+      result.currencyTotals[entry.currency] += entry.amount;
+    }
+  }
+  
+  // Sort entries chronologically
+  result.entries.sort((a, b) => a.timestamp - b.timestamp);
+  
+  if (!result.hasData) {
+    result.errorMessage = `No spending found for the specified period (${fromDate} to ${toDate}).`;
+  }
+  
+  return result;
+}
+
+/**
+ * Format spendings output with totals and itemized list
+ * @param {Object} spendingsData - Data from getSpendingsBetweenDates
+ * @param {string} fromDate - Start date (YYYY-MM-DD)
+ * @param {string} toDate - End date (YYYY-MM-DD)
+ * @returns {string} Formatted output string
+ */
+export function formatSpendingsOutput(spendingsData, fromDate, toDate) {
+  if (spendingsData.errorMessage) {
+    return spendingsData.errorMessage;
+  }
+  
+  const currencies = Object.keys(spendingsData.currencyTotals);
+  let output = '';
+  
+  // Format title with date range
+  if (currencies.length === 1) {
+    const currency = currencies[0];
+    const total = spendingsData.currencyTotals[currency];
+    output += `Total Spending (${fromDate} to ${toDate}): ${formatBudgetAmount(total, currency)}\n\n`;
+  } else {
+    output += `Total Spending (${fromDate} to ${toDate}):\n`;
+    for (const currency of currencies.sort()) {
+      const total = spendingsData.currencyTotals[currency];
+      output += `  ${formatBudgetAmount(total, currency)}\n`;
+    }
+    output += '\n';
+  }
+  
+  // Group entries by currency for display
+  const entriesByCurrency = {};
+  for (const entry of spendingsData.entries) {
+    if (!entriesByCurrency[entry.currency]) {
+      entriesByCurrency[entry.currency] = [];
+    }
+    entriesByCurrency[entry.currency].push(entry);
+  }
+  
+  // Display itemized list
+  if (currencies.length === 1) {
+    // Single currency - no currency headers
+    const currency = currencies[0];
+    for (const entry of entriesByCurrency[currency]) {
+      const date = entry.timestamp.toISOString().split('T')[0];
+      const recipientPart = entry.recipient ? ` for ${entry.recipient}` : '';
+      output += `${date}  ${formatBudgetAmount(entry.amount, entry.currency)}${recipientPart}\n`;
+    }
+  } else {
+    // Multi-currency - show currency headers
+    for (const currency of currencies.sort()) {
+      output += `${currency}:\n`;
+      for (const entry of entriesByCurrency[currency]) {
+        const date = entry.timestamp.toISOString().split('T')[0];
+        const recipientPart = entry.recipient ? ` for ${entry.recipient}` : '';
+        output += `${date}  ${formatBudgetAmount(entry.amount, entry.currency)}${recipientPart}\n`;
+      }
+      output += '\n';
+    }
+  }
+  
+  return output.trim();
 }
