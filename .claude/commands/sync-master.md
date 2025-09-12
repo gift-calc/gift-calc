@@ -213,8 +213,8 @@ Safely sync the current feature branch with the latest master changes using reba
 
 ### **Commit Workflow**
 ```bash
-# After successful sync, use /commit command
-/commit
+# After successful sync, execute /commit-push command
+/commit-push
 ```
 
 ## Advanced Options

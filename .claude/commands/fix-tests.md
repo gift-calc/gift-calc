@@ -3,14 +3,14 @@ description: "Analyze and fix failing tests using systematic root cause analysis
 allowed-tools: ["bash", "read", "write", "edit", "multiedit", "grep", "glob", "todowrite"]
 ---
 
-# Fix Failing Tests
+# Fix Tests
 
 Systematically analyze failing tests, determine root causes, and implement clean, correct fixes following KISS principles. This command works across all programming languages and test frameworks by prioritizing understanding over implementation details.
 
 ## Usage
 
 ```bash
-/fix-failing-tests
+/fix-tests
 ```
 
 ## Systematic Approach

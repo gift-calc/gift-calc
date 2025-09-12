@@ -5,15 +5,7 @@ Conduct a comprehensive code review focusing on architecture, code structure, re
 ## Usage
 
 ```
-/pr-code-review <pr-number-or-url>
-```
-
-## Examples
-
-```
-/pr-code-review 42
-/pr-code-review https://github.com/owner/repo/pull/15
-/pr-code-review #23
+/pr-review-code
 ```
 
 ## Review Principles
@@ -30,9 +22,9 @@ Conduct a comprehensive code review focusing on architecture, code structure, re
 
 ### Phase 1: PR Analysis
 1. **Fetch PR Details**
-   - Use `gh pr view $ARGUMENTS` to get comprehensive PR information
-   - Parse PR title, description, changed files, and linked issues
-   - Download PR diff using `gh pr diff $ARGUMENTS`
+   - Use `gh pr view --json number,title,url,body` to get PR information for current branch
+   - If no PR exists, show error and exit
+   - Download PR diff using `gh pr diff`
 
 2. **Context Understanding**
    - Review PR description and acceptance criteria
@@ -91,13 +83,13 @@ Conduct a comprehensive code review focusing on architecture, code structure, re
    - Provide constructive suggestions with reasoning
 
 2. **Submit Review**
-   - Use `gh pr review $ARGUMENTS --comment --body "review-content"`
+   - Use `gh pr review --comment --body "review-content"` with PR number from current branch
    - Choose appropriate review type (comment/approve/request-changes)
    - Ensure review is posted as a comprehensive single comment
 
 ## Arguments
 
-- `$ARGUMENTS`: GitHub PR number (e.g., `42`, `#42`) or full PR URL
+- `$CURRENT_BRANCH_PR`: GitHub PR number for current branch (detected automatically)
 
 ## Review Template Structure
 
@@ -135,7 +127,8 @@ Conduct a comprehensive code review focusing on architecture, code structure, re
 
 ## Error Handling
 
-- **Invalid PR**: Clear error if PR doesn't exist or isn't accessible
+- **No PR for current branch**: Clear error if no PR exists for the current branch
+- **Multiple PRs**: Guide user to specify which PR if multiple exist for the branch
 - **Permission Issues**: Guide user to check GitHub authentication
 - **Large PRs**: Handle PRs with many files efficiently
 - **Network Issues**: Graceful handling of GitHub API failures

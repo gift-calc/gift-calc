@@ -5,15 +5,7 @@ Address documentation review feedback by implementing fixes based on review comm
 ## Usage
 
 ```
-/pr-fix-docs <pr-number-or-url>
-```
-
-## Examples
-
-```
-/pr-fix-docs 42
-/pr-fix-docs https://github.com/owner/repo/pull/15
-/pr-fix-docs #23
+/pr-fix-docs
 ```
 
 ## Core Principle: Correctness First
@@ -41,7 +33,8 @@ Address documentation review feedback by implementing fixes based on review comm
 
 ### Phase 1: Review Analysis
 1. **Fetch PR Documentation Review Comments**
-   - Get review feedback from GitHub PR
+   - Get review feedback from GitHub PR for current branch
+   - If no PR exists, show error and exit
    - Filter for documentation-related comments only
    - **Prioritize accuracy and correctness issues first**
 
@@ -70,9 +63,8 @@ Address documentation review feedback by implementing fixes based on review comm
    - Test examples and commands one final time
    - Ensure no new inaccuracies were introduced
 
-2. **Commit Changes**
-   - Use `/commit-push` command for professional conventional commits
-   - Document fixes clearly in commit message
+2. **Commit and Push Changes**
+   - Execute `/commit-push` command for professional conventional commits
 
 ### Phase 4: PR Communication
 1. **Post Summary Comment**
@@ -83,14 +75,14 @@ Address documentation review feedback by implementing fixes based on review comm
 
 ## Arguments
 
-- `$ARGUMENTS`: GitHub PR number or URL
+- `$CURRENT_BRANCH_PR`: GitHub PR number for current branch (detected automatically)
 
 ## Success Criteria
 
 - **All technical inaccuracies corrected and verified**
 - **All examples tested and confirmed working**
 - **All links validated and functional**
-- Documentation review comments addressed
-- Clear, correct, and simple documentation maintained
-- Professional commit created via `/commit-push`
-- Professional PR comment posted explaining fixes
+- **Documentation review comments addressed**
+- **Clear, correct, and simple documentation maintained**
+- **Professional commit created and pushed via `/commit-push` command**
+- **Professional PR comment posted explaining fixes**

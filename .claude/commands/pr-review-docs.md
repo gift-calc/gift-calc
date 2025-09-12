@@ -5,15 +5,7 @@ Conduct a comprehensive documentation review focusing on accuracy, completeness,
 ## Usage
 
 ```
-/pr-docs-review <pr-number-or-url>
-```
-
-## Examples
-
-```
-/pr-docs-review 42
-/pr-docs-review https://github.com/owner/repo/pull/15
-/pr-docs-review #23
+/pr-review-docs
 ```
 
 ## Documentation Review Principles
@@ -30,9 +22,9 @@ Conduct a comprehensive documentation review focusing on accuracy, completeness,
 
 ### Phase 1: PR and Documentation Analysis
 1. **Fetch PR Details**
-   - Use `gh pr view $ARGUMENTS` to get comprehensive PR information
-   - Parse PR title, description, and changed files
-   - Download PR diff using `gh pr diff $ARGUMENTS`
+   - Use `gh pr view --json number,title,url,body` to get PR information for current branch
+   - If no PR exists, show error and exit
+   - Download PR diff using `gh pr diff`
    - Identify all documentation files (*.md, *.rst, *.txt, docs/, etc.)
 
 2. **Documentation Discovery**
@@ -116,13 +108,13 @@ Conduct a comprehensive documentation review focusing on accuracy, completeness,
    - Link to relevant documentation standards
 
 2. **Submit Review**
-   - Use `gh pr review $ARGUMENTS --comment --body "review-content"`
+   - Use `gh pr review --comment --body "review-content"` with PR number from current branch
    - Choose appropriate review type based on documentation quality
    - Post comprehensive feedback as single structured comment
 
 ## Arguments
 
-- `$ARGUMENTS`: GitHub PR number (e.g., `42`, `#42`) or full PR URL
+- `$CURRENT_BRANCH_PR`: GitHub PR number for current branch (detected automatically)
 
 ## Documentation Review Template Structure
 
@@ -167,7 +159,7 @@ Conduct a comprehensive documentation review focusing on accuracy, completeness,
 
 ## Error Handling
 
-- **Invalid PR**: Clear error if PR doesn't exist or isn't accessible
+- **No PR for current branch**: Clear error if no PR exists for the current branch
 - **No Documentation**: Guidance when PR lacks documentation files
 - **Permission Issues**: Help with GitHub authentication
 - **Large Documentation Sets**: Efficient handling of extensive docs

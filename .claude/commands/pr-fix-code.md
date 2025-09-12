@@ -5,15 +5,7 @@ Address code and architecture review feedback by implementing fixes based on rev
 ## Usage
 
 ```
-/pr-fix-code <pr-number-or-url>
-```
-
-## Examples
-
-```
-/pr-fix-code 42
-/pr-fix-code https://github.com/owner/repo/pull/15
-/pr-fix-code #23
+/pr-fix-code
 ```
 
 ## Scope
@@ -36,7 +28,8 @@ Address code and architecture review feedback by implementing fixes based on rev
 
 ### Phase 1: Review Analysis
 1. **Fetch PR Review Comments**
-   - Get review feedback from GitHub PR
+   - Get review feedback from GitHub PR for current branch
+   - If no PR exists, show error and exit
    - Filter for code and architecture-related comments only
    - Extract file-specific and line-specific feedback
 
@@ -66,9 +59,8 @@ Address code and architecture review feedback by implementing fixes based on rev
    - Ensure no regressions introduced
    - Validate that fixes address review concerns
 
-2. **Commit Changes**
-   - Use `/commit-push` command to handle proper conventional commits
-   - Automatically stages changes and pushes to remote
+2. **Commit and Push Changes**
+   - Execute `/commit-push` command to handle proper conventional commits
 
 ### Phase 4: PR Communication
 1. **Post Summary Comment**
@@ -79,12 +71,12 @@ Address code and architecture review feedback by implementing fixes based on rev
 
 ## Arguments
 
-- `$ARGUMENTS`: GitHub PR number or URL
+- `$CURRENT_BRANCH_PR`: GitHub PR number for current branch (detected automatically)
 
 ## Success Criteria
 
-- All code and architecture review comments addressed
-- Code quality improved without over-engineering
-- Changes maintain project conventions
-- Professional commit created via `/commit-push`
-- Professional PR comment posted explaining fixes
+- **All code and architecture review comments addressed**
+- **Code quality improved without over-engineering**
+- **Changes maintain project conventions**
+- **Professional commit created and pushed via `/commit-push`**
+- **Professional PR comment posted explaining fixes**

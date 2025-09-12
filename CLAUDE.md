@@ -38,16 +38,17 @@ node mcp-server.js          # MCP server
 ## Custom Commands
 - `/commit-push` - Conventional commits + versioning
 - `/implement-issue <num>` - Implement GitHub issue
-- `/fix-failing-tests` - Fix test failures
+- `/fix-tests` - Fix test failures
+- `/fix-lint` - Fix lint errors and warnings
 - `/sync-master` - Sync with master
 - `/update-claude-md` - Update this file
-- `/pr-review <pr>` - Review PR
-- `/pr-code-review <pr>` - Code review
-- `/pr-docs-review <pr>` - Docs review
-- `/pr-tests-review <pr>` - Tests review
-- `/pr-fix-code <pr>` - Fix code issues in PR
-- `/pr-fix-docs <pr>` - Fix documentation issues in PR
-- `/pr-fix-tests <pr>` - Fix test issues in PR
+- `/pr-review` - Review PR for current branch
+- `/pr-review-code` - Code review for current branch PR
+- `/pr-review-docs` - Docs review for current branch PR
+- `/pr-review-tests` - Tests review for current branch PR
+- `/pr-fix-code` - Fix code issues in current branch PR
+- `/pr-fix-docs` - Fix documentation issues in current branch PR
+- `/pr-fix-tests` - Fix test issues in current branch PR
 
 ## Protected Areas
 - Core algorithm logic

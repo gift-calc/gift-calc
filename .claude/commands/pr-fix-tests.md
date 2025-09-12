@@ -5,15 +5,7 @@ Address test review feedback by implementing test improvements based on review c
 ## Usage
 
 ```
-/pr-fix-tests <pr-number-or-url>
-```
-
-## Examples
-
-```
-/pr-fix-tests 42
-/pr-fix-tests https://github.com/owner/repo/pull/15
-/pr-fix-tests #23
+/pr-fix-tests
 ```
 
 ## Testing Principles
@@ -45,7 +37,8 @@ Address test review feedback by implementing test improvements based on review c
 
 ### Phase 1: Review Analysis
 1. **Fetch PR Test Review Comments**
-   - Get review feedback from GitHub PR
+   - Get review feedback from GitHub PR for current branch
+   - If no PR exists, show error and exit
    - Filter for test-related comments only
    - Extract specific test improvement suggestions
 
@@ -83,8 +76,7 @@ Address test review feedback by implementing test improvements based on review c
 
 ### Phase 4: Commit Changes
 1. **Professional Commit**
-   - Use `/commit-push` command for conventional commits
-   - Group related test improvements logically
+   - Execute `/commit-push` command for conventional commits
 
 ### Phase 5: PR Communication
 1. **Post Summary Comment**
@@ -95,7 +87,7 @@ Address test review feedback by implementing test improvements based on review c
 
 ## Arguments
 
-- `$ARGUMENTS`: GitHub PR number or URL
+- `$CURRENT_BRANCH_PR`: GitHub PR number for current branch (detected automatically)
 
 ## Testing Best Practices Applied
 
@@ -113,5 +105,5 @@ Address test review feedback by implementing test improvements based on review c
 - **Edge cases and error scenarios properly covered**
 - **Tests are independent, reliable, and fast**
 - **Assertions are specific and meaningful**
-- **Professional commit created via `/commit-push`**
+- **Professional commit created and pushed via `/commit-push` command**
 - **Professional PR comment posted explaining fixes**

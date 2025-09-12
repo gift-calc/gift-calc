@@ -5,15 +5,7 @@ Conduct a comprehensive test review focusing on test coverage, quality, edge cas
 ## Usage
 
 ```
-/pr-tests-review <pr-number-or-url>
-```
-
-## Examples
-
-```
-/pr-tests-review 42
-/pr-tests-review https://github.com/owner/repo/pull/15
-/pr-tests-review #23
+/pr-review-tests
 ```
 
 ## Test Review Principles
@@ -30,9 +22,9 @@ Conduct a comprehensive test review focusing on test coverage, quality, edge cas
 
 ### Phase 1: PR and Test Analysis
 1. **Fetch PR Details**
-   - Use `gh pr view $ARGUMENTS` to get comprehensive PR information
-   - Parse PR title, description, and changed files
-   - Download PR diff using `gh pr diff $ARGUMENTS`
+   - Use `gh pr view --json number,title,url,body` to get PR information for current branch
+   - If no PR exists, show error and exit
+   - Download PR diff using `gh pr diff`
    - Identify test files and production code changes
 
 2. **Test Discovery**
@@ -99,13 +91,13 @@ Conduct a comprehensive test review focusing on test coverage, quality, edge cas
    - Link test gaps to specific functionality
 
 2. **Submit Review**
-   - Use `gh pr review $ARGUMENTS --comment --body "review-content"`
+   - Use `gh pr review --comment --body "review-content"` with PR number from current branch
    - Choose appropriate review type based on test completeness
    - Post comprehensive feedback as single structured comment
 
 ## Arguments
 
-- `$ARGUMENTS`: GitHub PR number (e.g., `42`, `#42`) or full PR URL
+- `$CURRENT_BRANCH_PR`: GitHub PR number for current branch (detected automatically)
 
 ## Test Review Template Structure
 
@@ -145,7 +137,7 @@ Conduct a comprehensive test review focusing on test coverage, quality, edge cas
 
 ## Error Handling
 
-- **Invalid PR**: Clear error if PR doesn't exist or isn't accessible
+- **No PR for current branch**: Clear error if no PR exists for the current branch
 - **No Tests**: Guidance when PR lacks test files entirely
 - **Permission Issues**: Help with GitHub authentication
 - **Large Test Suites**: Efficient handling of extensive test files

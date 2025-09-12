@@ -77,12 +77,12 @@ Analyze a GitHub issue, create a feature branch, implement the solution, and cre
    - Use `/commit-push` command for conventional commits with semantic versioning
    - Automatically handles staging, committing, and pushing changes
 
-2. **Create PR and Add Comment**
+2. **Create PR with Comprehensive Description**
    - Create PR with `gh pr create`
    - Link back to original issue in PR description
-   - Include implementation summary and test plan
-   - Post professional comment using `gh pr comment` explaining what was implemented and why
-   - Keep comment concise, correct, and include all relevant technical details
+   - Include implementation summary and test plan in PR description
+   - Add explanation of what was implemented and why directly in PR description
+   - Keep PR description concise, correct, and include all relevant technical details
 
 ## Arguments
 
