@@ -5,7 +5,7 @@ Analyze current changes and create an appropriate conventional commit message, t
 ## Usage
 
 ```
-/commit
+/commit-push
 ```
 
 ## Implementation
