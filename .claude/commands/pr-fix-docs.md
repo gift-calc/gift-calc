@@ -74,6 +74,13 @@ Address documentation review feedback by implementing fixes based on review comm
    - Use `/commit-push` command for professional conventional commits
    - Document fixes clearly in commit message
 
+### Phase 4: PR Communication
+1. **Post Summary Comment**
+   - Use `gh pr comment` to post a professional comment explaining fixes
+   - Summarize what documentation issues were addressed
+   - Use professional, concise tone
+   - Reference specific review feedback that was resolved
+
 ## Arguments
 
 - `$ARGUMENTS`: GitHub PR number or URL
@@ -86,3 +93,4 @@ Address documentation review feedback by implementing fixes based on review comm
 - Documentation review comments addressed
 - Clear, correct, and simple documentation maintained
 - Professional commit created via `/commit-push`
+- Professional PR comment posted explaining fixes

@@ -86,6 +86,13 @@ Address test review feedback by implementing test improvements based on review c
    - Use `/commit-push` command for conventional commits
    - Group related test improvements logically
 
+### Phase 5: PR Communication
+1. **Post Summary Comment**
+   - Use `gh pr comment` to post a professional comment explaining fixes
+   - Summarize what test issues were addressed
+   - Use professional, concise tone
+   - Reference specific review feedback that was resolved
+
 ## Arguments
 
 - `$ARGUMENTS`: GitHub PR number or URL
@@ -107,3 +114,4 @@ Address test review feedback by implementing test improvements based on review c
 - **Tests are independent, reliable, and fast**
 - **Assertions are specific and meaningful**
 - **Professional commit created via `/commit-push`**
+- **Professional PR comment posted explaining fixes**

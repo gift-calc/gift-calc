@@ -73,16 +73,16 @@ Analyze a GitHub issue, create a feature branch, implement the solution, and cre
    - **Keep Documentation Simple**: Clear, concise explanations without unnecessary detail
 
 ### Phase 4: Pull Request Creation
-1. **Commit Changes**
-   - Stage all changes with `git add .`
-   - Create conventional commit message referencing the issue
-   - Format: `feat: implement <brief description> (fixes #<issue-number>)`
+1. **Commit and Push Changes**
+   - Use `/commit-push` command for conventional commits with semantic versioning
+   - Automatically handles staging, committing, and pushing changes
 
-2. **Push and Create PR**
-   - Push branch to origin: `git push -u origin <branch-name>`
+2. **Create PR and Add Comment**
    - Create PR with `gh pr create`
    - Link back to original issue in PR description
    - Include implementation summary and test plan
+   - Post professional comment using `gh pr comment` explaining what was implemented and why
+   - Keep comment concise, correct, and include all relevant technical details
 
 ## Arguments
 

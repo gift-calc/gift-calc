@@ -70,6 +70,13 @@ Address code and architecture review feedback by implementing fixes based on rev
    - Use `/commit-push` command to handle proper conventional commits
    - Automatically stages changes and pushes to remote
 
+### Phase 4: PR Communication
+1. **Post Summary Comment**
+   - Use `gh pr comment` to post a professional comment explaining fixes
+   - Summarize what code issues were addressed
+   - Use professional, concise tone
+   - Reference specific review feedback that was resolved
+
 ## Arguments
 
 - `$ARGUMENTS`: GitHub PR number or URL
@@ -80,3 +87,4 @@ Address code and architecture review feedback by implementing fixes based on rev
 - Code quality improved without over-engineering
 - Changes maintain project conventions
 - Professional commit created via `/commit-push`
+- Professional PR comment posted explaining fixes
