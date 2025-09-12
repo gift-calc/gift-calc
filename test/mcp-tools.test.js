@@ -293,6 +293,32 @@ describe('MCP Tools Tests', () => {
   });
 
   describe('get_spendings Tool Schema', () => {
+    test('should validate actual JSON schema structure', async () => {
+      // Test schema validation through functional execution
+      // Verify that the tool accepts valid anyOf combinations correctly
+      
+      // Test absolute date combination
+      const absoluteResult = await server.executeTool('get_spendings', {
+        fromDate: '2024-01-01',
+        toDate: '2024-01-31',
+        format: 'summary'
+      });
+      expect(absoluteResult).toBeDefined();
+      
+      // Test relative date combinations
+      const relativeResults = await Promise.all([
+        server.executeTool('get_spendings', { days: 30 }),
+        server.executeTool('get_spendings', { weeks: 4 }),
+        server.executeTool('get_spendings', { months: 1 }),
+        server.executeTool('get_spendings', { years: 1 })
+      ]);
+      
+      relativeResults.forEach(result => {
+        expect(result).toBeDefined();
+        expect(result.isReadOnly).toBe(true);
+      });
+    });
+
     test('should validate absolute date parameters', () => {
       const requiredFields = ['fromDate', 'toDate'];
       const datePattern = '^\\d{4}-\\d{2}-\\d{2}$';
@@ -463,12 +489,52 @@ describe('MCP Tools Tests', () => {
       }
     });
 
+    test('should handle edge case date boundaries', async () => {
+      // Test leap year edge case
+      const leapYearResult = await server.executeTool('get_spendings', {
+        fromDate: '2024-02-29', // Valid leap year date
+        toDate: '2024-03-01',
+        format: 'summary'
+      });
+      expect(leapYearResult.content[0].text).toContain('2024-02-29 to 2024-03-01');
+      
+      // Test month boundary transitions
+      const monthBoundaryResult = await server.executeTool('get_spendings', {
+        fromDate: '2024-01-31',
+        toDate: '2024-02-01',
+        format: 'summary'
+      });
+      expect(monthBoundaryResult.content[0].text).toContain('2024-01-31 to 2024-02-01');
+      
+      // Test year boundary transitions
+      const yearBoundaryResult = await server.executeTool('get_spendings', {
+        fromDate: '2023-12-31',
+        toDate: '2024-01-01',
+        format: 'summary'
+      });
+      expect(yearBoundaryResult.content[0].text).toContain('2023-12-31 to 2024-01-01');
+    });
+
+    test('should reject invalid leap year dates', async () => {
+      // Test invalid leap year date (2023 is not a leap year)
+      await expect(server.executeTool('get_spendings', {
+        fromDate: '2023-02-29',
+        toDate: '2023-03-01'
+      })).rejects.toThrow();
+    });
+
     test('should throw descriptive errors for constraint violations', async () => {
       await expect(server.executeTool('get_spendings', { days: -5 }))
-        .rejects.toThrow();
+        .rejects.toThrow('must be >= 1');
       
       await expect(server.executeTool('get_spendings', { months: 150 }))
-        .rejects.toThrow();
+        .rejects.toThrow('must be <= 120');
+        
+      await expect(server.executeTool('get_spendings', { weeks: 0 }))
+        .rejects.toThrow('must be >= 1');
+        
+      await expect(server.executeTool('get_spendings', { years: 20 }))
+        .rejects.toThrow('must be <= 10');
     });
   });
 
@@ -503,6 +569,22 @@ describe('MCP Tools Tests', () => {
       
       // Should handle output format regardless of currency count
       expect(result.content[0].text).toContain('Spending Summary');
+      expect(result.isReadOnly).toBe(true);
+      
+      // Should include currency grouping logic in summary format
+      // The response should be structured to handle different currencies
+      expect(result.content[0].text).toMatch(/Total|Currency|Summary/);
+    });
+
+    test('should validate multi-currency detailed output format', async () => {
+      const result = await server.executeTool('get_spendings', {
+        days: 30,
+        format: 'detailed'
+      });
+      
+      // Detailed format should include transaction-level information
+      expect(result.content[0].text).toContain('Spending Analysis');
+      expect(result.content[0].text).toMatch(/Transaction|Details|Analysis/);
       expect(result.isReadOnly).toBe(true);
     });
   });
