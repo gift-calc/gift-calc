@@ -59,7 +59,7 @@ brew install gift-calc
 
 ### Via Install Script
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/bin/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/master/install.sh | sh
 ```
 
 After installation, verify the MCP server is available:
