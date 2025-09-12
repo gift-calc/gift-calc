@@ -20,7 +20,7 @@ describe('CRITICAL BUG - MCP Server Validation Bypass', () => {
    */
   const sendMCPRequest = (message) => {
     return new Promise((resolve, reject) => {
-      const mcpProcess = spawn('node', ['mcp-server.js'], {
+      const mcpProcess = spawn('node', ['bin/mcp-server.js'], {
         stdio: ['pipe', 'pipe', 'pipe']
       });
       

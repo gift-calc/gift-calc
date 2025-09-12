@@ -7,7 +7,7 @@
   "bin": {
     "gcalc": "./index.js",
     "gift-calc": "./index.js",
-    "gift-calc-mcp": "./mcp-server.js"
+    "gift-calc-mcp": "./bin/mcp-server.js"
   },
   "scripts": {
     "test": "vitest run",
@@ -46,9 +46,10 @@
   },
   "files": [
     "index.js",
-    "mcp-server.js",
+    "bin/",
+    "config/",
+    "docs/",
     "src/",
-    ".config-example.json",
     "README.md",
     "gift-calc.1",
     "LICENSE"

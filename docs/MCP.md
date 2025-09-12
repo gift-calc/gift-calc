@@ -59,7 +59,7 @@ brew install gift-calc
 
 ### Via Install Script
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/bin/install.sh | sh
 ```
 
 After installation, verify the MCP server is available:
@@ -433,16 +433,16 @@ Test the MCP server directly using JSON-RPC commands:
 
 ```bash
 # Start the server
-node mcp-server.js
+node bin/mcp-server.js
 
 # Test initialize (in another terminal)
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | node mcp-server.js
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | node bin/mcp-server.js
 
 # List available tools
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | node mcp-server.js
+echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | node bin/mcp-server.js
 
 # Test calculate_gift_amount tool
-echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"calculate_gift_amount","arguments":{"baseValue":100,"friendScore":8,"name":"Alice"}}}' | node mcp-server.js
+echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"calculate_gift_amount","arguments":{"baseValue":100,"friendScore":8,"name":"Alice"}}}' | node bin/mcp-server.js
 ```
 
 ### Integration Testing

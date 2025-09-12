@@ -60,7 +60,7 @@ brew install gift-calc
 ### Via Install Script (Unix/Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/bin/install.sh | sh
 ```
 
 ### Via Docker

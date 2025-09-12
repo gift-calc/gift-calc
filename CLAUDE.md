@@ -8,7 +8,7 @@
 
 ## Project Structure
 - `index.js` - CLI interface
-- `mcp-server.js` - MCP server binary
+- `bin/mcp-server.js` - MCP server binary
 - `src/core.js` - Calculation engine
 - `src/mcp/` - MCP protocol implementation
 - Config: `~/.config/gift-calc/.config.json`
@@ -23,7 +23,7 @@ node index.js --help        # CLI help
 
 # Dev
 npm link                    # Global install
-node mcp-server.js          # MCP server
+node bin/mcp-server.js      # MCP server
 ```
 
 ## Code Style
