@@ -201,7 +201,7 @@ export class MCPServer {
     // Validate arguments against schema
     if (tool.inputSchema) {
       const validation = this.validateToolArgumentsLocal(args, tool.inputSchema);
-      if (!validation.valid) {
+      if (!validation.isValid) {
         this.sendError(id, -32602, `Invalid arguments: ${validation.error}`);
         return;
       }
