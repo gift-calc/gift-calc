@@ -25,7 +25,12 @@ import {
   findLastGiftFromLog,
   findLastGiftForRecipientFromLog,
   formatMatchedGift,
-  parseLogEntry
+  parseLogEntry,
+  parseSpendingsArguments,
+  calculateRelativeDate,
+  getSpendingsBetweenDates,
+  formatSpendingsOutput,
+  validateDate
 } from '../core.js';
 
 // Import server utilities
@@ -619,6 +624,242 @@ export function registerAllTools(server) {
         ],
         isReadOnly: true
       };
+    }
+  });
+
+  // Register spending tracking tool
+  server.registerTool('get_spendings', {
+    description: 'Get spending analysis for specified time periods with multi-currency support',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        fromDate: {
+          type: 'string',
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+          description: 'Start date in YYYY-MM-DD format'
+        },
+        toDate: {
+          type: 'string', 
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+          description: 'End date in YYYY-MM-DD format'
+        },
+        days: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 3650,
+          description: 'Number of days from today (mutually exclusive with fromDate/toDate)'
+        },
+        weeks: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 520,
+          description: 'Number of weeks from today'
+        },
+        months: {
+          type: 'integer', 
+          minimum: 1,
+          maximum: 120,
+          description: 'Number of months from today'
+        },
+        years: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 10,
+          description: 'Number of years from today'
+        },
+        format: {
+          type: 'string',
+          enum: ['detailed', 'summary'],
+          default: 'detailed',
+          description: 'Output format: detailed shows all transactions, summary shows totals only'
+        }
+      },
+      anyOf: [
+        { required: ['fromDate', 'toDate'] },
+        { required: ['days'] },
+        { required: ['weeks'] }, 
+        { required: ['months'] },
+        { required: ['years'] }
+      ]
+    },
+    handler: async (args) => {
+      const {
+        fromDate = null,
+        toDate = null,
+        days = null,
+        weeks = null,
+        months = null,
+        years = null,
+        format = 'detailed'
+      } = args;
+
+      // Validate argument combinations using core logic
+      const argsArray = [];
+      if (fromDate) argsArray.push('--from', fromDate);
+      if (toDate) argsArray.push('--to', toDate);
+      if (days) argsArray.push('--days', days.toString());
+      if (weeks) argsArray.push('--weeks', weeks.toString());
+      if (months) argsArray.push('--months', months.toString());
+      if (years) argsArray.push('--years', years.toString());
+
+      const config = parseSpendingsArguments(argsArray);
+      if (!config.success) {
+        throw new Error(config.error);
+      }
+
+      // Get actual date range
+      let actualFromDate, actualToDate;
+      if (config.fromDate && config.toDate) {
+        actualFromDate = config.fromDate;
+        actualToDate = config.toDate;
+      } else {
+        // Calculate relative dates
+        let timeUnit, timeValue;
+        if (config.days) {
+          timeUnit = 'days';
+          timeValue = config.days;
+        } else if (config.weeks) {
+          timeUnit = 'weeks';
+          timeValue = config.weeks;
+        } else if (config.months) {
+          timeUnit = 'months';
+          timeValue = config.months;
+        } else if (config.years) {
+          timeUnit = 'years';
+          timeValue = config.years;
+        }
+        
+        actualFromDate = calculateRelativeDate(timeUnit, timeValue);
+        const today = new Date();
+        actualToDate = today.toISOString().split('T')[0];
+      }
+
+      // Validate dates
+      const fromValidation = validateDate(actualFromDate);
+      if (!fromValidation.valid) {
+        throw new Error(`Invalid from date: ${fromValidation.error}`);
+      }
+      
+      const toValidation = validateDate(actualToDate);
+      if (!toValidation.valid) {
+        throw new Error(`Invalid to date: ${toValidation.error}`);
+      }
+
+      // Check date order
+      if (fromValidation.date > toValidation.date) {
+        throw new Error('From date must be before or equal to to date');
+      }
+
+      // Get spending data
+      const logPath = getLogPath();
+      const spendingsData = getSpendingsBetweenDates(logPath, actualFromDate, actualToDate, fs);
+
+      // Format output
+      if (format === 'summary') {
+        if (spendingsData.errorMessage) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `📊 Spending Summary (${actualFromDate} to ${actualToDate})\n💰 No data found for the specified period`
+              }
+            ],
+            isReadOnly: true
+          };
+        }
+
+        // Create summary output
+        const currencies = Object.keys(spendingsData.currencyTotals);
+        let summary = `📊 Spending Summary (${actualFromDate} to ${actualToDate})\n💰 `;
+        
+        if (currencies.length === 0) {
+          summary += 'No spending data found';
+        } else if (currencies.length === 1) {
+          const currency = currencies[0];
+          const total = spendingsData.currencyTotals[currency];
+          summary += `Total: ${total} ${currency}`;
+        } else {
+          summary += 'Total: ';
+          const totals = currencies.map(currency => 
+            `${spendingsData.currencyTotals[currency]} ${currency}`
+          ).join(' | ');
+          summary += totals;
+        }
+
+        // Add transaction count
+        if (spendingsData.entries.length > 0) {
+          summary += `\n📈 ${spendingsData.entries.length} gift${spendingsData.entries.length === 1 ? '' : 's'} across ${currencies.length} currency${currencies.length === 1 ? '' : 'ies'}`;
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: summary
+            }
+          ],
+          isReadOnly: true
+        };
+      } else {
+        // Detailed format
+        let output = `📊 Spending Analysis (${actualFromDate} to ${actualToDate})\n\n`;
+        
+        if (spendingsData.errorMessage) {
+          output += spendingsData.errorMessage;
+        } else {
+          // Add currency totals
+          const currencies = Object.keys(spendingsData.currencyTotals);
+          if (currencies.length > 0) {
+            output += '💰 Total Spending:\n';
+            for (const currency of currencies.sort()) {
+              const total = spendingsData.currencyTotals[currency];
+              output += `  ${total} ${currency}\n`;
+            }
+            output += '\n';
+          }
+
+          // Add transaction details if we have data
+          if (spendingsData.entries.length > 0) {
+            output += '📝 Transaction Details:\n';
+            
+            // Group by currency for display
+            const entriesByCurrency = {};
+            for (const entry of spendingsData.entries) {
+              if (!entriesByCurrency[entry.currency]) {
+                entriesByCurrency[entry.currency] = [];
+              }
+              entriesByCurrency[entry.currency].push(entry);
+            }
+
+            // Display entries grouped by currency
+            for (const currency of currencies.sort()) {
+              if (currencies.length > 1) {
+                output += `${currency}:\n`;
+              }
+              for (const entry of entriesByCurrency[currency]) {
+                const date = entry.timestamp.toISOString().split('T')[0];
+                const recipientPart = entry.recipient ? ` for ${entry.recipient}` : '';
+                output += `${date}  ${entry.amount} ${currency}${recipientPart}\n`;
+              }
+              if (currencies.length > 1) {
+                output += '\n';
+              }
+            }
+          } else {
+            output += '📝 No transactions found for the specified period';
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: output.trim()
+            }
+          ],
+          isReadOnly: true
+        };
+      }
     }
   });
 }

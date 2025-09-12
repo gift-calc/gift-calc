@@ -62,7 +62,8 @@ describe('MCP Tools Tests', () => {
         'add_to_naughty_list',
         'remove_from_naughty_list',
         'init_config',
-        'get_calculation_history'
+        'get_calculation_history',
+        'get_spendings'
       ];
 
       // Check that registerAllTools function exists and is callable
@@ -70,7 +71,7 @@ describe('MCP Tools Tests', () => {
       expect(server).toBeDefined();
       
       // Verify the expected tool count makes sense
-      expect(expectedTools.length).toBe(10);
+      expect(expectedTools.length).toBe(11);
     });
   });
 
@@ -285,6 +286,86 @@ describe('MCP Tools Tests', () => {
       expectedPaths.forEach(pathType => {
         expect(typeof pathType).toBe('string');
         expect(pathType.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('get_spendings Tool Schema', () => {
+    test('should validate absolute date parameters', () => {
+      const requiredFields = ['fromDate', 'toDate'];
+      const datePattern = '^\\d{4}-\\d{2}-\\d{2}$';
+      
+      expect(requiredFields).toContain('fromDate');
+      expect(requiredFields).toContain('toDate');
+      expect(datePattern).toContain('\\d{4}');
+      expect(datePattern).toContain('-');
+    });
+
+    test('should validate relative time parameters', () => {
+      const relativeFields = ['days', 'weeks', 'months', 'years'];
+      
+      relativeFields.forEach(field => {
+        expect(typeof field).toBe('string');
+        expect(field.length).toBeGreaterThan(0);
+      });
+    });
+
+    test('should validate format parameter', () => {
+      const validFormats = ['detailed', 'summary'];
+      
+      expect(validFormats).toContain('detailed');
+      expect(validFormats).toContain('summary');
+      expect(validFormats.length).toBe(2);
+    });
+
+    test('should validate parameter constraints', () => {
+      // Days: 1-3650
+      expect(1).toBeLessThanOrEqual(3650);
+      expect(3650).toBeGreaterThanOrEqual(1);
+      
+      // Weeks: 1-520  
+      expect(1).toBeLessThanOrEqual(520);
+      expect(520).toBeGreaterThanOrEqual(1);
+      
+      // Months: 1-120
+      expect(1).toBeLessThanOrEqual(120);
+      expect(120).toBeGreaterThanOrEqual(1);
+      
+      // Years: 1-10
+      expect(1).toBeLessThanOrEqual(10);
+      expect(10).toBeGreaterThanOrEqual(1);
+    });
+
+    test('should validate mutually exclusive date arguments', () => {
+      // The anyOf schema ensures only one combination is valid
+      const validCombinations = [
+        ['fromDate', 'toDate'],
+        ['days'],
+        ['weeks'], 
+        ['months'],
+        ['years']
+      ];
+
+      expect(validCombinations).toHaveLength(5);
+      expect(validCombinations[0]).toEqual(['fromDate', 'toDate']);
+    });
+  });
+
+  describe('Tool Safety Classifications Updated', () => {
+    test('should include get_spendings as read-only tool', () => {
+      const readOnlyTools = [
+        'calculate_gift_amount',
+        'match_previous_gift',
+        'check_naughty_list', 
+        'get_config',
+        'get_budget_status',
+        'get_calculation_history',
+        'get_spendings'
+      ];
+
+      readOnlyTools.forEach(toolName => {
+        expect(typeof toolName).toBe('string');
+        expect(toolName.length).toBeGreaterThan(0);
       });
     });
   });

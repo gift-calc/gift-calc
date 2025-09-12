@@ -280,6 +280,25 @@ View recent gift calculations from the log.
 
 **Example:** Show last 5 calculations, or all calculations for "Alice"
 
+#### `get_spendings`
+Analyze spending patterns over specific time periods with multi-currency support.
+
+**Parameters:**
+- **Either absolute dates OR relative period:**
+  - `fromDate` + `toDate` (string): Date range in YYYY-MM-DD format
+  - `days` (number): Last N days (1-3650)
+  - `weeks` (number): Last N weeks (1-520)
+  - `months` (number): Last N months (1-120)
+  - `years` (number): Last N years (1-10)
+- `format` (string, optional): "detailed" (default) or "summary"
+
+**Returns:** Spending analysis with totals by currency and transaction details
+
+**Examples:**
+- Last 30 days spending: `{ "days": 30 }`
+- Christmas 2024 analysis: `{ "fromDate": "2024-12-01", "toDate": "2024-12-31" }`
+- Monthly summary: `{ "months": 1, "format": "summary" }`
+
 ### Destructive Tools (Require Confirmation)
 
 These tools modify files or configuration:
@@ -386,6 +405,25 @@ Once configured with your AI client, you can have natural conversations:
 - **Remaining**: 3,752.50 SEK (75% left)
 - **Time Left**: 18 days
 - **Daily Average Available**: 208.47 SEK"*
+
+#### Spending Pattern Analysis
+**User**: "Show me my gift spending patterns over the last 3 months"
+
+**AI Response**: Uses `get_spendings` with months=3
+*"📊 Spending Analysis (2025-06-12 to 2025-09-12)
+
+💰 Total Spending:
+  2,847.50 SEK
+  45.00 EUR
+
+📝 Transaction Details:
+2025-07-15  150.00 SEK for Emma
+2025-08-02  200.00 SEK for Michael  
+2025-08-20  120.75 SEK for Sarah
+2025-09-05  45.00 EUR for David
+2025-09-10  97.50 SEK for Lisa
+
+Total: 5 gifts across 2 currencies"*
 
 ## Development & Testing
 
@@ -539,7 +577,7 @@ All MCP tools are properly categorized:
 
 - **Read-Only Tools** (`isReadOnly: true`): 
   - `calculate_gift_amount`, `match_previous_gift`, `check_naughty_list`
-  - `get_config`, `get_budget_status`, `get_calculation_history`
+  - `get_config`, `get_budget_status`, `get_calculation_history`, `get_spendings`
   - Safe to use without confirmation
 
 - **Destructive Tools** (`isReadOnly: false`):
