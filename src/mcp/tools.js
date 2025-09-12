@@ -713,21 +713,11 @@ export function registerAllTools(server) {
         actualFromDate = config.fromDate;
         actualToDate = config.toDate;
       } else {
-        // Calculate relative dates
-        let timeUnit, timeValue;
-        if (config.days) {
-          timeUnit = 'days';
-          timeValue = config.days;
-        } else if (config.weeks) {
-          timeUnit = 'weeks';
-          timeValue = config.weeks;
-        } else if (config.months) {
-          timeUnit = 'months';
-          timeValue = config.months;
-        } else if (config.years) {
-          timeUnit = 'years';
-          timeValue = config.years;
-        }
+        // Calculate relative dates using mapping approach
+        const timeUnits = ['days', 'weeks', 'months', 'years'];
+        const [timeUnit, timeValue] = timeUnits
+          .map(unit => [unit, config[unit]])
+          .find(([, value]) => value !== undefined) || [];
         
         actualFromDate = calculateRelativeDate(timeUnit, timeValue);
         const today = new Date();
