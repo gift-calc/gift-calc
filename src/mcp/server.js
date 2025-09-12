@@ -228,6 +228,27 @@ export class MCPServer {
     });
   }
 
+  /**
+   * Execute a tool directly (for testing purposes)
+   */
+  async executeTool(toolName, args) {
+    const tool = registeredTools.get(toolName);
+    if (!tool) {
+      throw new Error(`Tool '${toolName}' not found`);
+    }
+
+    // Validate arguments if schema is provided
+    if (tool.inputSchema) {
+      const validation = validateToolArgumentsProtocol(args, tool.inputSchema);
+      if (!validation.isValid) {
+        throw new Error(`Invalid arguments: ${validation.error}`);
+      }
+    }
+
+    // Execute the tool handler
+    return await tool.handler(args);
+  }
+
   sendResponse(id, result) {
     const response = {
       jsonrpc: '2.0',

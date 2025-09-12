@@ -79,20 +79,40 @@ export function validateJsonRpcMessage(message) {
  */
 export function validateToolArguments(args, schema) {
   if (!schema) {
-    return { valid: true };
+    return { isValid: true };
   }
 
   // Basic object type validation
   if (schema.type === 'object') {
     if (typeof args !== 'object' || args === null) {
-      return { valid: false, error: 'Arguments must be an object' };
+      return { isValid: false, error: 'Arguments must be an object' };
     }
 
-    // Check required fields
-    if (schema.required && Array.isArray(schema.required)) {
+    // Handle anyOf validation (for mutually exclusive arguments)
+    if (schema.anyOf && Array.isArray(schema.anyOf)) {
+      let anyOfValid = false;
+      let anyOfErrors = [];
+      
+      for (const anyOfSchema of schema.anyOf) {
+        const result = validateToolArguments(args, anyOfSchema);
+        if (result.isValid) {
+          anyOfValid = true;
+          break;
+        } else {
+          anyOfErrors.push(result.error);
+        }
+      }
+      
+      if (!anyOfValid) {
+        return { isValid: false, error: `Must satisfy one of: ${anyOfErrors.join(', or ')}` };
+      }
+    }
+
+    // Check required fields (if not using anyOf)
+    if (schema.required && Array.isArray(schema.required) && !schema.anyOf) {
       for (const field of schema.required) {
         if (args[field] === undefined || args[field] === null) {
-          return { valid: false, error: `Missing required field: ${field}` };
+          return { isValid: false, error: `Missing required field: ${field}` };
         }
       }
     }
@@ -103,7 +123,7 @@ export function validateToolArguments(args, schema) {
         const propSchema = schema.properties[key];
         if (propSchema) {
           const propValidation = validateProperty(value, propSchema, key);
-          if (!propValidation.valid) {
+          if (!propValidation.isValid) {
             return propValidation;
           }
         }
@@ -111,7 +131,7 @@ export function validateToolArguments(args, schema) {
     }
   }
 
-  return { valid: true };
+  return { isValid: true };
 }
 
 /**
@@ -125,44 +145,44 @@ function validateProperty(value, propSchema, fieldName) {
 
     if (expectedType === 'integer') {
       if (!Number.isInteger(value)) {
-        return { valid: false, error: `Field '${fieldName}' must be an integer` };
+        return { isValid: false, error: `Field '${fieldName}' must be an integer` };
       }
     } else if (expectedType === 'number') {
       if (typeof value !== 'number' || isNaN(value)) {
-        return { valid: false, error: `Field '${fieldName}' must be a number` };
+        return { isValid: false, error: `Field '${fieldName}' must be a number` };
       }
     } else if (actualType !== expectedType) {
-      return { valid: false, error: `Field '${fieldName}' must be of type ${expectedType}` };
+      return { isValid: false, error: `Field '${fieldName}' must be of type ${expectedType}` };
     }
   }
 
   // Minimum/maximum validation for numbers
   if (typeof value === 'number') {
     if (propSchema.minimum !== undefined && value < propSchema.minimum) {
-      return { valid: false, error: `Field '${fieldName}' must be >= ${propSchema.minimum}` };
+      return { isValid: false, error: `Field '${fieldName}' must be >= ${propSchema.minimum}` };
     }
     if (propSchema.maximum !== undefined && value > propSchema.maximum) {
-      return { valid: false, error: `Field '${fieldName}' must be <= ${propSchema.maximum}` };
+      return { isValid: false, error: `Field '${fieldName}' must be <= ${propSchema.maximum}` };
     }
   }
 
   // String length validation
   if (typeof value === 'string') {
     if (propSchema.minLength !== undefined && value.length < propSchema.minLength) {
-      return { valid: false, error: `Field '${fieldName}' must be at least ${propSchema.minLength} characters` };
+      return { isValid: false, error: `Field '${fieldName}' must be at least ${propSchema.minLength} characters` };
     }
     if (propSchema.maxLength !== undefined && value.length > propSchema.maxLength) {
-      return { valid: false, error: `Field '${fieldName}' must be at most ${propSchema.maxLength} characters` };
+      return { isValid: false, error: `Field '${fieldName}' must be at most ${propSchema.maxLength} characters` };
     }
     if (propSchema.pattern !== undefined) {
       const regex = new RegExp(propSchema.pattern);
       if (!regex.test(value)) {
-        return { valid: false, error: `Field '${fieldName}' does not match required pattern` };
+        return { isValid: false, error: `Field '${fieldName}' does not match required pattern` };
       }
     }
   }
 
-  return { valid: true };
+  return { isValid: true };
 }
 
 /**
