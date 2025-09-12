@@ -1,3 +1,11 @@
+# [2.5.0](https://github.com/gift-calc/gift-calc/compare/v2.4.1...v2.5.0) (2025-09-12)
+
+
+### Features
+
+* add spending tracking command for time-period analysis ([10179bd](https://github.com/gift-calc/gift-calc/commit/10179bd1a23e0197301fbeb3bb0281289321cfb4)), closes [#11](https://github.com/gift-calc/gift-calc/issues/11)
+* add update-claude-md command following 2025 best practices ([ec646fb](https://github.com/gift-calc/gift-calc/commit/ec646fb8c0fb626357b8178d1fc95a4ca3bed081))
+
 ## [2.4.1](https://github.com/gift-calc/gift-calc/compare/v2.4.0...v2.4.1) (2025-09-11)
 
 
