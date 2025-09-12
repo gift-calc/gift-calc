@@ -5,7 +5,7 @@ Analyze current changes and create an appropriate conventional commit message, t
 ## Usage
 
 ```
-/commit
+/commit-push
 ```
 
 ## Implementation
@@ -55,7 +55,7 @@ Analyze current changes and create an appropriate conventional commit message, t
 - Small enhancements to existing functionality
 
 **Common Mistakes to Avoid:**
-- ❌ `fix: update GitHub Actions Node.js version` → Should be: `ci:`
+- ❌ `fix: update GitHub Actions version` → Should be: `ci:`
 - ❌ `fix: add missing tests for edge cases` → Should be: `test:`  
 - ❌ `fix: update README installation instructions` → Should be: `docs:`
 - ❌ `fix: update dependencies to latest versions` → Should be: `chore:`
@@ -70,7 +70,8 @@ Analyze current changes and create an appropriate conventional commit message, t
 
 ## Notes
 
-- Uses `gh` CLI tool for GitHub operations when possible
+- Uses `gh` CLI tool for GitHub operations when available
 - Follows semantic versioning conventions for automated versioning
 - Commits are pushed to the current branch
-- The LLM will analyze changes and suggest appropriate commit message format
+- Test and build commands are read from CLAUDE.md when validation is needed
+- The assistant will analyze changes and suggest appropriate commit message format
