@@ -561,12 +561,19 @@ EXAMPLES:
   gift-calc budget                                                        # Defaults to showing status
   
   SPENDINGS EXAMPLES:
+  # Absolute date ranges (specific start and end dates)
   gift-calc spendings --from 2024-01-01 --to 2024-12-31                   # All spending in 2024
   gift-calc spendings -f 2024-12-01 -t 2024-12-31                         # December 2024 spending (short form)
+  
+  # Relative time periods (calculated from current date)
   gcalc spendings --days 30                                               # Last 30 days spending
   gcalc s --weeks 4                                                       # Last 4 weeks spending (short alias)
   gift-calc spendings --months 3                                          # Last 3 months spending
   gcalc spendings --years 1                                               # Last year spending
+  
+  # Invalid: Cannot mix absolute and relative periods
+  # gift-calc spendings --from 2024-01-01 --days 30                       # Error: mutually exclusive
+  
   # Output shows total per currency and itemized chronological list
   # Multi-currency spending is grouped by currency for easy analysis
   
