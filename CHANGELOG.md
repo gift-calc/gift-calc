@@ -1,3 +1,15 @@
+# [2.6.0](https://github.com/gift-calc/gift-calc/compare/v2.5.0...v2.6.0) (2025-09-12)
+
+
+### Bug Fixes
+
+* resolve MCP tool validation property inconsistency ([a0bf736](https://github.com/gift-calc/gift-calc/commit/a0bf73605daaabc681c00d1ea4ae137cd1198fda))
+
+
+### Features
+
+* add get_spendings MCP tool for spending pattern analysis ([84202c8](https://github.com/gift-calc/gift-calc/commit/84202c87eb9850da075f76702ebac009030e68ff))
+
 # [2.5.0](https://github.com/gift-calc/gift-calc/compare/v2.4.1...v2.5.0) (2025-09-12)
 
 
