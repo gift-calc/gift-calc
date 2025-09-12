@@ -1,84 +1,63 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+## Tech Stack
+- Node.js ≥20.8.1 (pure, no external runtime dependencies)
+- Testing: vitest
+- Publishing: semantic-release
+- CLI: dual commands (`gift-calc`, `gcalc`)
 
-## File Imports
-
-See @README.md for project overview and @package.json for available npm commands.
-
-## Project Overview
-
-`gift-calc` is a Node.js CLI tool that calculates gift amounts with configurable randomness and relationship-based bias. Published as an npm package with dual commands: `gift-calc` and `gcalc`.
-
-**Tech Stack:** Pure Node.js (≥20.8.1), no external runtime dependencies, vitest for testing, semantic-release for publishing.
-
-## Development Commands
-
-```bash
-# Local testing
-node index.js --help                 # Test CLI locally
-node index.js -b 100 -r 30 -f 7     # Test with parameters
-
-# Development workflow
-npm test                             # Run tests
-npm run test:coverage                # Run tests with coverage
-npm link                             # Link for global testing
-```
-
-## Architecture
-
-**Modular Structure:**
+## Project Structure
 - `index.js` - CLI interface and file operations
-- `src/core.js` - Pure functions for calculations and parsing
-- `src/mcp/` - Model Context Protocol server implementation
+- `src/core.js` - Pure calculation functions
+- `src/mcp/` - Model Context Protocol server
 - Config: `~/.config/gift-calc/.config.json` (auto-created)
 
-**Command Priority:** CLI args > config file > built-in defaults
+## Commands
+```bash
+# Testing
+npm test                             # Run tests
+npm run test:coverage                # Coverage report
+node index.js --help                 # Test CLI locally
 
-## Related Repositories
+# Development
+npm link                             # Global testing
+node mcp-server.js                   # Test MCP server
+```
 
-1. `../homebrew-gift-calc` - Homebrew tap for `brew install`
-2. `../gift-calc.github.io` - Documentation website
+## Code Style
+- Manual argument parsing (no CLI libraries)
+- Reuse functions from `src/core.js` for MCP tools
+- Mark MCP tool safety: `isReadOnly: true/false`
+- Command priority: CLI args > config file > defaults
 
-**IMPORTANT:** After CLI/functionality changes, update README.md, website docs, and Homebrew formula if needed.
-
-## Development Workflow
-
+## Workflow
 1. Make changes
 2. Run `npm test`
 3. Use `/commit` command (conventional commits)
 4. Push to master (auto-publishes via semantic-release)
 
 ## GitHub Operations
-
-Use `gh` CLI for all GitHub tasks: `gh pr create`, `gh issue list`, `gh repo view`, etc.
-
-## MCP Server
-
-`mcp-server.js` provides Model Context Protocol support. Test with:
-```bash
-node mcp-server.js
-```
-
-New tools should reuse functions from `src/core.js` and mark safety level (`isReadOnly: true/false`).
+Use `gh` CLI: `gh pr create`, `gh issue list`, `gh repo view`
 
 ## Custom Commands
+- `/commit-push` - Conventional commits with semantic versioning
+- `/implement-issue <number>` - Implement GitHub issue
+- `/fix-failing-tests` - Fix failing tests
+- `/sync-master` - Sync with master branch
+- `/pr-review <pr>` - Review pull request
+- `/pr-code-review <pr>` - Code-focused PR review
+- `/pr-docs-review <pr>` - Documentation-focused PR review  
+- `/pr-tests-review <pr>` - Tests-focused PR review
+- `/pr-fix-code <pr>` - Fix code issues in PR
+- `/pr-fix-docs <pr>` - Fix documentation issues in PR
+- `/pr-fix-tests <pr>` - Fix test issues in PR
 
-- `/commit` - Conventional commits with semantic versioning
-- `/feature <description>` - Feature implementation workflow
+## Do Not Touch
+- Core algorithm logic (requires explicit approval)
+- CLI argument structure (breaking changes)
+- Config file compatibility
+- MCP protocol version/transport
+- No AI attribution in commits
 
-## Boundaries
-
-**DO NOT:**
-- Modify existing core algorithm logic without explicit approval
-- Change CLI argument structure (breaking changes)
-- Remove or alter config file compatibility
-- Modify MCP protocol version or transport mechanism
-- Create commits with AI attribution or tool references
-
-## Important Notes
-
-- Uses manual argument parsing (no external CLI libraries)
-- Maintains backwards compatibility for config files
-- Follows semantic versioning via conventional commits
-- All MCP tools must reuse existing `src/core.js` functions
+## Related Updates
+After CLI/functionality changes: update README.md, website docs, Homebrew formula
