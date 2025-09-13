@@ -60,7 +60,7 @@ brew install gift-calc
 ### Via Install Script (Unix/Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/master/bin/install.sh | sh
 ```
 
 ### Via Docker
@@ -244,10 +244,10 @@ npm test                    # Run tests
 ## More Information
 
 - **Full Documentation**: [Website](https://gift-calc.github.io)
-- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
-- **Security**: [SECURITY.md](SECURITY.md)
-- **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Contributing**: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+- **Changelog**: [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- **Security**: [docs/SECURITY.md](docs/SECURITY.md)
+- **Code of Conduct**: [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md)
 - **Issues**: [GitHub Issues](https://github.com/gift-calc/gift-calc/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/gift-calc/gift-calc/discussions)
 
