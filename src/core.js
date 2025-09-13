@@ -904,6 +904,10 @@ export function searchNaughtyList(searchTerm, naughtyListPath, fsModule) {
 // Budget Management Functions
 // These functions require Node.js modules and should only be used in Node.js contexts
 
+// Budget configuration validation constants
+const VALID_BUDGET_ACTIONS = ['add', 'list', 'status', 'edit'];
+const VALID_BUDGET_EDIT_OPTIONS = ['--amount', '--from-date', '--to-date', '--description'];
+
 /**
  * Parse budget specific arguments
  * @param {string[]} args - Array of command line arguments (without budget/b prefix)
@@ -1038,14 +1042,14 @@ export function parseBudgetArguments(args) {
         }
       } else {
         config.success = false;
-        config.error = `Unknown option: ${arg}`;
+        config.error = `Unknown option: ${arg}. Valid options for edit: ${VALID_BUDGET_EDIT_OPTIONS.join(', ')}`;
         return config;
       }
     }
     
   } else {
     config.success = false;
-    config.error = `Unknown budget action: ${firstArg}. Use: add, list, status, edit`;
+    config.error = `Unknown budget action: ${firstArg}. Valid actions: ${VALID_BUDGET_ACTIONS.join(', ')}`;
   }
   
   return config;
@@ -1644,6 +1648,9 @@ export function findLastGiftForRecipientFromLog(recipientName, logPath, fsModule
 // Spending Tracking Functions
 // These functions require Node.js modules and should only be used in Node.js contexts
 
+// Spendings configuration validation constants
+const VALID_SPENDING_OPTIONS = ['--from (-f)', '--to (-t)', '--days', '--weeks', '--months', '--years'];
+
 /**
  * Parse spendings specific arguments
  * @param {string[]} args - Array of command line arguments (without spendings/s prefix)
@@ -1763,7 +1770,7 @@ export function parseSpendingsArguments(args) {
       }
     } else {
       config.success = false;
-      config.error = `Unknown argument: ${arg}`;
+      config.error = `Unknown argument: ${arg}. Valid options: ${VALID_SPENDING_OPTIONS.join(', ')}`;
       return config;
     }
   }
@@ -1967,6 +1974,11 @@ export function formatSpendingsOutput(spendingsData, fromDate, toDate) {
 // Person Configuration Functions
 // These functions require Node.js modules and should only be used in Node.js contexts
 
+// Person configuration validation constants
+const VALID_SORT_FIELDS = ['name', 'nice-score', 'friend-score', 'base-value', 'currency'];
+const VALID_SORT_ORDERS = ['asc', 'desc'];
+const VALID_PERSON_ACTIONS = ['set', 'clear', 'list'];
+
 /**
  * Parse person specific arguments
  * @param {string[]} args - Array of command line arguments (without person/p prefix)
@@ -2041,7 +2053,7 @@ export function parsePersonArguments(args) {
         i++;
       } else {
         config.success = false;
-        config.error = `Unknown option: ${arg}`;
+        config.error = `Unknown option: ${arg}. Valid options for set: --name (-n), --nice-score (-s), --friend-score (-f), --base-value (-b), --currency (-c)`;
         return config;
       }
     }
@@ -2065,7 +2077,7 @@ export function parsePersonArguments(args) {
         i++;
       } else {
         config.success = false;
-        config.error = `Unknown option: ${arg}`;
+        config.error = `Unknown option: ${arg}. Valid option for clear: --name (-n)`;
         return config;
       }
     }
@@ -2085,36 +2097,36 @@ export function parsePersonArguments(args) {
       
       if ((arg === '--sort-by' || arg === '-s') && args[i + 1]) {
         const field = args[i + 1];
-        if (['name', 'nice-score', 'friend-score', 'base-value', 'currency'].includes(field)) {
+        if (VALID_SORT_FIELDS.includes(field)) {
           config.sortBy = field;
           i++;
         } else {
           config.success = false;
-          config.error = `Invalid sort field: ${field}. Valid options: name, nice-score, friend-score, base-value, currency`;
+          config.error = `Invalid sort field: ${field}. Valid options: ${VALID_SORT_FIELDS.join(', ')}`;
           return config;
         }
       } else if ((arg === '--order' || arg === '-o') && args[i + 1]) {
         const order = args[i + 1];
-        if (['asc', 'desc'].includes(order)) {
+        if (VALID_SORT_ORDERS.includes(order)) {
           config.order = order;
           i++;
         } else {
           config.success = false;
-          config.error = `Invalid order: ${order}. Valid options: asc, desc`;
+          config.error = `Invalid order: ${order}. Valid options: ${VALID_SORT_ORDERS.join(', ')}`;
           return config;
         }
       } else if (arg === '--reverse' || arg === '-r') {
         config.order = 'desc';
       } else {
         config.success = false;
-        config.error = `Unknown option: ${arg}`;
+        config.error = `Unknown option: ${arg}. Valid options for list: --sort-by (-s), --order (-o), --reverse (-r)`;
         return config;
       }
     }
     
   } else {
     config.success = false;
-    config.error = `Unknown person action: ${firstArg}. Use: set, clear, list`;
+    config.error = `Unknown person action: ${firstArg}. Valid actions: ${VALID_PERSON_ACTIONS.join(', ')}`;
   }
   
   return config;
