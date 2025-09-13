@@ -183,7 +183,7 @@ describe('MCP Server Edge Cases', () => {
         }
       ];
 
-      const mcpServer = spawn('node', ['mcp-server.js'], {
+      const mcpServer = spawn('node', ['bin/mcp-server.js'], {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: process.cwd()
       });
@@ -224,7 +224,7 @@ describe('MCP Server Edge Cases', () => {
     });
 
     test('should handle empty lines in input gracefully', async () => {
-      const mcpServer = spawn('node', ['mcp-server.js'], {
+      const mcpServer = spawn('node', ['bin/mcp-server.js'], {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: process.cwd()
       });
@@ -357,7 +357,7 @@ describe('MCP Server Edge Cases', () => {
  */
 async function sendMCPCommand(message) {
   return new Promise((resolve, reject) => {
-    const mcpServer = spawn('node', ['mcp-server.js'], {
+    const mcpServer = spawn('node', ['bin/mcp-server.js'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: process.cwd()
     });

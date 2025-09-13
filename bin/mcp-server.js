@@ -7,8 +7,8 @@
  * This is the main entry point that orchestrates the modular MCP implementation
  */
 
-import { MCPServer, SERVER_INFO } from './src/mcp/server.js';
-import { registerAllTools } from './src/mcp/tools.js';
+import { MCPServer, SERVER_INFO } from '../src/mcp/server.js';
+import { registerAllTools } from '../src/mcp/tools.js';
 
 /**
  * Initialize and start the MCP server

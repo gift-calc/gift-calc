@@ -60,7 +60,7 @@ brew install gift-calc
 ### Via Install Script (Unix/Linux/macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gift-calc/gift-calc/master/bin/install.sh | sh
 ```
 
 ### Via Docker
@@ -225,7 +225,7 @@ gift-calc -b 200 --name "Bob"
 
 Gift-calc includes built-in MCP server support, enabling direct integration with AI assistants like Claude, GPT, and other LLMs. Use gift-calc tools directly in AI conversations for natural gift calculations, budget management, and naughty list operations.
 
-📖 **Complete documentation**: [MCP.md](MCP.md) - installation, setup, troubleshooting, and examples
+📖 **Complete documentation**: [MCP.md](docs/MCP.md) - installation, setup, troubleshooting, and examples
 
 ## Development
 
@@ -244,10 +244,10 @@ npm test                    # Run tests
 ## More Information
 
 - **Full Documentation**: [Website](https://gift-calc.github.io)
-- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
-- **Security**: [SECURITY.md](SECURITY.md)
-- **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Contributing**: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+- **Changelog**: [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- **Security**: [docs/SECURITY.md](docs/SECURITY.md)
+- **Code of Conduct**: [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md)
 - **Issues**: [GitHub Issues](https://github.com/gift-calc/gift-calc/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/gift-calc/gift-calc/discussions)
 
