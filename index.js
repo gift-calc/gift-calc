@@ -34,7 +34,13 @@ import {
   calculateRelativeDate,
   getSpendingsBetweenDates,
   formatSpendingsOutput,
-  validateDate
+  validateDate,
+  parsePersonArguments,
+  getPersonConfigPath,
+  setPersonConfig,
+  clearPersonConfig,
+  listPersonConfigs,
+  getPersonConfig
 } from './src/core.js';
 
 // Config utilities
@@ -58,7 +64,7 @@ function getLogPath() {
   return path.join(homeDir, '.config', 'gift-calc', 'gift-calc.log');
 }
 
-function loadConfig() {
+function loadConfig(personName = null) {
   const config = {};
   
   // Load from file first
@@ -72,7 +78,24 @@ function loadConfig() {
     }
   }
   
-  // Environment variable overrides
+  // Load person-specific config if name provided
+  if (personName) {
+    try {
+      const personConfigPath = getPersonConfigPath(path, os);
+      const personConfig = getPersonConfig(personName, personConfigPath, fs);
+      if (personConfig) {
+        // Person config overrides global config
+        if (personConfig.baseValue !== undefined) config.baseValue = personConfig.baseValue;
+        if (personConfig.currency !== undefined) config.currency = personConfig.currency;
+        if (personConfig.niceScore !== undefined) config.niceScore = personConfig.niceScore;
+        if (personConfig.friendScore !== undefined) config.friendScore = personConfig.friendScore;
+      }
+    } catch (error) {
+      // Silently ignore person config errors to avoid disrupting main functionality
+    }
+  }
+  
+  // Environment variable overrides (highest priority)
   if (process.env.GIFT_CALC_BASE_VALUE) {
     const baseValue = parseInt(process.env.GIFT_CALC_BASE_VALUE);
     if (!isNaN(baseValue)) config.baseValue = baseValue;
@@ -103,10 +126,19 @@ function showVersion() {
 
 const args = process.argv.slice(2);
 
-// Load config defaults
-const configDefaults = loadConfig();
+// First parse to detect person name for config loading
+let tempConfig;
+try {
+  tempConfig = parseArguments(args, {});
+} catch (error) {
+  console.error('Error:', error.message);
+  process.exit(1);
+}
 
-// Parse arguments using shared core function
+// Load config defaults with person-specific overrides if name is provided
+const configDefaults = loadConfig(tempConfig.recipientName);
+
+// Parse arguments again with proper defaults
 let parsedConfig;
 try {
   parsedConfig = parseArguments(args, configDefaults);
@@ -156,6 +188,12 @@ if (parsedConfig.command === 'budget') {
 // Handle spendings commands
 if (parsedConfig.command === 'spendings') {
   handleSpendingsCommand(parsedConfig);
+  process.exit(0);
+}
+
+// Handle person commands
+if (parsedConfig.command === 'person') {
+  handlePersonCommand(parsedConfig);
   process.exit(0);
 }
 
@@ -868,4 +906,64 @@ function handleSpendingsCommand(config) {
   // Format and display output
   const output = formatSpendingsOutput(spendingsData, fromDate, toDate);
   console.log(output);
+}
+
+function handlePersonCommand(config) {
+  // Check if parsing succeeded
+  if (!config.success) {
+    console.error('Error:', config.error);
+    console.log('\nUsage:');
+    console.log('  gift-calc person set --name "Alice" --nice-score 9 --friend-score 8 --base-value 150 --currency USD');
+    console.log('  gift-calc person list [--sort-by FIELD] [--order ORDER] [--reverse]');
+    console.log('  gift-calc person clear --name "Alice"');
+    console.log('  gcalc p set -n "Alice" -s 9 -f 8 -b 100 -c USD  # Short form');
+    console.log('  gcalc p list --sort-by name --order asc');
+    console.log('  gcalc p list -s base-value -o desc');
+    console.log('  gcalc p clear --name "Alice"');
+    process.exit(1);
+  }
+  
+  // Get person config path
+  const personConfigPath = getPersonConfigPath(path, os);
+  
+  // Handle different actions
+  switch (config.action) {
+    case 'set':
+      const personData = {};
+      if (config.niceScore !== null) personData.niceScore = config.niceScore;
+      if (config.friendScore !== null) personData.friendScore = config.friendScore;
+      if (config.baseValue !== null) personData.baseValue = config.baseValue;
+      if (config.currency !== null) personData.currency = config.currency;
+      
+      const setResult = setPersonConfig(config.name, personData, personConfigPath, fs, path);
+      console.log(setResult.message);
+      if (!setResult.success) {
+        process.exit(1);
+      }
+      break;
+      
+    case 'clear':
+      const clearResult = clearPersonConfig(config.name, personConfigPath, fs, path);
+      console.log(clearResult.message);
+      if (!clearResult.success) {
+        process.exit(1);
+      }
+      break;
+      
+    case 'list':
+      const personList = listPersonConfigs(personConfigPath, fs, config.sortBy, config.order);
+      if (personList.length === 0) {
+        console.log('No person configurations found.');
+      } else {
+        console.log('Person Configurations:');
+        personList.forEach(entry => {
+          console.log(`  ${entry}`);
+        });
+      }
+      break;
+      
+    default:
+      console.error('Unknown action:', config.action);
+      process.exit(1);
+  }
 }
