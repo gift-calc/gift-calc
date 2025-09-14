@@ -267,6 +267,8 @@ Top 4 Persons (Total Gifts):
 4. David: 150.00 SEK
 ```
 
+> **Note**: For toplist command help, use the global help flag: `gift-calc --help`
+
 **Features:**
 - **Multi-currency support**: Shows gift totals in original currencies
 - **Score integration**: Displays nice and friend scores when available
