@@ -132,13 +132,13 @@ describe('Person Configuration Functions', () => {
     it('should fail set command without name', () => {
       const result = parsePersonArguments(['set', '--nice-score', '8']);
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Name is required');
+      expect(result.error).toContain('Person name is required');
     });
 
     it('should fail clear command without name', () => {
       const result = parsePersonArguments(['clear']);
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Name is required');
+      expect(result.error).toContain('Person name is required');
     });
 
     it('should fail for nice score too high', () => {
@@ -318,7 +318,7 @@ describe('Person Configuration Functions', () => {
     it('should handle CLI error for missing name', () => {
       const result = runCLI('person set --nice-score 8');
       expect(result.success).toBe(false);
-      expect(result.stderr + result.stdout).toContain('Name is required');
+      expect(result.stderr + result.stdout).toContain('Person name is required');
     });
 
     it('should handle CLI error for invalid score', () => {

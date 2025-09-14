@@ -2061,7 +2061,7 @@ export function parsePersonArguments(args) {
     // Validate required fields
     if (!config.name) {
       config.success = false;
-      config.error = 'Name is required for set command';
+      config.error = 'Person name is required for person set command';
       return config;
     }
     
@@ -2084,7 +2084,7 @@ export function parsePersonArguments(args) {
     
     if (!config.name) {
       config.success = false;
-      config.error = 'Name is required for clear command';
+      config.error = 'Person name is required for person clear command';
       return config;
     }
     
@@ -2217,14 +2217,17 @@ export function setPersonConfig(name, personData, personConfigPath, fsModule, pa
       message: 'Name cannot be empty'
     };
   }
-  
+
+  // Sanitize name by trimming whitespace
+  const trimmedName = name.trim();
+
   const { persons } = loadPersonConfig(personConfigPath, fsModule);
-  const key = name.toLowerCase();
+  const key = trimmedName.toLowerCase();
   
   // Preserve existing values and update with new ones
   const existingData = persons[key] || {};
   const updatedData = {
-    name: name, // Use the provided name with proper casing
+    name: trimmedName, // Use the trimmed name with proper casing
     niceScore: personData.niceScore !== undefined ? personData.niceScore : existingData.niceScore,
     friendScore: personData.friendScore !== undefined ? personData.friendScore : existingData.friendScore,
     baseValue: personData.baseValue !== undefined ? personData.baseValue : existingData.baseValue,
@@ -2238,7 +2241,7 @@ export function setPersonConfig(name, personData, personConfigPath, fsModule, pa
   if (saved) {
     return {
       success: true,
-      message: `Person configuration saved for ${name}`,
+      message: `Person configuration saved for ${trimmedName}`,
       person: updatedData
     };
   } else {
@@ -2264,14 +2267,17 @@ export function clearPersonConfig(name, personConfigPath, fsModule, pathModule) 
       message: 'Name cannot be empty'
     };
   }
-  
+
+  // Sanitize name by trimming whitespace
+  const trimmedName = name.trim();
+
   const { persons } = loadPersonConfig(personConfigPath, fsModule);
-  const key = name.toLowerCase();
+  const key = trimmedName.toLowerCase();
   
   if (!persons[key]) {
     return {
       success: false,
-      message: `Person configuration for ${name} not found`
+      message: `Person configuration for ${trimmedName} not found`
     };
   }
   
@@ -2282,7 +2288,7 @@ export function clearPersonConfig(name, personConfigPath, fsModule, pathModule) 
   if (saved) {
     return {
       success: true,
-      message: `Person configuration cleared for ${name}`
+      message: `Person configuration cleared for ${trimmedName}`
     };
   } else {
     return {
@@ -2382,9 +2388,12 @@ export function getPersonConfig(name, personConfigPath, fsModule) {
   if (!name || name.trim() === '') {
     return null;
   }
-  
+
+  // Sanitize name by trimming whitespace
+  const trimmedName = name.trim();
+
   const { persons } = loadPersonConfig(personConfigPath, fsModule);
-  const key = name.toLowerCase();
+  const key = trimmedName.toLowerCase();
   
   return persons[key] || null;
 }
