@@ -449,6 +449,8 @@ USAGE:
   gift-calc toplist -n                   # Top 10 persons by nice score
   gift-calc toplist --friend-score -l 5  # Top 5 persons by friend score
   gift-calc toplist -c USD               # Top 10 persons by USD gift amount
+  gift-calc toplist --from 2024-01-01    # Top 10 from January 1, 2024 to today
+  gift-calc toplist --from 2024-01-01 --to 2024-12-31  # Top 10 for 2024
   gift-calc toplist --list-currencies    # Show available currencies
   gcalc [options]              # Short alias
   gcalc nl <name>              # Add to naughty list (short form)
@@ -604,6 +606,10 @@ EXAMPLES:
   gcalc tl --friend-score --length 15                                # Top 15 persons by friend score
   gift-calc toplist --currency USD                                    # Top 10 persons by USD gifts only
   gcalc tl -c SEK -l 5                                               # Top 5 persons by SEK gifts only
+  gift-calc toplist --from 2024-01-01                                # Top 10 persons from January 1, 2024 to today
+  gift-calc toplist --from 2024-01-01 --to 2024-12-31               # Top 10 persons for gifts in 2024
+  gcalc tl --from 2024-12-01 -n                                     # Top 10 by nice score for gifts since December 1
+  gift-calc toplist --from 2024-06-01 --to 2024-08-31 -l 5          # Top 5 for summer gifts (Jun-Aug)
   gift-calc toplist --list-currencies                                 # Show available currencies in dataset
   
   BUDGET EXAMPLES:
@@ -2440,7 +2446,9 @@ export function parseToplistArguments(args) {
     length: 10,           // Default top 10
     currency: null,       // Filter by specific currency
     listCurrencies: false, // Show available currencies
-    multiCurrency: false  // Show separate toplists for each currency
+    multiCurrency: false, // Show separate toplists for each currency
+    fromDate: null,       // Filter gifts from this date
+    toDate: null          // Filter gifts up to this date
   };
 
   // Parse arguments
@@ -2482,10 +2490,62 @@ export function parseToplistArguments(args) {
       config.listCurrencies = true;
     } else if (arg === '--multi-currency') {
       config.multiCurrency = true;
+    } else if (arg === '--from') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        const validation = validateDate(nextArg);
+        if (!validation.valid) {
+          config.success = false;
+          config.error = `Invalid from date: ${validation.error}`;
+          return config;
+        }
+        config.fromDate = nextArg;
+        i++;
+      } else {
+        config.success = false;
+        config.error = '--from requires a date in YYYY-MM-DD format';
+        return config;
+      }
+    } else if (arg === '--to') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        const validation = validateDate(nextArg);
+        if (!validation.valid) {
+          config.success = false;
+          config.error = `Invalid to date: ${validation.error}`;
+          return config;
+        }
+        config.toDate = nextArg;
+        i++;
+      } else {
+        config.success = false;
+        config.error = '--to requires a date in YYYY-MM-DD format';
+        return config;
+      }
     } else {
       config.success = false;
-      config.error = `Unknown argument: ${arg}. Valid options: --nice-score (-n), --friend-score (-f), --length (-l), --currency (-c), --list-currencies, --multi-currency`;
+      config.error = `Unknown argument: ${arg}. Valid options: --nice-score (-n), --friend-score (-f), --length (-l), --currency (-c), --from, --to, --list-currencies, --multi-currency`;
       return config;
+    }
+  }
+
+  // Post-processing for date parameters
+  // If fromDate is specified but toDate is not, default toDate to today
+  if (config.fromDate && !config.toDate) {
+    config.toDate = new Date().toISOString().split('T')[0];
+  }
+
+  // Validate date range if both dates are specified
+  if (config.fromDate && config.toDate) {
+    const fromValidation = validateDate(config.fromDate);
+    const toValidation = validateDate(config.toDate);
+
+    if (fromValidation.valid && toValidation.valid) {
+      if (fromValidation.date > toValidation.date) {
+        config.success = false;
+        config.error = 'From date must be before or equal to to date';
+        return config;
+      }
     }
   }
 
@@ -2497,9 +2557,11 @@ export function parseToplistArguments(args) {
  * @param {string} personConfigPath - Path to person config file
  * @param {string} logPath - Path to gift log file
  * @param {object} fsModule - Node.js fs module
+ * @param {string|null} fromDate - Filter gifts from this date (YYYY-MM-DD)
+ * @param {string|null} toDate - Filter gifts up to this date (YYYY-MM-DD)
  * @returns {Object} Toplist data with persons and their total gifts
  */
-export function getToplistData(personConfigPath, logPath, fsModule) {
+export function getToplistData(personConfigPath, logPath, fsModule, fromDate = null, toDate = null) {
   const result = {
     persons: [],
     currencies: new Set(),
@@ -2520,6 +2582,14 @@ export function getToplistData(personConfigPath, logPath, fsModule) {
       for (const line of lines) {
         const entry = parseLogEntry(line);
         if (entry && entry.recipient) {
+          // Apply date filtering if specified
+          if (fromDate || toDate) {
+            const entryDate = entry.timestamp.toISOString().split('T')[0];
+
+            if (fromDate && entryDate < fromDate) continue;
+            if (toDate && entryDate > toDate) continue;
+          }
+
           const recipientKey = entry.recipient.toLowerCase();
           if (!giftTotals[recipientKey]) {
             giftTotals[recipientKey] = {};

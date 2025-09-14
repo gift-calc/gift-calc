@@ -157,6 +157,66 @@ describe('Toplist Arguments Parsing', () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain('Unknown argument');
   });
+
+  it('should parse --from date parameter', () => {
+    const result = parseToplistArguments(['--from', '2024-01-01']);
+    expect(result.success).toBe(true);
+    expect(result.fromDate).toBe('2024-01-01');
+    expect(result.toDate).toBe(new Date().toISOString().split('T')[0]); // Should default to today
+  });
+
+  it('should parse --to date parameter', () => {
+    const result = parseToplistArguments(['--to', '2024-12-31']);
+    expect(result.success).toBe(true);
+    expect(result.fromDate).toBe(null);
+    expect(result.toDate).toBe('2024-12-31');
+  });
+
+  it('should parse both --from and --to date parameters', () => {
+    const result = parseToplistArguments(['--from', '2024-01-01', '--to', '2024-12-31']);
+    expect(result.success).toBe(true);
+    expect(result.fromDate).toBe('2024-01-01');
+    expect(result.toDate).toBe('2024-12-31');
+  });
+
+  it('should handle invalid --from date format', () => {
+    const result = parseToplistArguments(['--from', 'invalid-date']);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Invalid from date');
+  });
+
+  it('should handle invalid --to date format', () => {
+    const result = parseToplistArguments(['--to', '2024-13-45']);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Invalid to date');
+  });
+
+  it('should handle missing --from value', () => {
+    const result = parseToplistArguments(['--from']);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('--from requires a date in YYYY-MM-DD format');
+  });
+
+  it('should handle missing --to value', () => {
+    const result = parseToplistArguments(['--to']);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('--to requires a date in YYYY-MM-DD format');
+  });
+
+  it('should handle from date after to date', () => {
+    const result = parseToplistArguments(['--from', '2024-12-31', '--to', '2024-01-01']);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('From date must be before or equal to to date');
+  });
+
+  it('should combine time filtering with other parameters', () => {
+    const result = parseToplistArguments(['--from', '2024-01-01', '--to', '2024-12-31', '-n', '-l', '5']);
+    expect(result.success).toBe(true);
+    expect(result.fromDate).toBe('2024-01-01');
+    expect(result.toDate).toBe('2024-12-31');
+    expect(result.sortBy).toBe('nice-score');
+    expect(result.length).toBe(5);
+  });
 });
 
 describe('Toplist Data Aggregation', () => {
@@ -229,6 +289,128 @@ describe('Toplist Data Aggregation', () => {
 
     // Cleanup the directory
     fs.rmdirSync(LOG_PATH, { recursive: true });
+  });
+
+  it('should filter by date range when both fromDate and toDate provided', () => {
+    createTestPersonsConfig();
+
+    // Create log entries across different dates
+    const logEntries = [
+      '2024-11-29T10:00:00.000Z 100.00 SEK for Alice',  // Before range
+      '2024-12-01T10:00:00.000Z 150.50 SEK for Alice',  // In range
+      '2024-12-02T11:00:00.000Z 200.00 USD for Bob',    // In range
+      '2024-12-03T12:00:00.000Z 300.25 SEK for Alice',  // In range
+      '2024-12-05T14:00:00.000Z 50.00 SEK for David',   // In range (moved to Dec 5 to be within filter)
+      '2024-12-06T15:00:00.000Z 75.00 SEK for Charlie', // After range (excluded)
+    ];
+
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(LOG_PATH, logEntries.join('\n'));
+
+    // Filter for 2024-12-01 to 2024-12-05
+    const result = getToplistData(PERSON_CONFIG_PATH, LOG_PATH, fs, '2024-12-01', '2024-12-05');
+
+    expect(result.errorMessage).toBe(null);
+
+    // Alice should have gifts from Dec 1 and Dec 3 only (not Nov 29)
+    const alice = result.persons.find(p => p.name === 'Alice');
+    expect(alice).toBeDefined();
+    expect(alice.gifts.SEK).toBeCloseTo(450.75); // 150.50 + 300.25
+
+    // Bob should have gift from Dec 2
+    const bob = result.persons.find(p => p.name === 'Bob');
+    expect(bob).toBeDefined();
+    expect(bob.gifts.USD).toBeCloseTo(200.00);
+
+    // David should have gift from Dec 5 (within range)
+    const david = result.persons.find(p => p.name === 'David');
+    expect(david).toBeDefined();
+    expect(david.gifts.SEK).toBeCloseTo(50.00);
+
+    // Charlie should NOT appear because his gift was on Dec 6 (outside range)
+    const charlie = result.persons.find(p => p.name === 'Charlie');
+    const charlieGifts = charlie ? Object.keys(charlie.gifts || {}) : [];
+    expect(charlieGifts).toHaveLength(0); // Should have no gifts in this date range
+  });
+
+  it('should filter from date only (to date defaults to today)', () => {
+    createTestPersonsConfig();
+
+    // Create log entries with dates before and after the from date
+    const logEntries = [
+      '2024-11-30T10:00:00.000Z 100.00 SEK for Alice',  // Before from date
+      '2024-12-01T10:00:00.000Z 150.50 SEK for Alice',  // On from date
+      '2024-12-02T11:00:00.000Z 200.00 USD for Bob',    // After from date
+    ];
+
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(LOG_PATH, logEntries.join('\n'));
+
+    // Filter from 2024-12-01 only
+    const result = getToplistData(PERSON_CONFIG_PATH, LOG_PATH, fs, '2024-12-01', null);
+
+    expect(result.errorMessage).toBe(null);
+
+    // Alice should only have gifts from Dec 1 onwards (not Nov 30)
+    const alice = result.persons.find(p => p.name === 'Alice');
+    expect(alice).toBeDefined();
+    expect(alice.gifts.SEK).toBeCloseTo(150.50); // Only Dec 1 gift
+
+    // Bob should have gift from Dec 2
+    const bob = result.persons.find(p => p.name === 'Bob');
+    expect(bob).toBeDefined();
+    expect(bob.gifts.USD).toBeCloseTo(200.00);
+  });
+
+  it('should filter to date only', () => {
+    createTestPersonsConfig();
+
+    // Create log entries with dates before and after the to date
+    const logEntries = [
+      '2024-12-01T10:00:00.000Z 150.50 SEK for Alice',  // Before to date
+      '2024-12-02T11:00:00.000Z 200.00 USD for Bob',    // On to date
+      '2024-12-03T12:00:00.000Z 300.25 SEK for Alice',  // After to date
+    ];
+
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(LOG_PATH, logEntries.join('\n'));
+
+    // Filter up to 2024-12-02 only
+    const result = getToplistData(PERSON_CONFIG_PATH, LOG_PATH, fs, null, '2024-12-02');
+
+    expect(result.errorMessage).toBe(null);
+
+    // Alice should only have gifts up to Dec 2 (not Dec 3)
+    const alice = result.persons.find(p => p.name === 'Alice');
+    expect(alice).toBeDefined();
+    expect(alice.gifts.SEK).toBeCloseTo(150.50); // Only Dec 1 gift
+
+    // Bob should have gift from Dec 2
+    const bob = result.persons.find(p => p.name === 'Bob');
+    expect(bob).toBeDefined();
+    expect(bob.gifts.USD).toBeCloseTo(200.00);
+  });
+
+  it('should return no persons when date range excludes all entries', () => {
+    createTestPersonsConfig();
+    createTestLogEntries(); // Creates entries from 2024-12-01 to 2024-12-06
+
+    // Filter for a range that excludes all existing log entries
+    const result = getToplistData(PERSON_CONFIG_PATH, LOG_PATH, fs, '2024-01-01', '2024-01-31');
+
+    expect(result.errorMessage).toBe(null);
+
+    // Should still have the 3 persons from config, but with no gifts
+    expect(result.persons).toHaveLength(3);
+    result.persons.forEach(person => {
+      expect(Object.keys(person.gifts || {})).toHaveLength(0);
+    });
   });
 });
 

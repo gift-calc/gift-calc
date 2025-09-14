@@ -987,9 +987,11 @@ function handleToplistCommand(config) {
     console.log('  gift-calc toplist --friend-score       # Top 10 by friend score');
     console.log('  gift-calc toplist -l 20                # Top 20 by total gift amount');
     console.log('  gift-calc toplist -c USD               # Top 10 by USD gift amount');
+    console.log('  gift-calc toplist --from 2024-01-01    # Top 10 from January 1, 2024 to today');
+    console.log('  gift-calc toplist --from 2024-01-01 --to 2024-12-31  # Top 10 for 2024');
     console.log('  gift-calc toplist --list-currencies    # Show available currencies');
     console.log('  gcalc tl                               # Short form');
-    console.log('  gcalc tl -n -l 5                       # Top 5 by nice score');
+    console.log('  gcalc tl -n -l 5 --from 2024-12-01     # Top 5 by nice score from December');
     process.exit(1);
   }
 
@@ -998,7 +1000,7 @@ function handleToplistCommand(config) {
   const logPath = getLogPath();
 
   // Get toplist data
-  const toplistData = getToplistData(personConfigPath, logPath, fs);
+  const toplistData = getToplistData(personConfigPath, logPath, fs, config.fromDate, config.toDate);
 
   if (toplistData.errorMessage) {
     console.error('Error:', toplistData.errorMessage);
