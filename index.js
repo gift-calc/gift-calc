@@ -40,7 +40,10 @@ import {
   setPersonConfig,
   clearPersonConfig,
   listPersonConfigs,
-  getPersonConfig
+  getPersonConfig,
+  parseToplistArguments,
+  getToplistData,
+  formatToplistOutput
 } from './src/core.js';
 
 // Config utilities
@@ -194,6 +197,12 @@ if (parsedConfig.command === 'spendings') {
 // Handle person commands
 if (parsedConfig.command === 'person') {
   handlePersonCommand(parsedConfig);
+  process.exit(0);
+}
+
+// Handle toplist commands
+if (parsedConfig.command === 'toplist') {
+  handleToplistCommand(parsedConfig);
   process.exit(0);
 }
 
@@ -961,9 +970,40 @@ function handlePersonCommand(config) {
         });
       }
       break;
-      
+
     default:
       console.error('Unknown action:', config.action);
       process.exit(1);
   }
+}
+
+function handleToplistCommand(config) {
+  // Check if parsing succeeded
+  if (!config.success) {
+    console.error('Error:', config.error);
+    console.log('\nUsage:');
+    console.log('  gift-calc toplist                      # Top 10 by total gift amount');
+    console.log('  gift-calc toplist -n                   # Top 10 by nice score');
+    console.log('  gift-calc toplist --friend-score       # Top 10 by friend score');
+    console.log('  gift-calc toplist -l 20                # Top 20 by total gift amount');
+    console.log('  gcalc tl                               # Short form');
+    console.log('  gcalc tl -n -l 5                       # Top 5 by nice score');
+    process.exit(1);
+  }
+
+  // Get file paths
+  const personConfigPath = getPersonConfigPath(path, os);
+  const logPath = getLogPath();
+
+  // Get toplist data
+  const toplistData = getToplistData(personConfigPath, logPath, fs);
+
+  if (toplistData.errorMessage) {
+    console.error('Error:', toplistData.errorMessage);
+    process.exit(1);
+  }
+
+  // Format and display output
+  const output = formatToplistOutput(toplistData.persons, config.sortBy, config.length);
+  console.log(output);
 }

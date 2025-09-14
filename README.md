@@ -41,6 +41,7 @@ gift-calc -b 100 -f 8 --name "Alice"
 - 🎁 Gift matching functionality to repeat previous gift amounts
 - 💰 Automatic budget tracking with real-time spending analysis
 - 📊 Spending pattern analysis with flexible time periods
+- 🏆 Person ranking and toplist functionality for analyzing gift patterns
 
 ## Installation
 
@@ -80,7 +81,9 @@ gcalc                        # Short alias
 gift-calc init-config        # Setup configuration
 gift-calc log                # View calculation history
 gift-calc spendings          # Track spending patterns over time
+gift-calc toplist            # Show top persons by gift amount
 gcalc s                      # Short alias for spending tracking
+gcalc tl                     # Short alias for toplist
 gift-calc --help             # Show help
 ```
 
@@ -113,6 +116,11 @@ gift-calc spendings --months 3                       # Last 3 months spending
 gift-calc naughty-list Sven           # Add to naughty list
 gift-calc naughty-list list           # List naughty people
 gift-calc naughty-list --remove Sven  # Remove from naughty list
+
+# Person ranking and toplist
+gift-calc toplist                     # Top 10 by total gift amount
+gcalc tl -n                          # Top 10 by nice score
+gift-calc toplist --friend-score -l 5 # Top 5 by friend score
 ```
 
 ## Command Options
@@ -220,6 +228,51 @@ gift-calc -b 200 --name "Bob"
 - **Multi-currency support**: Different currencies tracked separately with warnings
 - **Status indicators**: Clear visual feedback for budget status
 - **Flexible periods**: Support for overlapping and non-overlapping budget periods
+
+## Person Ranking & Toplist
+
+View ranked lists of persons by different criteria to analyze your gift-giving patterns:
+
+```bash
+# Basic toplist commands
+gift-calc toplist                      # Top 10 persons by total gift amount
+gcalc tl                              # Short form
+gift-calc toplist --nice-score         # Top 10 persons by nice score
+gift-calc toplist --friend-score       # Top 10 persons by friend score
+gift-calc toplist --length 20          # Top 20 persons by total gifts
+
+# Combined options
+gcalc tl -n -l 5                      # Top 5 by nice score
+gift-calc toplist -f --length 15       # Top 15 by friend score
+```
+
+### Toplist Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `toplist, tl` | Show person ranking | - |
+| `-n, --nice-score` | Sort by nice score (highest first) | total |
+| `-f, --friend-score` | Sort by friend score (highest first) | total |
+| `-l, --length` | Number of results to show | 10 |
+
+### Sample Output
+
+```bash
+$ gift-calc toplist
+Top 4 Persons (Total Gifts):
+
+1. Alice: 1,250.50 SEK, 100.00 USD (nice: 9, friend: 8)
+2. Bob: 875.25 USD (nice: 7, friend: 6)
+3. Charlie: 425.00 SEK (nice: 5, friend: 9)
+4. David: 150.00 SEK
+```
+
+**Features:**
+- **Multi-currency support**: Shows gift totals in original currencies
+- **Score integration**: Displays nice and friend scores when available
+- **Flexible sorting**: Sort by total gifts, nice score, or friend score
+- **Configurable length**: Show any number of top results
+- **Combined data**: Merges person configuration and gift history data
 
 ## MCP (Model Context Protocol) Support
 

@@ -147,6 +147,11 @@ export function parseArguments(args, defaultConfig = {}) {
   if (args[0] === 'person' || args[0] === 'p') {
     return parsePersonArguments(args.slice(1));
   }
+
+  // Check for toplist commands
+  if (args[0] === 'toplist' || args[0] === 'tl') {
+    return parseToplistArguments(args.slice(1));
+  }
   
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -440,6 +445,9 @@ USAGE:
   gift-calc person set --name <name> [options]  # Set person configuration
   gift-calc person list [--sort-by field] # List person configurations
   gift-calc person clear --name <name>   # Clear person configuration
+  gift-calc toplist                      # Top 10 persons by total gift amount
+  gift-calc toplist -n                   # Top 10 persons by nice score
+  gift-calc toplist --friend-score -l 5  # Top 5 persons by friend score
   gcalc [options]              # Short alias
   gcalc nl <name>              # Add to naughty list (short form)
   gcalc nl list                # List naughty people
@@ -580,6 +588,18 @@ EXAMPLES:
   gift-calc person clear --name "Alice"                               # Clear Alice's config
   gift-calc --name "Alice"                                            # Use Alice's stored values
   gift-calc --name "Alice" --base-value 200                           # Override base value
+
+  TOPLIST EXAMPLES:
+  gift-calc toplist                                                    # Top 10 persons by total gift amount
+  gcalc tl                                                            # Same as above (short form)
+  gift-calc toplist --nice-score                                      # Top 10 persons by nice score
+  gcalc tl -n                                                         # Same as above (short form)
+  gift-calc toplist --friend-score                                    # Top 10 persons by friend score
+  gcalc tl -f                                                         # Same as above (short form)
+  gift-calc toplist --length 20                                       # Top 20 persons by total gifts
+  gcalc tl -l 5                                                       # Top 5 persons by total gifts
+  gift-calc toplist -n -l 3                                          # Top 3 persons by nice score
+  gcalc tl --friend-score --length 15                                # Top 15 persons by friend score
   
   BUDGET EXAMPLES:
   gift-calc budget add 5000 2024-12-01 2024-12-31 "Christmas gifts"      # Add Christmas budget
@@ -2396,4 +2416,232 @@ export function getPersonConfig(name, personConfigPath, fsModule) {
   const key = trimmedName.toLowerCase();
   
   return persons[key] || null;
+}
+
+// Toplist Functions
+// Functions for ranking persons by total gifts, nice score, or friend score
+
+/**
+ * Parse toplist specific arguments
+ * @param {string[]} args - Array of command line arguments (without toplist/tl prefix)
+ * @returns {Object} Toplist configuration object
+ */
+export function parseToplistArguments(args) {
+  const config = {
+    command: 'toplist',
+    success: true,
+    error: null,
+    sortBy: 'total',      // 'total', 'nice-score', 'friend-score'
+    length: 10,           // Default top 10
+  };
+
+  // Parse arguments
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    if (arg === '-n' || arg === '--nice-score') {
+      config.sortBy = 'nice-score';
+    } else if (arg === '-f' || arg === '--friend-score') {
+      config.sortBy = 'friend-score';
+    } else if (arg === '-l' || arg === '--length') {
+      const nextArg = args[i + 1];
+      if (nextArg && !isNaN(nextArg)) {
+        const length = parseInt(nextArg);
+        if (length > 0) {
+          config.length = length;
+          i++;
+        } else {
+          config.success = false;
+          config.error = '--length must be a positive number';
+          return config;
+        }
+      } else {
+        config.success = false;
+        config.error = '--length requires a numeric value';
+        return config;
+      }
+    } else {
+      config.success = false;
+      config.error = `Unknown argument: ${arg}. Valid options: --nice-score (-n), --friend-score (-f), --length (-l)`;
+      return config;
+    }
+  }
+
+  return config;
+}
+
+/**
+ * Get toplist data by aggregating person configs and gift log data
+ * @param {string} personConfigPath - Path to person config file
+ * @param {string} logPath - Path to gift log file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object} Toplist data with persons and their total gifts
+ */
+export function getToplistData(personConfigPath, logPath, fsModule) {
+  const result = {
+    persons: [],
+    errorMessage: null
+  };
+
+  // Load person configurations
+  const { persons } = loadPersonConfig(personConfigPath, fsModule);
+
+  // Calculate gift totals per person from log
+  const giftTotals = {};
+
+  if (fsModule.existsSync(logPath)) {
+    try {
+      const logContent = fsModule.readFileSync(logPath, 'utf8');
+      const lines = logContent.split('\n').filter(line => line.trim());
+
+      for (const line of lines) {
+        const entry = parseLogEntry(line);
+        if (entry && entry.recipient) {
+          const recipientKey = entry.recipient.toLowerCase();
+          if (!giftTotals[recipientKey]) {
+            giftTotals[recipientKey] = {};
+          }
+
+          // Group by currency
+          const currency = entry.currency;
+          if (!giftTotals[recipientKey][currency]) {
+            giftTotals[recipientKey][currency] = 0;
+          }
+          giftTotals[recipientKey][currency] += entry.amount;
+        }
+      }
+    } catch (error) {
+      result.errorMessage = `Could not read log file: ${error.message}`;
+      return result;
+    }
+  }
+
+  // Combine person data with gift totals
+  const personKeys = new Set([...Object.keys(persons), ...Object.keys(giftTotals)]);
+
+  for (const personKey of personKeys) {
+    const personConfig = persons[personKey] || {};
+    const personGifts = giftTotals[personKey] || {};
+
+    // Use person config name if available, otherwise capitalize the key
+    const displayName = personConfig.name || personKey.charAt(0).toUpperCase() + personKey.slice(1);
+
+    result.persons.push({
+      name: displayName,
+      niceScore: personConfig.niceScore,
+      friendScore: personConfig.friendScore,
+      baseValue: personConfig.baseValue,
+      currency: personConfig.currency,
+      gifts: personGifts
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Format toplist output with ranking and clean display
+ * @param {Array} persons - Array of person objects with gift data
+ * @param {string} sortBy - Sort criteria: 'total', 'nice-score', 'friend-score'
+ * @param {number} length - Number of results to show
+ * @returns {string} Formatted toplist output
+ */
+export function formatToplistOutput(persons, sortBy, length) {
+  if (persons.length === 0) {
+    return 'No persons found in configuration or gift history.';
+  }
+
+  // Sort persons based on criteria
+  const sortedPersons = [...persons].sort((a, b) => {
+    if (sortBy === 'nice-score') {
+      const aScore = a.niceScore !== undefined ? a.niceScore : -1;
+      const bScore = b.niceScore !== undefined ? b.niceScore : -1;
+      return bScore - aScore; // Highest first
+    } else if (sortBy === 'friend-score') {
+      const aScore = a.friendScore !== undefined ? a.friendScore : -1;
+      const bScore = b.friendScore !== undefined ? b.friendScore : -1;
+      return bScore - aScore; // Highest first
+    } else {
+      // Sort by total gift amount (default)
+      const aTotalValue = calculateTotalGiftValue(a.gifts);
+      const bTotalValue = calculateTotalGiftValue(b.gifts);
+      return bTotalValue - aTotalValue; // Highest first
+    }
+  });
+
+  // Take top N results
+  const topPersons = sortedPersons.slice(0, length);
+
+  // Format output
+  let output = '';
+  const sortLabel = sortBy === 'nice-score' ? 'Nice Score' :
+                   sortBy === 'friend-score' ? 'Friend Score' :
+                   'Total Gifts';
+
+  output += `Top ${topPersons.length} Persons (${sortLabel}):\n\n`;
+
+  topPersons.forEach((person, index) => {
+    const rank = index + 1;
+    let line = `${rank}. ${person.name}`;
+
+    if (sortBy === 'nice-score') {
+      const score = person.niceScore !== undefined ? person.niceScore : 'N/A';
+      line += `: ${score}`;
+      if (person.friendScore !== undefined) line += ` (friend: ${person.friendScore})`;
+    } else if (sortBy === 'friend-score') {
+      const score = person.friendScore !== undefined ? person.friendScore : 'N/A';
+      line += `: ${score}`;
+      if (person.niceScore !== undefined) line += ` (nice: ${person.niceScore})`;
+    } else {
+      // Total gifts
+      const giftSummary = formatGiftSummary(person.gifts);
+      line += `: ${giftSummary}`;
+
+      // Add scores if available
+      const scores = [];
+      if (person.niceScore !== undefined) scores.push(`nice: ${person.niceScore}`);
+      if (person.friendScore !== undefined) scores.push(`friend: ${person.friendScore}`);
+      if (scores.length > 0) line += ` (${scores.join(', ')})`;
+    }
+
+    output += line + '\n';
+  });
+
+  return output.trim();
+}
+
+/**
+ * Calculate total monetary value from gift amounts (for sorting)
+ * @param {Object} gifts - Object with currency->amount mappings
+ * @returns {number} Approximate total value for sorting
+ */
+function calculateTotalGiftValue(gifts) {
+  if (!gifts || Object.keys(gifts).length === 0) {
+    return 0;
+  }
+
+  // For sorting purposes, sum all amounts regardless of currency
+  // This is a simplification but works for relative ranking
+  return Object.values(gifts).reduce((sum, amount) => sum + amount, 0);
+}
+
+/**
+ * Format gift summary for display
+ * @param {Object} gifts - Object with currency->amount mappings
+ * @returns {string} Formatted gift summary
+ */
+function formatGiftSummary(gifts) {
+  if (!gifts || Object.keys(gifts).length === 0) {
+    return '0';
+  }
+
+  const currencies = Object.keys(gifts).sort();
+
+  if (currencies.length === 1) {
+    const currency = currencies[0];
+    return `${formatBudgetAmount(gifts[currency], currency)}`;
+  } else {
+    const parts = currencies.map(currency => `${formatBudgetAmount(gifts[currency], currency)}`);
+    return parts.join(', ');
+  }
 }

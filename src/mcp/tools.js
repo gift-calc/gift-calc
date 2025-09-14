@@ -30,7 +30,10 @@ import {
   calculateRelativeDate,
   getSpendingsBetweenDates,
   formatSpendingsOutput,
-  validateDate
+  validateDate,
+  getToplistData,
+  formatToplistOutput,
+  getPersonConfigPath
 } from '../core.js';
 
 // Import server utilities
@@ -850,6 +853,64 @@ export function registerAllTools(server) {
           isReadOnly: true
         };
       }
+    }
+  });
+
+  // Register toplist tool for ranking persons
+  server.registerTool('toplist_persons', {
+    description: 'Get ranked list of persons by total gifts received, nice score, or friend score',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sortBy: {
+          type: 'string',
+          enum: ['total', 'nice-score', 'friend-score'],
+          default: 'total',
+          description: 'Sort criteria: total (gift amount), nice-score, or friend-score'
+        },
+        length: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 100,
+          default: 10,
+          description: 'Number of results to show (default: 10)'
+        }
+      }
+    },
+    handler: async (args) => {
+      const { sortBy = 'total', length = 10 } = args;
+
+      // Get file paths
+      const personConfigPath = getPersonConfigPath(path, os);
+      const logPath = getLogPath();
+
+      // Get toplist data
+      const toplistData = getToplistData(personConfigPath, logPath, fs);
+
+      if (toplistData.errorMessage) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `❌ Error: ${toplistData.errorMessage}`
+            }
+          ],
+          isReadOnly: true
+        };
+      }
+
+      // Format output
+      const output = formatToplistOutput(toplistData.persons, sortBy, length);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `🏆 ${output}`
+          }
+        ],
+        isReadOnly: true
+      };
     }
   });
 }
