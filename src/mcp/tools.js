@@ -30,7 +30,10 @@ import {
   calculateRelativeDate,
   getSpendingsBetweenDates,
   formatSpendingsOutput,
-  validateDate
+  validateDate,
+  getToplistData,
+  formatToplistOutput,
+  getPersonConfigPath
 } from '../core.js';
 
 // Import server utilities
@@ -850,6 +853,117 @@ export function registerAllTools(server) {
           isReadOnly: true
         };
       }
+    }
+  });
+
+  // Register toplist tool for ranking persons
+  server.registerTool('toplist_persons', {
+    description: 'Get ranked list of persons by total gifts received, nice score, friend score, or gift count with optional currency filtering',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sortBy: {
+          type: 'string',
+          enum: ['total', 'nice-score', 'friend-score', 'gift-count'],
+          default: 'total',
+          description: 'Sort criteria: total (gift amount), nice-score, friend-score, or gift-count'
+        },
+        length: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 100,
+          default: 10,
+          description: 'Number of results to show (default: 10)'
+        },
+        currency: {
+          type: 'string',
+          description: 'Filter by specific currency (e.g., SEK, USD, EUR). If not specified, shows all currencies.'
+        },
+        listCurrencies: {
+          type: 'boolean',
+          default: false,
+          description: 'If true, returns list of available currencies instead of toplist'
+        }
+      }
+    },
+    handler: async (args) => {
+      const { sortBy = 'total', length = 10, currency = null, listCurrencies = false } = args;
+
+      // Get file paths
+      const personConfigPath = getPersonConfigPath(path, os);
+      const logPath = getLogPath();
+
+      // Get toplist data
+      const toplistData = getToplistData(personConfigPath, logPath, fs);
+
+      if (toplistData.errorMessage) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `❌ Error: ${toplistData.errorMessage}`
+            }
+          ],
+          isReadOnly: true
+        };
+      }
+
+      // Handle list currencies request
+      if (listCurrencies) {
+        if (toplistData.currencies.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: '💱 No currencies found in gift history.'
+              }
+            ],
+            isReadOnly: true
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `💱 Available currencies: ${toplistData.currencies.join(', ')}`
+              }
+            ],
+            isReadOnly: true
+          };
+        }
+      }
+
+      // Validate currency filter if specified
+      if (currency && toplistData.currencies.length > 0 && !toplistData.currencies.includes(currency)) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `❌ Currency '${currency}' not found. Available currencies: ${toplistData.currencies.join(', ')}`
+            }
+          ],
+          isReadOnly: true
+        };
+      }
+
+      // Format output
+      const output = formatToplistOutput(
+        toplistData.persons,
+        sortBy,
+        length,
+        toplistData.currencies,
+        currency
+      );
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `🏆 ${output}`
+          }
+        ],
+        isReadOnly: true
+      };
     }
   });
 }

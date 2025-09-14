@@ -299,6 +299,23 @@ Analyze spending patterns over specific time periods with multi-currency support
 - Christmas 2024 analysis: `{ "fromDate": "2024-12-01", "toDate": "2024-12-31" }`
 - Monthly summary: `{ "months": 1, "format": "summary" }`
 
+#### `toplist_persons`
+Get ranked list of persons by total gifts received, nice score, or friend score with optional currency filtering.
+
+**Parameters:**
+- `sortBy` (string, optional): Sort criteria - "total" (default), "nice-score", or "friend-score"
+- `length` (number, optional): Number of results to show (1-100, default: 10)
+- `currency` (string, optional): Filter by specific currency (e.g., "SEK", "USD", "EUR")
+- `listCurrencies` (boolean, optional): If true, returns available currencies instead of toplist
+
+**Returns:** Ranked list of persons. With multiple currencies, shows separate rankings per currency unless filtered.
+
+**Examples:**
+- Top 10 by total gifts: `{}`
+- Top 5 by nice score: `{ "sortBy": "nice-score", "length": 5 }`
+- Top 10 USD gifts only: `{ "currency": "USD" }`
+- Show available currencies: `{ "listCurrencies": true }`
+
 ### Destructive Tools (Require Confirmation)
 
 These tools modify files or configuration:
