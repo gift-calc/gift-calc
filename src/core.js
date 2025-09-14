@@ -143,6 +143,11 @@ export function parseArguments(args, defaultConfig = {}) {
     return parseSpendingsArguments(args.slice(1));
   }
   
+  // Check for person commands
+  if (args[0] === 'person' || args[0] === 'p') {
+    return parsePersonArguments(args.slice(1));
+  }
+  
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     
@@ -432,6 +437,9 @@ USAGE:
   gift-calc budget edit <id> [options]  # Edit existing budget
   gift-calc spendings --from <date> --to <date>  # Show spending in date range
   gift-calc spendings --days <n>     # Show spending in last n days
+  gift-calc person set --name <name> [options]  # Set person configuration
+  gift-calc person list [--sort-by field] # List person configurations
+  gift-calc person clear --name <name>   # Clear person configuration
   gcalc [options]              # Short alias
   gcalc nl <name>              # Add to naughty list (short form)
   gcalc nl list                # List naughty people
@@ -441,6 +449,9 @@ USAGE:
   gcalc b list                 # List budgets (short form)
   gcalc b status               # Show budget status (short form)
   gcalc s --weeks 4            # Show spending in last 4 weeks (short form)
+  gcalc p set -n "Alice" -s 9 -f 8 -b 100 -c USD  # Set person config (short)
+  gcalc p list --sort-by name  # List person configs (short form)
+  gcalc p clear -n "Alice"     # Clear person config (short form)
 
 COMMANDS:
   init-config                 Setup configuration file with default values
@@ -449,6 +460,7 @@ COMMANDS:
   naughty-list, nl            Manage the naughty list (add/remove/list/search)
   budget, b                   Manage budgets (add/list/status/edit)
   spendings, s                Track and analyze spending patterns over time
+  person, p                   Manage person-specific configurations
 
 OPTIONS:
   -h, --help                  Show this help message
@@ -486,8 +498,14 @@ CONFIGURATION:
   Config is stored at: ~/.config/gift-calc/.config.json
   Naughty list is stored at: ~/.config/gift-calc/naughty-list.json
   Budgets are stored at: ~/.config/gift-calc/budgets.json
+  Person configurations are stored at: ~/.config/gift-calc/persons.json
   Gift calculations are logged at: ~/.config/gift-calc/gift-calc.log
-  Command line options override config file defaults.
+  
+  CONFIGURATION PRECEDENCE (highest to lowest priority):
+    1. CLI arguments (--base-value, --nice-score, etc.)
+    2. Person-specific config (when using --name)
+    3. Global config file (~/.config/gift-calc/.config.json)
+    4. Built-in defaults
   
   NAUGHTY LIST:
     When a recipient is on the naughty list, their gift amount is always 0,
@@ -498,6 +516,12 @@ CONFIGURATION:
     Budget periods cannot overlap. Each budget has a unique time range.
     Status shows ACTIVE (current), FUTURE (upcoming), or EXPIRED (past).
     Budget amounts are displayed in your configured currency (default: SEK).
+    
+  PERSON CONFIGURATIONS:
+    Store person-specific parameters (nice-score, friend-score, base-value, currency)
+    to avoid specifying them repeatedly. Use --name with stored configurations.
+    Person configs override global config but are overridden by CLI arguments.
+    Supports sorting by any field when listing configurations.
     
   GIFT MATCHING:
     Gift calculations are automatically logged when using the default logging.
@@ -547,6 +571,15 @@ EXAMPLES:
   gcalc nl -r Sven                      # Remove Sven from naughty list (short form)
   gcalc nl --search Dav                  # Search for names starting with "Dav"
   gift-calc --name "Sven" -b 100        # Returns "0 SEK for Sven (on naughty list!)"
+  
+  PERSON CONFIGURATION EXAMPLES:
+  gift-calc person set --name "Alice" --nice-score 9 --friend-score 8 --base-value 150 --currency USD
+  gcalc p set -n "Bob" -s 7 -f 9 -b 80 -c EUR                        # Short form
+  gift-calc person list                                               # List all person configs
+  gcalc p list --sort-by base-value --order desc                      # Sort by base value
+  gift-calc person clear --name "Alice"                               # Clear Alice's config
+  gift-calc --name "Alice"                                            # Use Alice's stored values
+  gift-calc --name "Alice" --base-value 200                           # Override base value
   
   BUDGET EXAMPLES:
   gift-calc budget add 5000 2024-12-01 2024-12-31 "Christmas gifts"      # Add Christmas budget
@@ -871,6 +904,10 @@ export function searchNaughtyList(searchTerm, naughtyListPath, fsModule) {
 // Budget Management Functions
 // These functions require Node.js modules and should only be used in Node.js contexts
 
+// Budget configuration validation constants
+const VALID_BUDGET_ACTIONS = ['add', 'list', 'status', 'edit'];
+const VALID_BUDGET_EDIT_OPTIONS = ['--amount', '--from-date', '--to-date', '--description'];
+
 /**
  * Parse budget specific arguments
  * @param {string[]} args - Array of command line arguments (without budget/b prefix)
@@ -1005,14 +1042,14 @@ export function parseBudgetArguments(args) {
         }
       } else {
         config.success = false;
-        config.error = `Unknown option: ${arg}`;
+        config.error = `Unknown option: ${arg}. Valid options for edit: ${VALID_BUDGET_EDIT_OPTIONS.join(', ')}`;
         return config;
       }
     }
     
   } else {
     config.success = false;
-    config.error = `Unknown budget action: ${firstArg}. Use: add, list, status, edit`;
+    config.error = `Unknown budget action: ${firstArg}. Valid actions: ${VALID_BUDGET_ACTIONS.join(', ')}`;
   }
   
   return config;
@@ -1611,6 +1648,9 @@ export function findLastGiftForRecipientFromLog(recipientName, logPath, fsModule
 // Spending Tracking Functions
 // These functions require Node.js modules and should only be used in Node.js contexts
 
+// Spendings configuration validation constants
+const VALID_SPENDING_OPTIONS = ['--from (-f)', '--to (-t)', '--days', '--weeks', '--months', '--years'];
+
 /**
  * Parse spendings specific arguments
  * @param {string[]} args - Array of command line arguments (without spendings/s prefix)
@@ -1730,7 +1770,7 @@ export function parseSpendingsArguments(args) {
       }
     } else {
       config.success = false;
-      config.error = `Unknown argument: ${arg}`;
+      config.error = `Unknown argument: ${arg}. Valid options: ${VALID_SPENDING_OPTIONS.join(', ')}`;
       return config;
     }
   }
@@ -1929,4 +1969,431 @@ export function formatSpendingsOutput(spendingsData, fromDate, toDate) {
   }
   
   return output.trim();
+}
+
+// Person Configuration Functions
+// These functions require Node.js modules and should only be used in Node.js contexts
+
+// Person configuration validation constants
+const VALID_SORT_FIELDS = ['name', 'nice-score', 'friend-score', 'base-value', 'currency'];
+const VALID_SORT_ORDERS = ['asc', 'desc'];
+const VALID_PERSON_ACTIONS = ['set', 'clear', 'list'];
+
+/**
+ * Parse person specific arguments
+ * @param {string[]} args - Array of command line arguments (without person/p prefix)
+ * @returns {Object} Person configuration object
+ */
+export function parsePersonArguments(args) {
+  const config = {
+    command: 'person',
+    action: null,        // 'set', 'clear', 'list'
+    name: null,
+    niceScore: null,
+    friendScore: null,
+    baseValue: null,
+    currency: null,
+    sortBy: 'name',      // Default sort
+    order: 'asc',        // Default order
+    success: true,
+    error: null
+  };
+  
+  // If no arguments provided, show help
+  if (args.length === 0) {
+    config.success = false;
+    config.error = 'No action specified. Use "set", "clear", or "list".';
+    return config;
+  }
+  
+  const firstArg = args[0];
+  
+  if (firstArg === 'set') {
+    config.action = 'set';
+    
+    // Parse set options
+    for (let i = 1; i < args.length; i++) {
+      const arg = args[i];
+      
+      if ((arg === '--name' || arg === '-n') && args[i + 1]) {
+        config.name = args[i + 1];
+        i++;
+      } else if ((arg === '--nice-score' || arg === '-s') && args[i + 1]) {
+        const score = parseFloat(args[i + 1]);
+        if (score >= 0 && score <= 10) {
+          config.niceScore = score;
+          i++;
+        } else {
+          config.success = false;
+          config.error = 'Nice score must be between 0 and 10';
+          return config;
+        }
+      } else if ((arg === '--friend-score' || arg === '-f') && args[i + 1]) {
+        const score = parseFloat(args[i + 1]);
+        if (score >= 1 && score <= 10) {
+          config.friendScore = score;
+          i++;
+        } else {
+          config.success = false;
+          config.error = 'Friend score must be between 1 and 10';
+          return config;
+        }
+      } else if ((arg === '--base-value' || arg === '-b') && args[i + 1]) {
+        const value = parseFloat(args[i + 1]);
+        if (value > 0) {
+          config.baseValue = value;
+          i++;
+        } else {
+          config.success = false;
+          config.error = 'Base value must be positive';
+          return config;
+        }
+      } else if ((arg === '--currency' || arg === '-c') && args[i + 1]) {
+        config.currency = args[i + 1].toUpperCase();
+        i++;
+      } else {
+        config.success = false;
+        config.error = `Unknown option: ${arg}. Valid options for set: --name (-n), --nice-score (-s), --friend-score (-f), --base-value (-b), --currency (-c)`;
+        return config;
+      }
+    }
+    
+    // Validate required fields
+    if (!config.name) {
+      config.success = false;
+      config.error = 'Person name is required for person set command';
+      return config;
+    }
+    
+  } else if (firstArg === 'clear') {
+    config.action = 'clear';
+    
+    // Parse clear options
+    for (let i = 1; i < args.length; i++) {
+      const arg = args[i];
+      
+      if ((arg === '--name' || arg === '-n') && args[i + 1]) {
+        config.name = args[i + 1];
+        i++;
+      } else {
+        config.success = false;
+        config.error = `Unknown option: ${arg}. Valid option for clear: --name (-n)`;
+        return config;
+      }
+    }
+    
+    if (!config.name) {
+      config.success = false;
+      config.error = 'Person name is required for person clear command';
+      return config;
+    }
+    
+  } else if (firstArg === 'list') {
+    config.action = 'list';
+    
+    // Parse list options
+    for (let i = 1; i < args.length; i++) {
+      const arg = args[i];
+      
+      if ((arg === '--sort-by' || arg === '-s') && args[i + 1]) {
+        const field = args[i + 1];
+        if (VALID_SORT_FIELDS.includes(field)) {
+          config.sortBy = field;
+          i++;
+        } else {
+          config.success = false;
+          config.error = `Invalid sort field: ${field}. Valid options: ${VALID_SORT_FIELDS.join(', ')}`;
+          return config;
+        }
+      } else if ((arg === '--order' || arg === '-o') && args[i + 1]) {
+        const order = args[i + 1];
+        if (VALID_SORT_ORDERS.includes(order)) {
+          config.order = order;
+          i++;
+        } else {
+          config.success = false;
+          config.error = `Invalid order: ${order}. Valid options: ${VALID_SORT_ORDERS.join(', ')}`;
+          return config;
+        }
+      } else if (arg === '--reverse' || arg === '-r') {
+        config.order = 'desc';
+      } else {
+        config.success = false;
+        config.error = `Unknown option: ${arg}. Valid options for list: --sort-by (-s), --order (-o), --reverse (-r)`;
+        return config;
+      }
+    }
+    
+  } else {
+    config.success = false;
+    config.error = `Unknown person action: ${firstArg}. Valid actions: ${VALID_PERSON_ACTIONS.join(', ')}`;
+  }
+  
+  return config;
+}
+
+/**
+ * Get the path to the person configuration JSON file
+ * @param {object} pathModule - Node.js path module
+ * @param {object} osModule - Node.js os module
+ * @returns {string} Path to person config file
+ */
+export function getPersonConfigPath(pathModule, osModule) {
+  if (!pathModule || !osModule) {
+    throw new Error('Path and os modules are required for person config operations');
+  }
+  return pathModule.join(osModule.homedir(), '.config', 'gift-calc', 'persons.json');
+}
+
+/**
+ * Load the person configuration from file
+ * @param {string} personConfigPath - Path to person config file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object} Object containing persons and loaded boolean
+ */
+export function loadPersonConfig(personConfigPath, fsModule) {
+  if (!fsModule) {
+    throw new Error('fs module is required for person config operations');
+  }
+  
+  if (fsModule.existsSync(personConfigPath)) {
+    try {
+      const configData = fsModule.readFileSync(personConfigPath, 'utf8');
+      const parsed = JSON.parse(configData);
+      return { 
+        persons: parsed.persons || {}, 
+        loaded: true 
+      };
+    } catch (error) {
+      console.error(`Warning: Could not parse person config file at ${personConfigPath}. Starting with empty config.`);
+      return { persons: {}, loaded: false };
+    }
+  }
+  return { persons: {}, loaded: false };
+}
+
+/**
+ * Save the person configuration to file
+ * @param {Object} persons - Object containing person configurations
+ * @param {string} personConfigPath - Path to person config file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {boolean} True if save was successful
+ */
+export function savePersonConfig(persons, personConfigPath, fsModule, pathModule) {
+  if (!fsModule || !pathModule) {
+    throw new Error('fs and path modules are required for person config operations');
+  }
+  
+  try {
+    // Ensure directory exists
+    const configDir = pathModule.dirname(personConfigPath);
+    if (!fsModule.existsSync(configDir)) {
+      fsModule.mkdirSync(configDir, { recursive: true });
+    }
+    
+    const data = { persons };
+    fsModule.writeFileSync(personConfigPath, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error(`Error saving person config: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Set person configuration
+ * @param {string} name - Person name
+ * @param {Object} personData - Person configuration data
+ * @param {string} personConfigPath - Path to person config file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {Object} Result object with success and message
+ */
+export function setPersonConfig(name, personData, personConfigPath, fsModule, pathModule) {
+  if (!name || name.trim() === '') {
+    return {
+      success: false,
+      message: 'Name cannot be empty'
+    };
+  }
+
+  // Sanitize name by trimming whitespace
+  const trimmedName = name.trim();
+
+  const { persons } = loadPersonConfig(personConfigPath, fsModule);
+  const key = trimmedName.toLowerCase();
+  
+  // Preserve existing values and update with new ones
+  const existingData = persons[key] || {};
+  const updatedData = {
+    name: trimmedName, // Use the trimmed name with proper casing
+    niceScore: personData.niceScore !== undefined ? personData.niceScore : existingData.niceScore,
+    friendScore: personData.friendScore !== undefined ? personData.friendScore : existingData.friendScore,
+    baseValue: personData.baseValue !== undefined ? personData.baseValue : existingData.baseValue,
+    currency: personData.currency !== undefined ? personData.currency : existingData.currency
+  };
+  
+  persons[key] = updatedData;
+  
+  const saved = savePersonConfig(persons, personConfigPath, fsModule, pathModule);
+  
+  if (saved) {
+    return {
+      success: true,
+      message: `Person configuration saved for ${trimmedName}`,
+      person: updatedData
+    };
+  } else {
+    return {
+      success: false,
+      message: 'Failed to save person configuration'
+    };
+  }
+}
+
+/**
+ * Clear person configuration
+ * @param {string} name - Person name
+ * @param {string} personConfigPath - Path to person config file
+ * @param {object} fsModule - Node.js fs module
+ * @param {object} pathModule - Node.js path module
+ * @returns {Object} Result object with success and message
+ */
+export function clearPersonConfig(name, personConfigPath, fsModule, pathModule) {
+  if (!name || name.trim() === '') {
+    return {
+      success: false,
+      message: 'Name cannot be empty'
+    };
+  }
+
+  // Sanitize name by trimming whitespace
+  const trimmedName = name.trim();
+
+  const { persons } = loadPersonConfig(personConfigPath, fsModule);
+  const key = trimmedName.toLowerCase();
+  
+  if (!persons[key]) {
+    return {
+      success: false,
+      message: `Person configuration for ${trimmedName} not found`
+    };
+  }
+  
+  delete persons[key];
+  
+  const saved = savePersonConfig(persons, personConfigPath, fsModule, pathModule);
+  
+  if (saved) {
+    return {
+      success: true,
+      message: `Person configuration cleared for ${trimmedName}`
+    };
+  } else {
+    return {
+      success: false,
+      message: 'Failed to save person configuration'
+    };
+  }
+}
+
+/**
+ * List all person configurations with optional sorting
+ * @param {string} personConfigPath - Path to person config file
+ * @param {object} fsModule - Node.js fs module
+ * @param {string} sortBy - Field to sort by
+ * @param {string} order - Sort order (asc/desc)
+ * @returns {Array} Array of formatted person strings
+ */
+export function listPersonConfigs(personConfigPath, fsModule, sortBy = 'name', order = 'asc') {
+  const { persons } = loadPersonConfig(personConfigPath, fsModule);
+  
+  if (Object.keys(persons).length === 0) {
+    return [];
+  }
+  
+  // Convert to array and sort
+  const personArray = Object.values(persons);
+  const sortedPersons = sortPersons(personArray, sortBy, order);
+  
+  return sortedPersons.map(person => {
+    const parts = [];
+    parts.push(`${person.name}:`);
+    
+    if (person.niceScore !== undefined) parts.push(`nice-score=${person.niceScore}`);
+    if (person.friendScore !== undefined) parts.push(`friend-score=${person.friendScore}`);
+    if (person.baseValue !== undefined) parts.push(`base-value=${person.baseValue}`);
+    if (person.currency !== undefined) parts.push(`currency=${person.currency}`);
+    
+    return parts.join(' ');
+  });
+}
+
+/**
+ * Sort persons array by specified field and order
+ * @param {Array} persons - Array of person objects
+ * @param {string} sortBy - Field to sort by
+ * @param {string} order - Sort order (asc/desc)
+ * @returns {Array} Sorted array
+ */
+export function sortPersons(persons, sortBy, order) {
+  const sortedPersons = [...persons].sort((a, b) => {
+    let aVal, bVal;
+    
+    switch (sortBy) {
+      case 'name':
+        aVal = a.name.toLowerCase();
+        bVal = b.name.toLowerCase();
+        break;
+      case 'nice-score':
+        aVal = a.niceScore || 0;
+        bVal = b.niceScore || 0;
+        break;
+      case 'friend-score':
+        aVal = a.friendScore || 0;
+        bVal = b.friendScore || 0;
+        break;
+      case 'base-value':
+        aVal = a.baseValue || 0;
+        bVal = b.baseValue || 0;
+        break;
+      case 'currency':
+        aVal = a.currency || '';
+        bVal = b.currency || '';
+        break;
+      default:
+        aVal = a.name.toLowerCase();
+        bVal = b.name.toLowerCase();
+    }
+    
+    if (typeof aVal === 'string') {
+      return order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    } else {
+      return order === 'asc' ? aVal - bVal : bVal - aVal;
+    }
+  });
+  
+  return sortedPersons;
+}
+
+/**
+ * Get person configuration by name
+ * @param {string} name - Person name
+ * @param {string} personConfigPath - Path to person config file
+ * @param {object} fsModule - Node.js fs module
+ * @returns {Object|null} Person configuration or null if not found
+ */
+export function getPersonConfig(name, personConfigPath, fsModule) {
+  if (!name || name.trim() === '') {
+    return null;
+  }
+
+  // Sanitize name by trimming whitespace
+  const trimmedName = name.trim();
+
+  const { persons } = loadPersonConfig(personConfigPath, fsModule);
+  const key = trimmedName.toLowerCase();
+  
+  return persons[key] || null;
 }
