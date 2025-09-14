@@ -448,6 +448,7 @@ USAGE:
   gift-calc toplist                      # Top 10 persons by total gift amount
   gift-calc toplist -n                   # Top 10 persons by nice score
   gift-calc toplist --friend-score -l 5  # Top 5 persons by friend score
+  gift-calc toplist --gift-count         # Top 10 persons by gift count
   gift-calc toplist -c USD               # Top 10 persons by USD gift amount
   gift-calc toplist --from 2024-01-01    # Top 10 from January 1, 2024 to today
   gift-calc toplist --from 2024-01-01 --to 2024-12-31  # Top 10 for 2024
@@ -600,6 +601,8 @@ EXAMPLES:
   gcalc tl -n                                                         # Same as above (short form)
   gift-calc toplist --friend-score                                    # Top 10 persons by friend score
   gcalc tl -f                                                         # Same as above (short form)
+  gift-calc toplist --gift-count                                      # Top 10 persons by gift count
+  gcalc tl -g                                                         # Same as above (short form)
   gift-calc toplist --length 20                                       # Top 20 persons by total gifts
   gcalc tl -l 5                                                       # Top 5 persons by total gifts
   gift-calc toplist -n -l 3                                          # Top 3 persons by nice score
@@ -2442,7 +2445,7 @@ export function parseToplistArguments(args) {
     command: 'toplist',
     success: true,
     error: null,
-    sortBy: 'total',      // 'total', 'nice-score', 'friend-score'
+    sortBy: 'total',      // 'total', 'nice-score', 'friend-score', 'gift-count'
     length: 10,           // Default top 10
     currency: null,       // Filter by specific currency
     listCurrencies: false, // Show available currencies
@@ -2459,6 +2462,8 @@ export function parseToplistArguments(args) {
       config.sortBy = 'nice-score';
     } else if (arg === '-f' || arg === '--friend-score') {
       config.sortBy = 'friend-score';
+    } else if (arg === '-g' || arg === '--gift-count') {
+      config.sortBy = 'gift-count';
     } else if (arg === '-l' || arg === '--length') {
       const nextArg = args[i + 1];
       if (nextArg && !isNaN(nextArg)) {
@@ -2524,7 +2529,7 @@ export function parseToplistArguments(args) {
       }
     } else {
       config.success = false;
-      config.error = `Unknown argument: ${arg}. Valid options: --nice-score (-n), --friend-score (-f), --length (-l), --currency (-c), --from, --to, --list-currencies, --multi-currency`;
+      config.error = `Unknown argument: ${arg}. Valid options: --nice-score (-n), --friend-score (-f), --gift-count (-g), --length (-l), --currency (-c), --from, --to, --list-currencies, --multi-currency`;
       return config;
     }
   }
@@ -2571,8 +2576,9 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
   // Load person configurations
   const { persons } = loadPersonConfig(personConfigPath, fsModule);
 
-  // Calculate gift totals per person from log
+  // Calculate gift totals and counts per person from log
   const giftTotals = {};
+  const giftCounts = {};
 
   if (fsModule.existsSync(logPath)) {
     try {
@@ -2594,6 +2600,9 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
           if (!giftTotals[recipientKey]) {
             giftTotals[recipientKey] = {};
           }
+          if (!giftCounts[recipientKey]) {
+            giftCounts[recipientKey] = {};
+          }
 
           // Group by currency
           const currency = entry.currency;
@@ -2601,7 +2610,11 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
           if (!giftTotals[recipientKey][currency]) {
             giftTotals[recipientKey][currency] = 0;
           }
+          if (!giftCounts[recipientKey][currency]) {
+            giftCounts[recipientKey][currency] = 0;
+          }
           giftTotals[recipientKey][currency] += entry.amount;
+          giftCounts[recipientKey][currency] += 1;
         }
       }
     } catch (error) {
@@ -2610,12 +2623,13 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
     }
   }
 
-  // Combine person data with gift totals
-  const personKeys = new Set([...Object.keys(persons), ...Object.keys(giftTotals)]);
+  // Combine person data with gift totals and counts
+  const personKeys = new Set([...Object.keys(persons), ...Object.keys(giftTotals), ...Object.keys(giftCounts)]);
 
   for (const personKey of personKeys) {
     const personConfig = persons[personKey] || {};
     const personGifts = giftTotals[personKey] || {};
+    const personGiftCounts = giftCounts[personKey] || {};
 
     // Use person config name if available, otherwise capitalize the key
     const displayName = personConfig.name || personKey.charAt(0).toUpperCase() + personKey.slice(1);
@@ -2626,7 +2640,8 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
       friendScore: personConfig.friendScore,
       baseValue: personConfig.baseValue,
       currency: personConfig.currency,
-      gifts: personGifts
+      gifts: personGifts,
+      giftCounts: personGiftCounts
     });
   }
 
@@ -2639,7 +2654,7 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
 /**
  * Format toplist output with ranking and clean display
  * @param {Array} persons - Array of person objects with gift data
- * @param {string} sortBy - Sort criteria: 'total', 'nice-score', 'friend-score'
+ * @param {string} sortBy - Sort criteria: 'total', 'nice-score', 'friend-score', 'gift-count'
  * @param {number} length - Number of results to show
  * @param {Array} availableCurrencies - Array of currencies found in the dataset
  * @param {string|null} currencyFilter - Optional currency to filter by
@@ -2658,9 +2673,11 @@ export function formatToplistOutput(persons, sortBy, length, availableCurrencies
     return `Available currencies in dataset: ${availableCurrencies.join(', ')}`;
   }
 
-  // If sorting by scores, show all persons regardless of currency
+  // If sorting by scores or gift count, show all persons regardless of currency
   if (sortBy === 'nice-score' || sortBy === 'friend-score') {
     return formatScoreBasedToplist(persons, sortBy, length);
+  } else if (sortBy === 'gift-count') {
+    return formatGiftCountToplist(persons, length);
   }
 
   // For total gifts sorting, handle currencies
@@ -2674,6 +2691,39 @@ export function formatToplistOutput(persons, sortBy, length, availableCurrencies
     // Multiple currencies - show separate toplists for each currency
     return formatMultiCurrencyToplist(persons, sortBy, length, availableCurrencies);
   }
+}
+
+/**
+ * Format toplist for gift count sorting
+ */
+function formatGiftCountToplist(persons, length) {
+  const sortedPersons = [...persons].sort((a, b) => {
+    const aCount = calculateTotalGiftCount(a.giftCounts);
+    const bCount = calculateTotalGiftCount(b.giftCounts);
+    return bCount - aCount;
+  });
+
+  const topPersons = sortedPersons.slice(0, length);
+
+  let output = `Top ${topPersons.length} Persons (Gift Count):\n\n`;
+
+  topPersons.forEach((person, index) => {
+    const rank = index + 1;
+    let line = `${rank}. ${person.name}`;
+
+    const totalCount = calculateTotalGiftCount(person.giftCounts);
+    line += `: ${totalCount} gift${totalCount !== 1 ? 's' : ''}`;
+
+    // Add scores if available
+    const scores = [];
+    if (person.niceScore !== undefined && person.niceScore !== null) scores.push(`nice: ${person.niceScore}`);
+    if (person.friendScore !== undefined && person.friendScore !== null) scores.push(`friend: ${person.friendScore}`);
+    if (scores.length > 0) line += ` (${scores.join(', ')})`;
+
+    output += line + '\n';
+  });
+
+  return output.trim();
 }
 
 /**
@@ -2800,6 +2850,20 @@ function formatMultiCurrencyToplist(persons, sortBy, length, availableCurrencies
   }
 
   return output;
+}
+
+/**
+ * Calculate total gift count from gift counts (for sorting)
+ * @param {Object} giftCounts - Object with currency->count mappings
+ * @returns {number} Total number of gifts across all currencies
+ */
+function calculateTotalGiftCount(giftCounts) {
+  if (!giftCounts || Object.keys(giftCounts).length === 0) {
+    return 0;
+  }
+
+  // Sum all gift counts across all currencies
+  return Object.values(giftCounts).reduce((sum, count) => sum + count, 0);
 }
 
 /**

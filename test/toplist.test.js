@@ -258,6 +258,26 @@ describe('Toplist Arguments Parsing', () => {
     expect(result.success).toBe(true);
     expect(result.currency).toBe('INVALID');
   });
+
+  it('should parse --gift-count parameter', () => {
+    const result = parseToplistArguments(['--gift-count']);
+    expect(result.success).toBe(true);
+    expect(result.sortBy).toBe('gift-count');
+    expect(result.length).toBe(10); // default
+  });
+
+  it('should parse -g short form for gift count', () => {
+    const result = parseToplistArguments(['-g']);
+    expect(result.success).toBe(true);
+    expect(result.sortBy).toBe('gift-count');
+  });
+
+  it('should combine gift count with other parameters', () => {
+    const result = parseToplistArguments(['-g', '-l', '5']);
+    expect(result.success).toBe(true);
+    expect(result.sortBy).toBe('gift-count');
+    expect(result.length).toBe(5);
+  });
 });
 
 describe('Toplist Data Aggregation', () => {
@@ -465,25 +485,29 @@ describe('Toplist Output Formatting', () => {
         name: 'Alice',
         niceScore: 9,
         friendScore: 8,
-        gifts: { SEK: 450.75, USD: 100.00 }
+        gifts: { SEK: 450.75, USD: 100.00 },
+        giftCounts: { SEK: 1, USD: 1 }
       },
       {
         name: 'Bob',
         niceScore: 7,
         friendScore: 6,
-        gifts: { USD: 375.00 }
+        gifts: { USD: 375.00 },
+        giftCounts: { USD: 1 }
       },
       {
         name: 'Charlie',
         niceScore: 5,
         friendScore: 9,
-        gifts: { SEK: 100.75 }
+        gifts: { SEK: 100.75 },
+        giftCounts: { SEK: 1 }
       },
       {
         name: 'David',
         niceScore: undefined,
         friendScore: undefined,
-        gifts: { SEK: 50.00 }
+        gifts: { SEK: 50.00 },
+        giftCounts: { SEK: 1 }
       }
     ];
   });
@@ -566,6 +590,34 @@ describe('Toplist Output Formatting', () => {
     expect(output).toMatch(/Alice:\s*9.*\(friend: 8\)/);
     expect(output).toMatch(/Bob:\s*7.*\(friend: 6\)/);
     expect(output).toMatch(/Charlie:\s*5.*\(friend: 9\)/);
+  });
+
+  it('should sort by gift count', () => {
+    const output = formatToplistOutput(testPersons, 'gift-count', 10);
+    expect(output).toContain('Top 4 Persons (Gift Count)');
+
+    // Alice should be first (2 gifts: 1 SEK + 1 USD)
+    expect(output).toMatch(/1\.\s*Alice:\s*2 gifts/);
+    // Bob should be second (1 gift)
+    expect(output).toMatch(/2\.\s*Bob:\s*1 gift/);
+    // Charlie should be third (1 gift)
+    expect(output).toMatch(/3\.\s*Charlie:\s*1 gift/);
+    // David should be last (1 gift)
+    expect(output).toMatch(/4\.\s*David:\s*1 gift/);
+  });
+
+  it('should show scores when sorting by gift count', () => {
+    const output = formatToplistOutput(testPersons, 'gift-count', 10);
+
+    // Alice should show gift count and both scores
+    expect(output).toMatch(/Alice:\s*2 gifts.*\(nice: 9, friend: 8\)/);
+    // Bob should show gift count and both scores
+    expect(output).toMatch(/Bob:\s*1 gift.*\(nice: 7, friend: 6\)/);
+    // Charlie should show gift count and both scores
+    expect(output).toMatch(/Charlie:\s*1 gift.*\(nice: 5, friend: 9\)/);
+    // David should show gift count but no scores
+    expect(output).toMatch(/David:\s*1 gift/);
+    expect(output).not.toMatch(/David:.*\(/);
   });
 
   it('should handle currency filtering with single currency data', () => {
@@ -998,37 +1050,43 @@ describe('Score Edge Cases', () => {
         name: 'Alice',
         niceScore: 0,
         friendScore: 0,
-        gifts: { SEK: 100.00 }
+        gifts: { SEK: 100.00 },
+        giftCounts: { SEK: 1 }
       },
       {
         name: 'Bob',
         niceScore: 10,
         friendScore: 10,
-        gifts: { SEK: 200.00 }
+        gifts: { SEK: 200.00 },
+        giftCounts: { SEK: 1 }
       },
       {
         name: 'Charlie',
         niceScore: -1,
         friendScore: 5,
-        gifts: { SEK: 50.00 }
+        gifts: { SEK: 50.00 },
+        giftCounts: { SEK: 1 }
       },
       {
         name: 'David',
         niceScore: 5,
         friendScore: -1,
-        gifts: { SEK: 75.00 }
+        gifts: { SEK: 75.00 },
+        giftCounts: { SEK: 1 }
       },
       {
         name: 'Eve',
         niceScore: undefined,
         friendScore: undefined,
-        gifts: { SEK: 25.00 }
+        gifts: { SEK: 25.00 },
+        giftCounts: { SEK: 1 }
       },
       {
         name: 'Frank',
         niceScore: null,
         friendScore: null,
-        gifts: { SEK: 150.00 }
+        gifts: { SEK: 150.00 },
+        giftCounts: { SEK: 1 }
       }
     ];
   });

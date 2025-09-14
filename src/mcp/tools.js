@@ -858,15 +858,15 @@ export function registerAllTools(server) {
 
   // Register toplist tool for ranking persons
   server.registerTool('toplist_persons', {
-    description: 'Get ranked list of persons by total gifts received, nice score, or friend score with optional currency filtering',
+    description: 'Get ranked list of persons by total gifts received, nice score, friend score, or gift count with optional currency filtering',
     inputSchema: {
       type: 'object',
       properties: {
         sortBy: {
           type: 'string',
-          enum: ['total', 'nice-score', 'friend-score'],
+          enum: ['total', 'nice-score', 'friend-score', 'gift-count'],
           default: 'total',
-          description: 'Sort criteria: total (gift amount), nice-score, or friend-score'
+          description: 'Sort criteria: total (gift amount), nice-score, friend-score, or gift-count'
         },
         length: {
           type: 'integer',

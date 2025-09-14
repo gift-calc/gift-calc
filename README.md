@@ -242,11 +242,13 @@ gift-calc toplist                      # Top 10 persons by total gift amount
 gcalc tl                              # Short form
 gift-calc toplist --nice-score         # Top 10 persons by nice score
 gift-calc toplist --friend-score       # Top 10 persons by friend score
+gift-calc toplist --gift-count         # Top 10 persons by gift count
 gift-calc toplist --length 20          # Top 20 persons by total gifts
 
 # Combined options
 gcalc tl -n -l 5                      # Top 5 by nice score
 gift-calc toplist -f --length 15       # Top 15 by friend score
+gcalc tl -g -l 3                      # Top 3 by gift count
 
 # Time filtering
 gift-calc toplist --from 2024-01-01 --to 2024-12-31  # Top 10 for 2024
@@ -261,6 +263,7 @@ gift-calc toplist --from 2024-06-01 --to 2024-08-31 -l 5  # Top 5 for summer gif
 | `toplist, tl` | Show person ranking | - |
 | `-n, --nice-score` | Sort by nice score (highest first) | total |
 | `-f, --friend-score` | Sort by friend score (highest first) | total |
+| `-g, --gift-count` | Sort by gift count (highest first) | total |
 | `-l, --length` | Number of results to show | 10 |
 | `-c, --currency` | Filter by specific currency | - |
 | `--from` | Start date filter (YYYY-MM-DD) | - |
@@ -277,6 +280,14 @@ Top 4 Persons (Total Gifts):
 2. Bob: 875.25 USD (nice: 7, friend: 6)
 3. Charlie: 425.00 SEK (nice: 5, friend: 9)
 4. David: 150.00 SEK
+
+$ gift-calc toplist --gift-count
+Top 4 Persons (Gift Count):
+
+1. Alice: 2 gifts (nice: 9, friend: 8)
+2. Bob: 1 gift (nice: 7, friend: 6)
+3. Charlie: 1 gift (nice: 5, friend: 9)
+4. David: 1 gift
 ```
 
 > **Note**: For toplist command help, use the global help flag: `gift-calc --help`
