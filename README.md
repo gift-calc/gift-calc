@@ -42,6 +42,7 @@ gift-calc -b 100 -f 8 --name "Alice"
 - 💰 Automatic budget tracking with real-time spending analysis
 - 📊 Spending pattern analysis with flexible time periods
 - 🏆 Person ranking and toplist functionality for analyzing gift patterns
+- 📅 Flexible date filtering for historical analysis and time-based gift insights
 
 ## Installation
 
@@ -121,6 +122,8 @@ gift-calc naughty-list --remove Sven  # Remove from naughty list
 gift-calc toplist                     # Top 10 by total gift amount
 gcalc tl -n                          # Top 10 by nice score
 gift-calc toplist --friend-score -l 5 # Top 5 by friend score
+gift-calc toplist --from 2024-01-01 --to 2024-12-31  # Top 10 for 2024
+gcalc tl --from 2024-12-01           # Top 10 from December 1 to today
 ```
 
 ## Command Options
@@ -244,6 +247,11 @@ gift-calc toplist --length 20          # Top 20 persons by total gifts
 # Combined options
 gcalc tl -n -l 5                      # Top 5 by nice score
 gift-calc toplist -f --length 15       # Top 15 by friend score
+
+# Time filtering
+gift-calc toplist --from 2024-01-01 --to 2024-12-31  # Top 10 for 2024
+gcalc tl --from 2024-12-01 -n           # Top 10 by nice score from December 1
+gift-calc toplist --from 2024-06-01 --to 2024-08-31 -l 5  # Top 5 for summer gifts
 ```
 
 ### Toplist Options
@@ -254,6 +262,10 @@ gift-calc toplist -f --length 15       # Top 15 by friend score
 | `-n, --nice-score` | Sort by nice score (highest first) | total |
 | `-f, --friend-score` | Sort by friend score (highest first) | total |
 | `-l, --length` | Number of results to show | 10 |
+| `-c, --currency` | Filter by specific currency | - |
+| `--from` | Start date filter (YYYY-MM-DD) | - |
+| `--to` | End date filter (YYYY-MM-DD) | - |
+| `--list-currencies` | Show available currencies | - |
 
 ### Sample Output
 
@@ -274,6 +286,8 @@ Top 4 Persons (Total Gifts):
 - **Score integration**: Displays nice and friend scores when available
 - **Flexible sorting**: Sort by total gifts, nice score, or friend score
 - **Configurable length**: Show any number of top results
+- **Time filtering**: Analyze gift patterns by date range for historical insights
+- **Currency filtering**: Focus analysis on specific currencies
 - **Combined data**: Merges person configuration and gift history data
 
 ## MCP (Model Context Protocol) Support
