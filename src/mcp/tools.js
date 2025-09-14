@@ -858,7 +858,7 @@ export function registerAllTools(server) {
 
   // Register toplist tool for ranking persons
   server.registerTool('toplist_persons', {
-    description: 'Get ranked list of persons by total gifts received, nice score, or friend score',
+    description: 'Get ranked list of persons by total gifts received, nice score, or friend score with optional currency filtering',
     inputSchema: {
       type: 'object',
       properties: {
@@ -874,11 +874,20 @@ export function registerAllTools(server) {
           maximum: 100,
           default: 10,
           description: 'Number of results to show (default: 10)'
+        },
+        currency: {
+          type: 'string',
+          description: 'Filter by specific currency (e.g., SEK, USD, EUR). If not specified, shows all currencies.'
+        },
+        listCurrencies: {
+          type: 'boolean',
+          default: false,
+          description: 'If true, returns list of available currencies instead of toplist'
         }
       }
     },
     handler: async (args) => {
-      const { sortBy = 'total', length = 10 } = args;
+      const { sortBy = 'total', length = 10, currency = null, listCurrencies = false } = args;
 
       // Get file paths
       const personConfigPath = getPersonConfigPath(path, os);
@@ -899,8 +908,52 @@ export function registerAllTools(server) {
         };
       }
 
+      // Handle list currencies request
+      if (listCurrencies) {
+        if (toplistData.currencies.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: '💱 No currencies found in gift history.'
+              }
+            ],
+            isReadOnly: true
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `💱 Available currencies: ${toplistData.currencies.join(', ')}`
+              }
+            ],
+            isReadOnly: true
+          };
+        }
+      }
+
+      // Validate currency filter if specified
+      if (currency && toplistData.currencies.length > 0 && !toplistData.currencies.includes(currency)) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `❌ Currency '${currency}' not found. Available currencies: ${toplistData.currencies.join(', ')}`
+            }
+          ],
+          isReadOnly: true
+        };
+      }
+
       // Format output
-      const output = formatToplistOutput(toplistData.persons, sortBy, length);
+      const output = formatToplistOutput(
+        toplistData.persons,
+        sortBy,
+        length,
+        toplistData.currencies,
+        currency
+      );
 
       return {
         content: [

@@ -986,6 +986,8 @@ function handleToplistCommand(config) {
     console.log('  gift-calc toplist -n                   # Top 10 by nice score');
     console.log('  gift-calc toplist --friend-score       # Top 10 by friend score');
     console.log('  gift-calc toplist -l 20                # Top 20 by total gift amount');
+    console.log('  gift-calc toplist -c USD               # Top 10 by USD gift amount');
+    console.log('  gift-calc toplist --list-currencies    # Show available currencies');
     console.log('  gcalc tl                               # Short form');
     console.log('  gcalc tl -n -l 5                       # Top 5 by nice score');
     process.exit(1);
@@ -1003,7 +1005,30 @@ function handleToplistCommand(config) {
     process.exit(1);
   }
 
+  // Handle --list-currencies
+  if (config.listCurrencies) {
+    if (toplistData.currencies.length === 0) {
+      console.log('No currencies found in gift history.');
+    } else {
+      console.log(`Available currencies in dataset: ${toplistData.currencies.join(', ')}`);
+    }
+    return;
+  }
+
+  // Validate currency filter if specified
+  if (config.currency && toplistData.currencies.length > 0 && !toplistData.currencies.includes(config.currency)) {
+    console.error(`Error: Currency '${config.currency}' not found in gift history.`);
+    console.error(`Available currencies: ${toplistData.currencies.join(', ')}`);
+    process.exit(1);
+  }
+
   // Format and display output
-  const output = formatToplistOutput(toplistData.persons, config.sortBy, config.length);
+  const output = formatToplistOutput(
+    toplistData.persons,
+    config.sortBy,
+    config.length,
+    toplistData.currencies,
+    config.currency
+  );
   console.log(output);
 }

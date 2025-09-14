@@ -448,6 +448,8 @@ USAGE:
   gift-calc toplist                      # Top 10 persons by total gift amount
   gift-calc toplist -n                   # Top 10 persons by nice score
   gift-calc toplist --friend-score -l 5  # Top 5 persons by friend score
+  gift-calc toplist -c USD               # Top 10 persons by USD gift amount
+  gift-calc toplist --list-currencies    # Show available currencies
   gcalc [options]              # Short alias
   gcalc nl <name>              # Add to naughty list (short form)
   gcalc nl list                # List naughty people
@@ -600,6 +602,9 @@ EXAMPLES:
   gcalc tl -l 5                                                       # Top 5 persons by total gifts
   gift-calc toplist -n -l 3                                          # Top 3 persons by nice score
   gcalc tl --friend-score --length 15                                # Top 15 persons by friend score
+  gift-calc toplist --currency USD                                    # Top 10 persons by USD gifts only
+  gcalc tl -c SEK -l 5                                               # Top 5 persons by SEK gifts only
+  gift-calc toplist --list-currencies                                 # Show available currencies in dataset
   
   BUDGET EXAMPLES:
   gift-calc budget add 5000 2024-12-01 2024-12-31 "Christmas gifts"      # Add Christmas budget
@@ -2433,6 +2438,9 @@ export function parseToplistArguments(args) {
     error: null,
     sortBy: 'total',      // 'total', 'nice-score', 'friend-score'
     length: 10,           // Default top 10
+    currency: null,       // Filter by specific currency
+    listCurrencies: false, // Show available currencies
+    multiCurrency: false  // Show separate toplists for each currency
   };
 
   // Parse arguments
@@ -2460,9 +2468,23 @@ export function parseToplistArguments(args) {
         config.error = '--length requires a numeric value';
         return config;
       }
+    } else if (arg === '-c' || arg === '--currency') {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith('-')) {
+        config.currency = nextArg.toUpperCase();
+        i++;
+      } else {
+        config.success = false;
+        config.error = '--currency requires a currency code (e.g., SEK, USD, EUR)';
+        return config;
+      }
+    } else if (arg === '--list-currencies') {
+      config.listCurrencies = true;
+    } else if (arg === '--multi-currency') {
+      config.multiCurrency = true;
     } else {
       config.success = false;
-      config.error = `Unknown argument: ${arg}. Valid options: --nice-score (-n), --friend-score (-f), --length (-l)`;
+      config.error = `Unknown argument: ${arg}. Valid options: --nice-score (-n), --friend-score (-f), --length (-l), --currency (-c), --list-currencies, --multi-currency`;
       return config;
     }
   }
@@ -2480,6 +2502,7 @@ export function parseToplistArguments(args) {
 export function getToplistData(personConfigPath, logPath, fsModule) {
   const result = {
     persons: [],
+    currencies: new Set(),
     errorMessage: null
   };
 
@@ -2504,6 +2527,7 @@ export function getToplistData(personConfigPath, logPath, fsModule) {
 
           // Group by currency
           const currency = entry.currency;
+          result.currencies.add(currency);
           if (!giftTotals[recipientKey][currency]) {
             giftTotals[recipientKey][currency] = 0;
           }
@@ -2536,6 +2560,9 @@ export function getToplistData(personConfigPath, logPath, fsModule) {
     });
   }
 
+  // Convert currencies Set to sorted array
+  result.currencies = Array.from(result.currencies).sort();
+
   return result;
 }
 
@@ -2544,41 +2571,62 @@ export function getToplistData(personConfigPath, logPath, fsModule) {
  * @param {Array} persons - Array of person objects with gift data
  * @param {string} sortBy - Sort criteria: 'total', 'nice-score', 'friend-score'
  * @param {number} length - Number of results to show
+ * @param {Array} availableCurrencies - Array of currencies found in the dataset
+ * @param {string|null} currencyFilter - Optional currency to filter by
  * @returns {string} Formatted toplist output
  */
-export function formatToplistOutput(persons, sortBy, length) {
+export function formatToplistOutput(persons, sortBy, length, availableCurrencies = [], currencyFilter = null) {
   if (persons.length === 0) {
     return 'No persons found in configuration or gift history.';
   }
 
-  // Sort persons based on criteria
+  // Handle --list-currencies case
+  if (availableCurrencies.length > 0 && currencyFilter === 'LIST_CURRENCIES') {
+    if (availableCurrencies.length === 0) {
+      return 'No currencies found in gift history.';
+    }
+    return `Available currencies in dataset: ${availableCurrencies.join(', ')}`;
+  }
+
+  // If sorting by scores, show all persons regardless of currency
+  if (sortBy === 'nice-score' || sortBy === 'friend-score') {
+    return formatScoreBasedToplist(persons, sortBy, length);
+  }
+
+  // For total gifts sorting, handle currencies
+  if (currencyFilter) {
+    // Single currency filter - show only that currency
+    return formatSingleCurrencyToplist(persons, sortBy, length, currencyFilter);
+  } else if (availableCurrencies.length <= 1) {
+    // Single currency in dataset (or no currencies) - use original behavior
+    return formatSingleCurrencyToplist(persons, sortBy, length, null);
+  } else {
+    // Multiple currencies - show separate toplists for each currency
+    return formatMultiCurrencyToplist(persons, sortBy, length, availableCurrencies);
+  }
+}
+
+/**
+ * Format toplist for score-based sorting (nice-score, friend-score)
+ */
+function formatScoreBasedToplist(persons, sortBy, length) {
   const sortedPersons = [...persons].sort((a, b) => {
     if (sortBy === 'nice-score') {
       const aScore = a.niceScore !== undefined ? a.niceScore : -1;
       const bScore = b.niceScore !== undefined ? b.niceScore : -1;
-      return bScore - aScore; // Highest first
+      return bScore - aScore;
     } else if (sortBy === 'friend-score') {
       const aScore = a.friendScore !== undefined ? a.friendScore : -1;
       const bScore = b.friendScore !== undefined ? b.friendScore : -1;
-      return bScore - aScore; // Highest first
-    } else {
-      // Sort by total gift amount (default)
-      const aTotalValue = calculateTotalGiftValue(a.gifts);
-      const bTotalValue = calculateTotalGiftValue(b.gifts);
-      return bTotalValue - aTotalValue; // Highest first
+      return bScore - aScore;
     }
+    return 0;
   });
 
-  // Take top N results
   const topPersons = sortedPersons.slice(0, length);
+  const sortLabel = sortBy === 'nice-score' ? 'Nice Score' : 'Friend Score';
 
-  // Format output
-  let output = '';
-  const sortLabel = sortBy === 'nice-score' ? 'Nice Score' :
-                   sortBy === 'friend-score' ? 'Friend Score' :
-                   'Total Gifts';
-
-  output += `Top ${topPersons.length} Persons (${sortLabel}):\n\n`;
+  let output = `Top ${topPersons.length} Persons (${sortLabel}):\n\n`;
 
   topPersons.forEach((person, index) => {
     const rank = index + 1;
@@ -2592,22 +2640,96 @@ export function formatToplistOutput(persons, sortBy, length) {
       const score = person.friendScore !== undefined ? person.friendScore : 'N/A';
       line += `: ${score}`;
       if (person.niceScore !== undefined) line += ` (nice: ${person.niceScore})`;
-    } else {
-      // Total gifts
-      const giftSummary = formatGiftSummary(person.gifts);
-      line += `: ${giftSummary}`;
-
-      // Add scores if available
-      const scores = [];
-      if (person.niceScore !== undefined) scores.push(`nice: ${person.niceScore}`);
-      if (person.friendScore !== undefined) scores.push(`friend: ${person.friendScore}`);
-      if (scores.length > 0) line += ` (${scores.join(', ')})`;
     }
 
     output += line + '\n';
   });
 
   return output.trim();
+}
+
+/**
+ * Format toplist for a single currency
+ */
+function formatSingleCurrencyToplist(persons, sortBy, length, currency) {
+  if (persons.length === 0) {
+    return currency
+      ? `No persons found with gifts in ${currency}.`
+      : 'No persons found in configuration or gift history.';
+  }
+
+  // When currency is specified, we still include all persons but sort by that currency's amount
+  // When currency is null, we use the original behavior
+  const sortedPersons = [...persons].sort((a, b) => {
+    if (currency) {
+      const aAmount = a.gifts && a.gifts[currency] || 0;
+      const bAmount = b.gifts && b.gifts[currency] || 0;
+      return bAmount - aAmount;
+    } else {
+      const aAmount = calculateTotalGiftValue(a.gifts);
+      const bAmount = calculateTotalGiftValue(b.gifts);
+      return bAmount - aAmount;
+    }
+  });
+
+  // When no currency filter, include all persons (original behavior)
+  // When currency filter is specified, only show persons with gifts in that currency
+  const relevantPersons = currency
+    ? sortedPersons.filter(person => person.gifts && person.gifts[currency] > 0)
+    : sortedPersons;
+
+  if (relevantPersons.length === 0) {
+    return currency
+      ? `No persons found with gifts in ${currency}.`
+      : 'No persons found in configuration or gift history.';
+  }
+
+  const topPersons = relevantPersons.slice(0, length);
+  const currencyLabel = currency ? ` - ${currency}` : '';
+
+  let output = `Top ${topPersons.length} Persons (Total Gifts${currencyLabel}):\n\n`;
+
+  topPersons.forEach((person, index) => {
+    const rank = index + 1;
+    let line = `${rank}. ${person.name}`;
+
+    if (currency && person.gifts && person.gifts[currency]) {
+      line += `: ${formatBudgetAmount(person.gifts[currency], currency)}`;
+    } else {
+      const giftSummary = formatGiftSummary(person.gifts);
+      line += `: ${giftSummary}`;
+    }
+
+    // Add scores if available
+    const scores = [];
+    if (person.niceScore !== undefined) scores.push(`nice: ${person.niceScore}`);
+    if (person.friendScore !== undefined) scores.push(`friend: ${person.friendScore}`);
+    if (scores.length > 0) line += ` (${scores.join(', ')})`;
+
+    output += line + '\n';
+  });
+
+  return output.trim();
+}
+
+/**
+ * Format toplist with separate sections for each currency
+ */
+function formatMultiCurrencyToplist(persons, sortBy, length, availableCurrencies) {
+  let output = '';
+
+  for (let currencyIndex = 0; currencyIndex < availableCurrencies.length; currencyIndex++) {
+    const currency = availableCurrencies[currencyIndex];
+
+    if (currencyIndex > 0) {
+      output += '\n\n';
+    }
+
+    const currencyToplist = formatSingleCurrencyToplist(persons, sortBy, length, currency);
+    output += currencyToplist;
+  }
+
+  return output;
 }
 
 /**

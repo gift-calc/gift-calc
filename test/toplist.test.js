@@ -405,11 +405,14 @@ describe('CLI Integration', () => {
 
     const result = runCLI('toplist -l 2');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('Top 2 Persons');
+    // With multi-currency data, shows separate sections
+    expect(result.stdout).toContain('Top 2 Persons (Total Gifts - SEK)');
+    expect(result.stdout).toContain('Top 1 Persons (Total Gifts - USD)');
 
     const lines = result.stdout.split('\n');
     const dataLines = lines.filter(line => /^\d+\./.test(line));
-    expect(dataLines).toHaveLength(2);
+    // Expects 3 total data lines: 2 from SEK section + 1 from USD section
+    expect(dataLines).toHaveLength(3);
   });
 
   it('should execute toplist with friend score and length', () => {
