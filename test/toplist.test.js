@@ -217,6 +217,47 @@ describe('Toplist Arguments Parsing', () => {
     expect(result.sortBy).toBe('nice-score');
     expect(result.length).toBe(5);
   });
+
+  it('should parse currency flag', () => {
+    const result = parseToplistArguments(['-c', 'USD']);
+    expect(result.success).toBe(true);
+    expect(result.currency).toBe('USD');
+    expect(result.sortBy).toBe('total');
+    expect(result.length).toBe(10);
+  });
+
+  it('should parse currency long flag', () => {
+    const result = parseToplistArguments(['--currency', 'SEK']);
+    expect(result.success).toBe(true);
+    expect(result.currency).toBe('SEK');
+  });
+
+  it('should handle missing currency value', () => {
+    const result = parseToplistArguments(['-c']);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('--currency requires a currency code');
+  });
+
+  it('should parse list-currencies flag', () => {
+    const result = parseToplistArguments(['--list-currencies']);
+    expect(result.success).toBe(true);
+    expect(result.listCurrencies).toBe(true);
+  });
+
+  it('should combine currency filtering with other parameters', () => {
+    const result = parseToplistArguments(['-c', 'USD', '-n', '-l', '5']);
+    expect(result.success).toBe(true);
+    expect(result.currency).toBe('USD');
+    expect(result.sortBy).toBe('nice-score');
+    expect(result.length).toBe(5);
+  });
+
+  it('should handle invalid currency codes gracefully', () => {
+    // Should accept any currency code without validation at parse time
+    const result = parseToplistArguments(['-c', 'INVALID']);
+    expect(result.success).toBe(true);
+    expect(result.currency).toBe('INVALID');
+  });
 });
 
 describe('Toplist Data Aggregation', () => {
@@ -526,6 +567,73 @@ describe('Toplist Output Formatting', () => {
     expect(output).toMatch(/Bob:\s*7.*\(friend: 6\)/);
     expect(output).toMatch(/Charlie:\s*5.*\(friend: 9\)/);
   });
+
+  it('should handle currency filtering with single currency data', () => {
+    const output = formatToplistOutput(testPersons, 'total', 10, ['SEK', 'USD'], 'SEK');
+    expect(output).toContain('Top 3 Persons (Total Gifts - SEK)');
+    expect(output).toContain('Alice: 450.75 SEK');
+    expect(output).toContain('Charlie: 100.75 SEK');
+    expect(output).toContain('David: 50 SEK');
+    expect(output).not.toContain('USD');
+  });
+
+  it('should handle currency filtering with non-existent currency', () => {
+    const output = formatToplistOutput(testPersons, 'total', 10, ['SEK', 'USD'], 'EUR');
+    expect(output).toBe('No persons found with gifts in EUR.');
+  });
+
+  it('should handle list currencies output', () => {
+    const output = formatToplistOutput(testPersons, 'total', 10, ['SEK', 'USD'], 'LIST_CURRENCIES');
+    expect(output).toBe('Available currencies in dataset: SEK, USD');
+  });
+
+  it('should handle list currencies with no currencies', () => {
+    const output = formatToplistOutput([], 'total', 10, [], 'LIST_CURRENCIES');
+    expect(output).toBe('No persons found in configuration or gift history.');
+  });
+
+  it('should handle currency filtering with score-based sorting', () => {
+    const output = formatToplistOutput(testPersons, 'nice-score', 10, ['SEK', 'USD'], 'SEK');
+    expect(output).toContain('Top 4 Persons (Nice Score)');
+    expect(output).toContain('Alice: 9 (friend: 8)');
+    expect(output).toContain('Bob: 7 (friend: 6)');
+    expect(output).toContain('Charlie: 5 (friend: 9)');
+    expect(output).toContain('David: N/A');
+    // Score-based sorting shows all persons regardless of currency filter
+  });
+
+  it('should handle persons with mixed currencies when filtering', () => {
+    // Alice has both SEK and USD, but when filtering for SEK, should only show SEK amounts
+    const output = formatToplistOutput(testPersons, 'total', 10, ['SEK', 'USD'], 'SEK');
+    expect(output).toContain('Alice: 450.75 SEK');
+    expect(output).not.toContain('Alice:.*100.*USD');
+  });
+
+  it('should handle edge case: person with no gifts in filtered currency but has scores', () => {
+    const personsWithScoresOnly = [
+      {
+        name: 'Bob',
+        niceScore: 7,
+        friendScore: 6,
+        gifts: { USD: 375.00 }
+      }
+    ];
+    const output = formatToplistOutput(personsWithScoresOnly, 'total', 10, ['USD'], 'SEK');
+    expect(output).toBe('No persons found with gifts in SEK.');
+  });
+
+  it('should handle edge case: empty gifts object with currency filter', () => {
+    const personsWithEmptyGifts = [
+      {
+        name: 'Eve',
+        niceScore: 8,
+        friendScore: 7,
+        gifts: {}
+      }
+    ];
+    const output = formatToplistOutput(personsWithEmptyGifts, 'total', 10, ['SEK'], 'SEK');
+    expect(output).toBe('No persons found with gifts in SEK.');
+  });
 });
 
 describe('CLI Integration', () => {
@@ -606,6 +714,101 @@ describe('CLI Integration', () => {
     expect(result.stdout).toContain('Top 3 Persons (Friend Score)');
     expect(result.stdout).toMatch(/1\.\s*Charlie:\s*9/); // Charlie has highest friend score
   });
+
+  it('should handle currency filtering via CLI', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist -c SEK');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Top 3 Persons (Total Gifts - SEK)');
+    expect(result.stdout).toContain('Alice: 450.75 SEK');
+    expect(result.stdout).toContain('Charlie: 100.75 SEK');
+    expect(result.stdout).toContain('David: 50 SEK');
+    // Should not show USD in the filtered output
+    expect(result.stdout).not.toContain('USD');
+  });
+
+  it('should handle currency filtering with non-existent currency', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist -c EUR');
+    expect(result.success).toBe(false);
+    expect(result.stderr).toContain('Currency \'EUR\' not found');
+  });
+
+  it('should handle list-currencies flag via CLI', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist --list-currencies');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Available currencies in dataset: SEK, USD');
+  });
+
+  it('should handle list-currencies with no data', () => {
+    const result = runCLI('toplist --list-currencies');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('No currencies found');
+  });
+
+  it('should handle date filtering via CLI', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist --from 2024-12-01 --to 2024-12-05');
+    expect(result.success).toBe(true);
+
+    // Should contain entries within the date range (Dec 1-5)
+    expect(result.stdout).toContain('Alice');
+    expect(result.stdout).toContain('Bob');
+    expect(result.stdout).toContain('Charlie');
+    // David's gift was on Dec 6, so should NOT appear
+    expect(result.stdout).not.toContain('David');
+  });
+
+  it('should handle from date only via CLI', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist --from 2024-12-05');
+    expect(result.success).toBe(true);
+
+    // Should only show gifts from Dec 5 onwards
+    expect(result.stdout).toContain('David: 50 SEK'); // Dec 5 gift
+    // Bob's gift was on Dec 6, so should appear in USD section
+    expect(result.stdout).toContain('Bob: 175 USD');
+  });
+
+  it('should handle to date only via CLI', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist --to 2024-12-02');
+    expect(result.success).toBe(true);
+
+    // Should only show gifts up to Dec 2
+    expect(result.stdout).toContain('Alice'); // Has gifts on Dec 1 and Dec 3, but Dec 3 is after filter
+    expect(result.stdout).toContain('Bob'); // Has gift on Dec 2
+    // David's gift was on Dec 6, so should not appear
+    const davidMatch = result.stdout.match(/David:/g);
+    expect(davidMatch).toBeNull();
+  });
+
+  it('should handle currency filtering with date filtering via CLI', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist -c SEK --from 2024-12-01 --to 2024-12-05');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Top 2 Persons (Total Gifts - SEK)');
+    expect(result.stdout).toContain('Alice: 450.75 SEK');
+    expect(result.stdout).toContain('Charlie: 100.75 SEK');
+    // David should be filtered out (his gift is on Dec 6, outside Dec 1-5 range)
+    expect(result.stdout).not.toContain('David');
+    expect(result.stdout).not.toContain('USD');
+  });
 });
 
 describe('Edge Cases', () => {
@@ -685,5 +888,293 @@ describe('Edge Cases', () => {
     // Should aggregate all Alice entries regardless of case
     expect(alice.gifts.SEK).toBeCloseTo(250.50); // 150.50 + 100.00
     expect(alice.gifts.USD).toBeCloseTo(200.00);
+  });
+});
+
+describe('MCP Tool Integration', () => {
+  beforeEach(() => {
+    globalCleanup();
+  });
+
+  afterEach(() => {
+    globalCleanup();
+  });
+
+  it('should handle toplist MCP tool with basic parameters', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Top');
+    expect(result.stdout).toContain('Alice');
+    expect(result.stdout).toContain('Bob');
+    expect(result.stdout).toContain('Charlie');
+  });
+
+  it('should handle toplist MCP tool with currency filter', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist -c SEK');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('SEK');
+    expect(result.stdout).not.toContain('USD');
+  });
+
+  it('should handle toplist MCP tool with list currencies', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist --list-currencies');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Available currencies in dataset: SEK, USD');
+  });
+
+  it('should handle toplist MCP tool with score sorting', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist -n');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Nice Score');
+    expect(result.stdout).toMatch(/Alice:\s*9/);
+  });
+
+  it('should handle toplist MCP tool with custom length', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist -l 2');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Top 2');
+  });
+
+  it('should handle toplist MCP tool with date filtering', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist --from 2024-12-01 --to 2024-12-05');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Alice');
+    expect(result.stdout).toContain('Bob');
+    expect(result.stdout).toContain('Charlie');
+    // David should be filtered out (his gift is on Dec 6, outside Dec 1-5 range)
+    expect(result.stdout).not.toContain('David');
+  });
+
+  it('should handle toplist MCP tool with combined parameters', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    const result = runCLI('toplist -c SEK -n -l 2 --from 2024-12-01');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('Top 2 Persons (Nice Score)');
+    expect(result.stdout).toContain('Alice: 9');
+    // Charlie is filtered out by date (his gift is on Dec 10, outside --from 2024-12-01 without --to)
+    expect(result.stdout).toContain('Bob: 7');
+  });
+
+  it('should handle toplist MCP tool error cases', () => {
+    const result = runCLI('toplist --invalid-arg');
+    expect(result.success).toBe(false);
+    expect(result.stderr).toContain('Unknown argument');
+  });
+
+  it('should handle toplist MCP tool with no data', () => {
+    const result = runCLI('toplist');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('No persons found');
+  });
+});
+
+describe('Score Edge Cases', () => {
+  let testPersons;
+
+  beforeEach(() => {
+    globalCleanup();
+    testPersons = [
+      {
+        name: 'Alice',
+        niceScore: 0,
+        friendScore: 0,
+        gifts: { SEK: 100.00 }
+      },
+      {
+        name: 'Bob',
+        niceScore: 10,
+        friendScore: 10,
+        gifts: { SEK: 200.00 }
+      },
+      {
+        name: 'Charlie',
+        niceScore: -1,
+        friendScore: 5,
+        gifts: { SEK: 50.00 }
+      },
+      {
+        name: 'David',
+        niceScore: 5,
+        friendScore: -1,
+        gifts: { SEK: 75.00 }
+      },
+      {
+        name: 'Eve',
+        niceScore: undefined,
+        friendScore: undefined,
+        gifts: { SEK: 25.00 }
+      },
+      {
+        name: 'Frank',
+        niceScore: null,
+        friendScore: null,
+        gifts: { SEK: 150.00 }
+      }
+    ];
+  });
+
+  afterEach(() => {
+    globalCleanup();
+  });
+
+  it('should handle zero scores correctly', () => {
+    const output = formatToplistOutput(testPersons, 'nice-score', 10);
+    expect(output).toContain('Alice: 0 (friend: 0)');
+    expect(output).toContain('Bob: 10 (friend: 10)');
+    // Alice should appear with zero score, not be filtered out
+    expect(output).toContain('Alice');
+  });
+
+  it('should handle negative scores correctly', () => {
+    const output = formatToplistOutput(testPersons, 'nice-score', 10);
+    expect(output).toContain('Charlie: -1 (friend: 5)');
+    // Negative scores should still be displayed
+    expect(output).toContain('Charlie');
+  });
+
+  it('should handle undefined scores correctly', () => {
+    const output = formatToplistOutput(testPersons, 'nice-score', 10);
+    expect(output).toContain('Eve: N/A');
+    // Undefined scores should show as N/A
+    expect(output).toContain('Eve');
+  });
+
+  it('should handle null scores correctly', () => {
+    const output = formatToplistOutput(testPersons, 'nice-score', 10);
+    expect(output).toContain('Frank: N/A');
+    // Null scores should show as N/A
+    expect(output).toContain('Frank');
+  });
+
+  it('should sort correctly with mixed score types', () => {
+    const output = formatToplistOutput(testPersons, 'nice-score', 10);
+
+    // Should sort: Bob (10), David (5), Alice (0), Charlie (-1), Eve (N/A), Frank (N/A)
+    const lines = output.split('\n').filter(line => line.match(/^\d+\./));
+
+    expect(lines[0]).toContain('Bob: 10');
+    expect(lines[1]).toContain('David: 5');
+    expect(lines[2]).toContain('Alice: 0');
+    expect(lines[3]).toContain('Charlie: -1');
+    expect(lines[4]).toContain('Eve: N/A');
+    expect(lines[5]).toContain('Frank: N/A');
+  });
+
+  it('should handle CLI with zero scores', () => {
+    // Create custom config with Alice having zero scores
+    const config = {
+      alice: {
+        name: 'Alice',
+        niceScore: 0,
+        friendScore: 0
+      },
+      bob: {
+        name: 'Bob',
+        niceScore: 7,
+        friendScore: 6
+      },
+      charlie: {
+        name: 'Charlie',
+        niceScore: 5,
+        friendScore: 9
+      }
+    };
+    savePersonConfig(config, PERSON_CONFIG_PATH, fs, path);
+    createTestLogEntries();
+
+    const result = runCLI('toplist -n');
+    expect(result.success).toBe(true);
+    // Alice with 0 score should be included (0 is valid, only null/undefined are filtered)
+    expect(result.stdout).toContain('Alice: 0');
+    expect(result.stdout).toContain('Bob: 7');
+    expect(result.stdout).toContain('Charlie: 5');
+  });
+
+  it('should handle CLI with missing scores', () => {
+    createTestPersonsConfig();
+    // Remove scores for David (log-only person)
+    createTestLogEntries();
+
+    const result = runCLI('toplist -n');
+    expect(result.success).toBe(true);
+    expect(result.stdout).toContain('David: N/A');
+  });
+
+  it('should handle large dataset performance (basic)', () => {
+    // Create a larger dataset with 50 persons
+    const largeConfig = {};
+    for (let i = 1; i <= 50; i++) {
+      largeConfig[`person${i}`] = {
+        name: `Person ${i}`,
+        niceScore: Math.floor(Math.random() * 10),
+        friendScore: Math.floor(Math.random() * 10),
+        baseValue: 100 + Math.floor(Math.random() * 100),
+        currency: 'SEK'
+      };
+    }
+
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    savePersonConfig(largeConfig, PERSON_CONFIG_PATH, fs, path);
+
+    const result = getToplistData(PERSON_CONFIG_PATH, LOG_PATH, fs);
+    expect(result.errorMessage).toBe(null);
+    expect(result.persons).toHaveLength(50);
+
+    const output = formatToplistOutput(result.persons, 'nice-score', 10);
+    expect(output).toContain('Top 10 Persons (Nice Score)');
+    // Should handle large dataset without performance issues
+    expect(output.split('\n').filter(line => line.match(/^\d+\./))).toHaveLength(10);
+  });
+
+  it('should handle extreme date ranges', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    // Test with very large date range
+    const result = runCLI('toplist --from 2020-01-01 --to 2030-12-31');
+    expect(result.success).toBe(true);
+    // Should include all data since our test dates are within this range
+    expect(result.stdout).toContain('Alice');
+    expect(result.stdout).toContain('Bob');
+    expect(result.stdout).toContain('Charlie');
+    expect(result.stdout).toContain('David');
+  });
+
+  it('should handle date range with no matching data', () => {
+    createTestPersonsConfig();
+    createTestLogEntries();
+
+    // Test with date range that excludes all our test data
+    const result = runCLI('toplist --from 2023-01-01 --to 2023-12-31');
+    expect(result.success).toBe(true);
+    // Should show persons from config but with no gifts
+    expect(result.stdout).toContain('Alice');
+    expect(result.stdout).toContain('Bob');
+    expect(result.stdout).toContain('Charlie');
+    // But no gift amounts should appear
+    expect(result.stdout).not.toContain('SEK');
+    expect(result.stdout).not.toContain('USD');
   });
 });

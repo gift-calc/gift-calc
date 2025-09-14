@@ -2682,12 +2682,12 @@ export function formatToplistOutput(persons, sortBy, length, availableCurrencies
 function formatScoreBasedToplist(persons, sortBy, length) {
   const sortedPersons = [...persons].sort((a, b) => {
     if (sortBy === 'nice-score') {
-      const aScore = a.niceScore !== undefined ? a.niceScore : -1;
-      const bScore = b.niceScore !== undefined ? b.niceScore : -1;
+      const aScore = a.niceScore !== undefined && a.niceScore !== null ? a.niceScore : -1;
+      const bScore = b.niceScore !== undefined && b.niceScore !== null ? b.niceScore : -1;
       return bScore - aScore;
     } else if (sortBy === 'friend-score') {
-      const aScore = a.friendScore !== undefined ? a.friendScore : -1;
-      const bScore = b.friendScore !== undefined ? b.friendScore : -1;
+      const aScore = a.friendScore !== undefined && a.friendScore !== null ? a.friendScore : -1;
+      const bScore = b.friendScore !== undefined && b.friendScore !== null ? b.friendScore : -1;
       return bScore - aScore;
     }
     return 0;
@@ -2703,13 +2703,13 @@ function formatScoreBasedToplist(persons, sortBy, length) {
     let line = `${rank}. ${person.name}`;
 
     if (sortBy === 'nice-score') {
-      const score = person.niceScore !== undefined ? person.niceScore : 'N/A';
+      const score = person.niceScore !== undefined && person.niceScore !== null ? person.niceScore : 'N/A';
       line += `: ${score}`;
-      if (person.friendScore !== undefined) line += ` (friend: ${person.friendScore})`;
+      if (person.friendScore !== undefined && person.friendScore !== null) line += ` (friend: ${person.friendScore})`;
     } else if (sortBy === 'friend-score') {
-      const score = person.friendScore !== undefined ? person.friendScore : 'N/A';
+      const score = person.friendScore !== undefined && person.friendScore !== null ? person.friendScore : 'N/A';
       line += `: ${score}`;
-      if (person.niceScore !== undefined) line += ` (nice: ${person.niceScore})`;
+      if (person.niceScore !== undefined && person.niceScore !== null) line += ` (nice: ${person.niceScore})`;
     }
 
     output += line + '\n';
@@ -2772,8 +2772,8 @@ function formatSingleCurrencyToplist(persons, sortBy, length, currency) {
 
     // Add scores if available
     const scores = [];
-    if (person.niceScore !== undefined) scores.push(`nice: ${person.niceScore}`);
-    if (person.friendScore !== undefined) scores.push(`friend: ${person.friendScore}`);
+    if (person.niceScore !== undefined && person.niceScore !== null) scores.push(`nice: ${person.niceScore}`);
+    if (person.friendScore !== undefined && person.friendScore !== null) scores.push(`friend: ${person.friendScore}`);
     if (scores.length > 0) line += ` (${scores.join(', ')})`;
 
     output += line + '\n';
