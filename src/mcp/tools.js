@@ -72,10 +72,10 @@ export function registerAllTools(server) {
           minimum: 0,
           maximum: 10
         },
-        currency: {
+        displayCurrency: {
           type: 'string',
-          description: 'Currency code (e.g., SEK, USD, EUR)',
-          default: 'SEK'
+          description: 'Display currency code for conversion (e.g., SEK, USD, EUR). If not provided, uses base currency.',
+          default: null
         },
         decimals: {
           type: 'integer',
@@ -108,7 +108,7 @@ export function registerAllTools(server) {
         variation,
         friendScore,
         niceScore,
-        currency = config.currency || 'SEK',
+        displayCurrency = null,
         decimals = config.decimals !== undefined ? config.decimals : 2,
         recipientName = null,
         useMaximum = false,
@@ -129,7 +129,10 @@ export function registerAllTools(server) {
         giftAmount = calculateFinalAmount(baseValue, variation, friendScore, niceScore, decimals, useMaximum, useMinimum);
       }
 
-      const output = formatOutput(giftAmount, currency, recipientName, decimals) + notes;
+      // Use new async currency conversion formatting
+      const baseCurrency = config.baseCurrency || config.currency || 'SEK';
+      const { formatOutputWithConversion } = await import('../currency.js');
+      const output = await formatOutputWithConversion(giftAmount, baseCurrency, displayCurrency, recipientName, decimals) + notes;
 
       return {
         content: [
@@ -236,7 +239,7 @@ export function registerAllTools(server) {
 
   // Register get config tool
   server.registerTool('get_config', {
-    description: 'Get current gift-calc configuration settings including base value, variation, currency, and decimals.',
+    description: 'Get current gift-calc configuration settings including base value, variation, base currency, and decimals.',
     inputSchema: {
       type: 'object',
       properties: {}
@@ -248,7 +251,7 @@ export function registerAllTools(server) {
       const effectiveConfig = {
         baseValue: config.baseValue || 70,
         variation: config.variation || 20,
-        currency: config.currency || 'SEK',
+        baseCurrency: config.baseCurrency || config.currency || 'SEK',
         decimals: config.decimals !== undefined ? config.decimals : 2,
         friendScore: config.friendScore || 5,
         niceScore: config.niceScore || 5,
@@ -345,7 +348,7 @@ export function registerAllTools(server) {
       
       const budget = status.budget;
       const statusText = `📊 Active Budget: "${budget.description}"
-💰 Amount: ${budget.totalAmount} (currency from config)
+💰 Amount: ${budget.totalAmount} (in base currency)
 📅 Period: ${budget.fromDate} to ${budget.toDate}
 ⏰ Remaining: ${status.remainingDays} day${status.remainingDays === 1 ? '' : 's'}
 📈 Total days: ${status.totalDays}`;
@@ -490,7 +493,7 @@ export function registerAllTools(server) {
       const {
         baseValue = 70,
         variation = 20,
-        currency = 'SEK',
+        baseCurrency = 'SEK',
         decimals = 2
       } = args;
 
@@ -506,7 +509,7 @@ export function registerAllTools(server) {
       const config = {
         baseValue,
         variation,
-        currency,
+        baseCurrency,
         decimals
       };
 
@@ -889,11 +892,13 @@ export function registerAllTools(server) {
     handler: async (args) => {
       const { sortBy = 'total', length = 10, currency = null, listCurrencies = false } = args;
 
+      // Note: currency parameter is kept for backward compatibility but simplified toplist doesn't use it
+
       // Get file paths
       const personConfigPath = getPersonConfigPath(path, os);
       const logPath = getLogPath();
 
-      // Get toplist data
+      // Get toplist data (simplified for base currency)
       const toplistData = getToplistData(personConfigPath, logPath, fs);
 
       if (toplistData.errorMessage) {

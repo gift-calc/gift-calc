@@ -5,10 +5,11 @@ import path from 'node:path';
 import os from 'node:os';
 import readline from 'node:readline';
 import { exec, spawnSync } from 'node:child_process';
-import { 
-  parseArguments, 
-  calculateFinalAmount, 
-  formatOutput, 
+import {
+  parseArguments,
+  calculateFinalAmount,
+  formatOutput,
+  formatOutputWithConversion,
   getHelpText,
   parseNaughtyListArguments,
   getNaughtyListPath,
@@ -69,18 +70,24 @@ function getLogPath() {
 
 function loadConfig(personName = null) {
   const config = {};
-  
+
   // Load from file first
   const configPath = getConfigPath();
   if (fs.existsSync(configPath)) {
     try {
       const configData = fs.readFileSync(configPath, 'utf8');
-      Object.assign(config, JSON.parse(configData));
+      const fileConfig = JSON.parse(configData);
+      Object.assign(config, fileConfig);
+
+      // Migration: if only 'currency' exists, migrate to 'baseCurrency'
+      if (fileConfig.currency && !fileConfig.baseCurrency) {
+        config.baseCurrency = fileConfig.currency;
+      }
     } catch (error) {
       console.error(`Warning: Could not parse config file at ${configPath}. Using defaults.`);
     }
   }
-  
+
   // Load person-specific config if name provided
   if (personName) {
     try {
@@ -89,7 +96,8 @@ function loadConfig(personName = null) {
       if (personConfig) {
         // Person config overrides global config
         if (personConfig.baseValue !== undefined) config.baseValue = personConfig.baseValue;
-        if (personConfig.currency !== undefined) config.currency = personConfig.currency;
+        // Person currency is now display currency only (stored separately)
+        if (personConfig.currency !== undefined) config.displayCurrency = personConfig.currency;
         if (personConfig.niceScore !== undefined) config.niceScore = personConfig.niceScore;
         if (personConfig.friendScore !== undefined) config.friendScore = personConfig.friendScore;
       }
@@ -97,7 +105,7 @@ function loadConfig(personName = null) {
       // Silently ignore person config errors to avoid disrupting main functionality
     }
   }
-  
+
   // Environment variable overrides (highest priority)
   if (process.env.GIFT_CALC_BASE_VALUE) {
     const baseValue = parseInt(process.env.GIFT_CALC_BASE_VALUE);
@@ -111,7 +119,10 @@ function loadConfig(personName = null) {
     const friendScore = parseInt(process.env.GIFT_CALC_FRIEND_SCORE);
     if (!isNaN(friendScore)) config.friendScore = friendScore;
   }
-  
+  if (process.env.GIFT_CALC_BASE_CURRENCY) {
+    config.baseCurrency = process.env.GIFT_CALC_BASE_CURRENCY;
+  }
+
   return config;
 }
 
@@ -250,13 +261,13 @@ async function updateConfig() {
     newConfig.variation = existingConfig.variation;
   }
 
-  // Currency
-  const currentCurrency = existingConfig.currency || 'SEK';
-  const currencyAnswer = await askQuestion(`Currency code (current: ${currentCurrency}): `);
-  if (currencyAnswer.trim()) {
-    newConfig.currency = currencyAnswer.toUpperCase();
-  } else if (existingConfig.currency) {
-    newConfig.currency = existingConfig.currency;
+  // Base Currency (used for all calculations and storage)
+  const currentBaseCurrency = existingConfig.baseCurrency || existingConfig.currency || 'SEK';
+  const baseCurrencyAnswer = await askQuestion(`Base currency for calculations (current: ${currentBaseCurrency}): `);
+  if (baseCurrencyAnswer.trim()) {
+    newConfig.baseCurrency = baseCurrencyAnswer.toUpperCase();
+  } else if (existingConfig.baseCurrency || existingConfig.currency) {
+    newConfig.baseCurrency = existingConfig.baseCurrency || existingConfig.currency;
   }
 
   // Decimals
@@ -289,7 +300,7 @@ async function updateConfig() {
       console.log('Updated values:');
       if (newConfig.baseValue) console.log(`  Base value: ${newConfig.baseValue}`);
       if (newConfig.variation !== undefined) console.log(`  Variation: ${newConfig.variation}%`);
-      if (newConfig.currency) console.log(`  Currency: ${newConfig.currency}`);
+      if (newConfig.baseCurrency) console.log(`  Base currency: ${newConfig.baseCurrency}`);
       if (newConfig.decimals !== undefined) console.log(`  Decimals: ${newConfig.decimals}`);
     }
   } catch (error) {
@@ -334,10 +345,10 @@ async function initConfig() {
     }
   }
 
-  // Currency
-  const currencyAnswer = await askQuestion(`Currency code (default: SEK): `);
-  if (currencyAnswer.trim()) {
-    newConfig.currency = currencyAnswer.toUpperCase();
+  // Base Currency (used for all calculations and storage)
+  const baseCurrencyAnswer = await askQuestion(`Base currency for calculations (default: SEK): `);
+  if (baseCurrencyAnswer.trim()) {
+    newConfig.baseCurrency = baseCurrencyAnswer.toUpperCase();
   }
 
   // Decimals
@@ -366,7 +377,7 @@ async function initConfig() {
       console.log('Configured values:');
       if (newConfig.baseValue) console.log(`  Base value: ${newConfig.baseValue}`);
       if (newConfig.variation) console.log(`  Variation: ${newConfig.variation}%`);
-      if (newConfig.currency) console.log(`  Currency: ${newConfig.currency}`);
+      if (newConfig.baseCurrency) console.log(`  Base currency: ${newConfig.baseCurrency}`);
       if (newConfig.decimals !== undefined) console.log(`  Decimals: ${newConfig.decimals}`);
     }
   } catch (error) {
@@ -447,7 +458,7 @@ function determineGiftAmount(config) {
       if (isOnNaughtyList(recipientName, naughtyListPath, fs)) {
         return {
           amount: 0,
-          currency: config.currency,
+          currency: config.baseCurrency,
           recipient: recipientName,
           isMatched: false,
           naughtyList: true
@@ -469,7 +480,7 @@ function determineGiftAmount(config) {
   
   return {
     amount: calculatedAmount,
-    currency: config.currency,
+    currency: config.baseCurrency,
     recipient: config.recipientName,
     isMatched: false
   };
@@ -545,15 +556,21 @@ function getNaughtyListInfo(config) {
   return isOnNaughtyList(recipientName, naughtyListPath, fs) ? ' (on naughty list!)' : '';
 }
 
-function displayResults(result, config) {
+async function displayResults(result, config) {
   // Format naughty list note
   let naughtyListNote = '';
   if (result.naughtyList || result.naughtyListOverride) {
     naughtyListNote = ' (on naughty list!)';
   }
-  
-  // Format and display main output using result's currency and recipient
-  const output = formatOutput(result.amount, result.currency, result.recipient, config.decimals) + naughtyListNote;
+
+  // Format and display main output using base currency and display currency conversion
+  const output = await formatOutputWithConversion(
+    result.amount,
+    config.baseCurrency,
+    config.displayCurrency,
+    result.recipient,
+    config.decimals
+  ) + naughtyListNote;
   console.log(output);
   
   // Display matched gift information if applicable
@@ -569,10 +586,10 @@ function displayResults(result, config) {
     
     if (budgetStatus.hasActiveBudget) {
       const logPath = getLogPath();
-      const budgetCurrency = result.currency; // Use actual gift currency
+      const budgetCurrency = config.baseCurrency; // Use base currency for budget calculations
       
-      // Calculate budget usage with currency filtering
-      const usage = calculateBudgetUsage(logPath, budgetStatus.budget, budgetCurrency, fs);
+      // Calculate budget usage (simplified)
+      const usage = calculateBudgetUsage(logPath, budgetStatus.budget, fs);
       
       if (!usage.errorMessage) {
         // Format and display budget summary
@@ -582,23 +599,12 @@ function displayResults(result, config) {
           budgetStatus.budget.totalAmount,
           budgetStatus.remainingDays,
           budgetStatus.budget.toDate,
-          budgetCurrency,
-          usage.hasSkippedCurrencies
+          budgetCurrency
         );
         
         console.log(budgetSummary);
         
-        // Display skipped currency details if any
-        if (usage.skippedEntries.length > 0) {
-          const skippedDetails = usage.skippedEntries
-            .map(entry => {
-              const recipientPart = entry.recipient ? ` (${entry.recipient})` : '';
-              return `${entry.amount} ${entry.currency} (${entry.date})${recipientPart}`;
-            })
-            .join(', ');
-          
-          console.log(`Note: Excluded from budget calculation: ${skippedDetails}`);
-        }
+        // Note: Simplified budget calculation now includes all entries
       }
     }
   } catch (error) {
@@ -616,7 +622,7 @@ if (result === null) {
   process.exit(0);
 }
 
-displayResults(result, parsedConfig);
+await displayResults(result, parsedConfig);
 
 // Copy to clipboard if requested
 if (parsedConfig.copyToClipboard) {
@@ -642,23 +648,24 @@ if (parsedConfig.copyToClipboard) {
   });
 }
 
-// Log to file if requested
+// Log to file if requested (always log in base currency)
 if (parsedConfig.logToFile) {
   const logPath = getLogPath();
   const timestamp = new Date().toISOString();
-  
+
   // Format naughty list note
   let naughtyListNote = '';
   if (result.naughtyList || result.naughtyListOverride) {
     naughtyListNote = ' (on naughty list!)';
   }
-  
-  const output = formatOutput(result.amount, result.currency, result.recipient, parsedConfig.decimals) + naughtyListNote;
+
+  // Always log in base currency for consistency
+  const output = formatOutput(result.amount, parsedConfig.baseCurrency, result.recipient, parsedConfig.decimals) + naughtyListNote;
   const logEntry = `${timestamp} ${output}\n`;
-  
+
   // Ensure log directory exists
   ensureConfigDir();
-  
+
   // Append to log file
   try {
     fs.appendFileSync(logPath, logEntry);
