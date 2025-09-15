@@ -96,6 +96,7 @@ export function parseArguments(args, defaultConfig = {}) {
     niceScore: 5,
     baseCurrency: defaultConfig.baseCurrency || defaultConfig.currency || 'SEK',
     displayCurrency: defaultConfig.displayCurrency || null, // null means use base currency
+    currency: defaultConfig.currency || 'SEK', // backwards compatibility
     decimals: defaultConfig.decimals !== undefined ? defaultConfig.decimals : 2,
     recipientName: null,
     logToFile: true,
@@ -230,6 +231,7 @@ export function parseArguments(args, defaultConfig = {}) {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
         config.displayCurrency = nextArg.toUpperCase();
+        config.currency = nextArg.toUpperCase(); // backwards compatibility
         i++; // Skip the next argument as it's the value
       } else {
         throw new Error('-c/--currency requires a currency code for display (e.g., SEK, USD, EUR)');
@@ -1506,15 +1508,18 @@ export function parseLogEntry(logLine) {
 }
 
 /**
- * Calculate budget usage from log file (simplified for base currency)
+ * Calculate budget usage from log file
  * @param {string} logPath - Path to the log file
  * @param {Object} activeBudget - Active budget object
+ * @param {string} currency - Target currency for filtering
  * @param {object} fsModule - Node.js fs module
  * @returns {Object} Usage calculation result
  */
-export function calculateBudgetUsage(logPath, activeBudget, fsModule) {
+export function calculateBudgetUsage(logPath, activeBudget, currency, fsModule) {
   const result = {
     totalSpent: 0,
+    skippedEntries: [],
+    hasSkippedCurrencies: false,
     errorMessage: null
   };
 
@@ -1546,7 +1551,20 @@ export function calculateBudgetUsage(logPath, activeBudget, fsModule) {
       continue;
     }
 
-    // Include all entries (simplified from complex currency filtering)
+    // Check currency match
+    if (entry.currency !== currency) {
+      // Track skipped entries for different currencies
+      result.skippedEntries.push({
+        amount: entry.amount,
+        currency: entry.currency,
+        date: entry.timestamp.toISOString().split('T')[0],
+        recipient: entry.recipient
+      });
+      result.hasSkippedCurrencies = true;
+      continue;
+    }
+
+    // Include matching currency entries
     result.totalSpent += entry.amount;
   }
 
@@ -1554,16 +1572,17 @@ export function calculateBudgetUsage(logPath, activeBudget, fsModule) {
 }
 
 /**
- * Format budget summary (simplified for base currency)
+ * Format budget summary
  * @param {number} usedAmount - Amount spent
  * @param {number} newAmount - Newly calculated amount to include
  * @param {number} totalBudget - Total budget amount
  * @param {number} remainingDays - Days remaining in budget period
  * @param {string} endDate - Budget end date (YYYY-MM-DD)
  * @param {string} currency - Budget currency
+ * @param {boolean} hasMixedCurrencies - Whether there are mixed currencies
  * @returns {string} Formatted budget summary
  */
-export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainingDays, endDate, currency) {
+export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainingDays, endDate, currency, hasMixedCurrencies = false) {
   const totalUsed = usedAmount + newAmount;
   const remaining = totalBudget - totalUsed;
   const isOverBudget = totalUsed > totalBudget;
@@ -1578,6 +1597,10 @@ export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainin
   }
 
   summary += ` | Ends: ${endDate} (${remainingDays} day${remainingDays === 1 ? '' : 's'})`;
+
+  if (hasMixedCurrencies) {
+    summary += ' [*mixed currencies]';
+  }
 
   return summary;
 }
@@ -2594,12 +2617,6 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
           }
 
           const recipientKey = entry.recipient.toLowerCase();
-          if (!giftTotals[recipientKey]) {
-            giftTotals[recipientKey] = {};
-          }
-          if (!giftCounts[recipientKey]) {
-            giftCounts[recipientKey] = {};
-          }
 
           // Simplified: Sum all amounts regardless of currency
           result.currencies.add(entry.currency);
@@ -2685,14 +2702,14 @@ function formatSimplifiedToplist(persons, sortBy, length) {
   const sortedPersons = [...persons].sort((a, b) => {
     switch (sortBy) {
       case 'nice-score':
-        const aNice = a.niceScore || 0;
-        const bNice = b.niceScore || 0;
+        const aNice = a.niceScore !== undefined && a.niceScore !== null ? a.niceScore : -Infinity;
+        const bNice = b.niceScore !== undefined && b.niceScore !== null ? b.niceScore : -Infinity;
         if (bNice !== aNice) return bNice - aNice;
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 
       case 'friend-score':
-        const aFriend = a.friendScore || 0;
-        const bFriend = b.friendScore || 0;
+        const aFriend = a.friendScore !== undefined && a.friendScore !== null ? a.friendScore : -Infinity;
+        const bFriend = b.friendScore !== undefined && b.friendScore !== null ? b.friendScore : -Infinity;
         if (bFriend !== aFriend) return bFriend - aFriend;
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 
@@ -2741,15 +2758,22 @@ function formatSimplifiedToplist(persons, sortBy, length) {
 
     switch (sortBy) {
       case 'nice-score':
-        const niceScore = person.niceScore !== undefined ? person.niceScore : 'not set';
+        const niceScore = person.niceScore !== undefined && person.niceScore !== null ? person.niceScore : 'N/A';
         line += `: ${niceScore}`;
+        if (person.friendScore !== undefined && person.friendScore !== null) line += ` (friend: ${person.friendScore})`;
         break;
       case 'friend-score':
-        const friendScore = person.friendScore !== undefined ? person.friendScore : 'not set';
+        const friendScore = person.friendScore !== undefined && person.friendScore !== null ? person.friendScore : 'N/A';
         line += `: ${friendScore}`;
+        if (person.niceScore !== undefined && person.niceScore !== null) line += ` (nice: ${person.niceScore})`;
         break;
       case 'gift-count':
         line += `: ${person.giftCount || 0} gifts`;
+        // Add scores if available
+        const giftCountScores = [];
+        if (person.niceScore !== undefined && person.niceScore !== null) giftCountScores.push(`nice: ${person.niceScore}`);
+        if (person.friendScore !== undefined && person.friendScore !== null) giftCountScores.push(`friend: ${person.friendScore}`);
+        if (giftCountScores.length > 0) line += ` (${giftCountScores.join(', ')})`;
         break;
       case 'total':
       default:
@@ -2758,6 +2782,11 @@ function formatSimplifiedToplist(persons, sortBy, length) {
         } else {
           line += ': no gifts';
         }
+        // Add scores if available
+        const totalScores = [];
+        if (person.niceScore !== undefined && person.niceScore !== null) totalScores.push(`nice: ${person.niceScore}`);
+        if (person.friendScore !== undefined && person.friendScore !== null) totalScores.push(`friend: ${person.friendScore}`);
+        if (totalScores.length > 0) line += ` (${totalScores.join(', ')})`;
         break;
     }
 

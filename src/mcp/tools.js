@@ -131,8 +131,8 @@ export function registerAllTools(server) {
 
       // Use new async currency conversion formatting
       const baseCurrency = config.baseCurrency || config.currency || 'SEK';
-      const { formatOutputWithConversion } = await import('../currency.js');
-      const output = await formatOutputWithConversion(giftAmount, baseCurrency, displayCurrency, recipientName, decimals) + notes;
+      const { formatCurrencyOutput } = await import('../currency.js');
+      const output = await formatCurrencyOutput(giftAmount, baseCurrency, displayCurrency, recipientName, decimals) + notes;
 
       return {
         content: [

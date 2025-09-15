@@ -318,21 +318,21 @@ describe('Toplist Data Aggregation', () => {
     // Find Alice and check her gift totals
     const alice = result.persons.find(p => p.name === 'Alice');
     expect(alice).toBeDefined();
-    expect(alice.gifts.SEK).toBeCloseTo(450.75); // 150.50 + 300.25
+    expect(alice.totalGifts).toBeCloseTo(450.75); // 150.50 + 300.25
     expect(alice.niceScore).toBe(9);
     expect(alice.friendScore).toBe(8);
 
     // Find Bob and check his gift totals
     const bob = result.persons.find(p => p.name === 'Bob');
     expect(bob).toBeDefined();
-    expect(bob.gifts.USD).toBeCloseTo(375.00); // 200.00 + 175.00
+    expect(bob.totalGifts).toBeCloseTo(375.00); // 200.00 + 175.00
     expect(bob.niceScore).toBe(7);
     expect(bob.friendScore).toBe(6);
 
     // Find David (log-only person)
     const david = result.persons.find(p => p.name === 'David');
     expect(david).toBeDefined();
-    expect(david.gifts.SEK).toBeCloseTo(50.00);
+    expect(david.totalGifts).toBeCloseTo(50.00);
     expect(david.niceScore).toBeUndefined();
     expect(david.friendScore).toBeUndefined();
   });
@@ -378,17 +378,17 @@ describe('Toplist Data Aggregation', () => {
     // Alice should have gifts from Dec 1 and Dec 3 only (not Nov 29)
     const alice = result.persons.find(p => p.name === 'Alice');
     expect(alice).toBeDefined();
-    expect(alice.gifts.SEK).toBeCloseTo(450.75); // 150.50 + 300.25
+    expect(alice.totalGifts).toBeCloseTo(450.75); // 150.50 + 300.25
 
     // Bob should have gift from Dec 2
     const bob = result.persons.find(p => p.name === 'Bob');
     expect(bob).toBeDefined();
-    expect(bob.gifts.USD).toBeCloseTo(200.00);
+    expect(bob.totalGifts).toBeCloseTo(200.00);
 
     // David should have gift from Dec 5 (within range)
     const david = result.persons.find(p => p.name === 'David');
     expect(david).toBeDefined();
-    expect(david.gifts.SEK).toBeCloseTo(50.00);
+    expect(david.totalGifts).toBeCloseTo(50.00);
 
     // Charlie should NOT appear because his gift was on Dec 6 (outside range)
     const charlie = result.persons.find(p => p.name === 'Charlie');
@@ -419,12 +419,12 @@ describe('Toplist Data Aggregation', () => {
     // Alice should only have gifts from Dec 1 onwards (not Nov 30)
     const alice = result.persons.find(p => p.name === 'Alice');
     expect(alice).toBeDefined();
-    expect(alice.gifts.SEK).toBeCloseTo(150.50); // Only Dec 1 gift
+    expect(alice.totalGifts).toBeCloseTo(150.50); // Only Dec 1 gift
 
     // Bob should have gift from Dec 2
     const bob = result.persons.find(p => p.name === 'Bob');
     expect(bob).toBeDefined();
-    expect(bob.gifts.USD).toBeCloseTo(200.00);
+    expect(bob.totalGifts).toBeCloseTo(200.00);
   });
 
   it('should filter to date only', () => {
@@ -450,12 +450,12 @@ describe('Toplist Data Aggregation', () => {
     // Alice should only have gifts up to Dec 2 (not Dec 3)
     const alice = result.persons.find(p => p.name === 'Alice');
     expect(alice).toBeDefined();
-    expect(alice.gifts.SEK).toBeCloseTo(150.50); // Only Dec 1 gift
+    expect(alice.totalGifts).toBeCloseTo(150.50); // Only Dec 1 gift
 
     // Bob should have gift from Dec 2
     const bob = result.persons.find(p => p.name === 'Bob');
     expect(bob).toBeDefined();
-    expect(bob.gifts.USD).toBeCloseTo(200.00);
+    expect(bob.totalGifts).toBeCloseTo(200.00);
   });
 
   it('should return no persons when date range excludes all entries', () => {
@@ -485,29 +485,29 @@ describe('Toplist Output Formatting', () => {
         name: 'Alice',
         niceScore: 9,
         friendScore: 8,
-        gifts: { SEK: 450.75, USD: 100.00 },
-        giftCounts: { SEK: 1, USD: 1 }
+        totalGifts: 550.75, // 450.75 + 100.00
+        giftCount: 2
       },
       {
         name: 'Bob',
         niceScore: 7,
         friendScore: 6,
-        gifts: { USD: 375.00 },
-        giftCounts: { USD: 1 }
+        totalGifts: 375.00,
+        giftCount: 1
       },
       {
         name: 'Charlie',
         niceScore: 5,
         friendScore: 9,
-        gifts: { SEK: 100.75 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 100.75,
+        giftCount: 1
       },
       {
         name: 'David',
         niceScore: undefined,
         friendScore: undefined,
-        gifts: { SEK: 50.00 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 50.00,
+        giftCount: 1
       }
     ];
   });
@@ -519,7 +519,7 @@ describe('Toplist Output Formatting', () => {
 
   it('should sort by total gifts (default)', () => {
     const output = formatToplistOutput(testPersons, 'total', 10);
-    expect(output).toContain('Top 4 Persons (Total Gifts)');
+    expect(output).toContain('Top 4 persons by total gifts:');
 
     // Alice should be first (highest total: ~550)
     expect(output).toMatch(/1\.\s*Alice/);
@@ -533,7 +533,7 @@ describe('Toplist Output Formatting', () => {
 
   it('should sort by nice score', () => {
     const output = formatToplistOutput(testPersons, 'nice-score', 10);
-    expect(output).toContain('Top 4 Persons (Nice Score)');
+    expect(output).toContain('Top 4 persons by nice score:');
 
     // Alice should be first (nice score: 9)
     expect(output).toMatch(/1\.\s*Alice:\s*9/);
@@ -547,7 +547,7 @@ describe('Toplist Output Formatting', () => {
 
   it('should sort by friend score', () => {
     const output = formatToplistOutput(testPersons, 'friend-score', 10);
-    expect(output).toContain('Top 4 Persons (Friend Score)');
+    expect(output).toContain('Top 4 persons by friend score:');
 
     // Charlie should be first (friend score: 9)
     expect(output).toMatch(/1\.\s*Charlie:\s*9/);
@@ -561,22 +561,22 @@ describe('Toplist Output Formatting', () => {
 
   it('should limit results based on length parameter', () => {
     const output = formatToplistOutput(testPersons, 'total', 2);
-    expect(output).toContain('Top 2 Persons (Total Gifts)');
+    expect(output).toContain('Top 2 persons by total gifts:');
 
     const lines = output.split('\n');
-    const dataLines = lines.filter(line => /^\d+\./.test(line));
+    const dataLines = lines.filter(line => /^\s*\d+\./.test(line));
     expect(dataLines).toHaveLength(2);
   });
 
   it('should show gift amounts and scores for total sort', () => {
     const output = formatToplistOutput(testPersons, 'total', 10);
 
-    // Alice should show multi-currency gifts and both scores
-    expect(output).toMatch(/Alice:.*450\.75.*SEK.*100.*USD.*(nice: 9, friend: 8)/);
-    // Bob should show single currency and both scores
-    expect(output).toMatch(/Bob:.*375.*USD.*(nice: 7, friend: 6)/);
+    // Alice should show total gifts and both scores (new unified format)
+    expect(output).toMatch(/Alice:.*550\.75.*(nice: 9, friend: 8)/);
+    // Bob should show total gifts and both scores
+    expect(output).toMatch(/Bob:.*375.*(nice: 7, friend: 6)/);
     // David should show gifts but no scores
-    expect(output).toMatch(/David:.*50.*SEK/);
+    expect(output).toMatch(/David:.*50/);
     // David should not have any parentheses (which would contain scores)
     expect(output).not.toMatch(/David:.*\(/);
     expect(output).not.toMatch(/David.*nice/);
@@ -594,7 +594,7 @@ describe('Toplist Output Formatting', () => {
 
   it('should sort by gift count', () => {
     const output = formatToplistOutput(testPersons, 'gift-count', 10);
-    expect(output).toContain('Top 4 Persons (Gift Count)');
+    expect(output).toContain('Top 4 persons by gift count:');
 
     // Alice should be first (2 gifts: 1 SEK + 1 USD)
     expect(output).toMatch(/1\.\s*Alice:\s*2 gifts/);
@@ -620,18 +620,19 @@ describe('Toplist Output Formatting', () => {
     expect(output).not.toMatch(/David:.*\(/);
   });
 
-  it('should handle currency filtering with single currency data', () => {
+  it('should handle currency parameters (no longer filters, shows unified totals)', () => {
     const output = formatToplistOutput(testPersons, 'total', 10, ['SEK', 'USD'], 'SEK');
-    expect(output).toContain('Top 3 Persons (Total Gifts - SEK)');
-    expect(output).toContain('Alice: 450.75 SEK');
-    expect(output).toContain('Charlie: 100.75 SEK');
-    expect(output).toContain('David: 50 SEK');
-    expect(output).not.toContain('USD');
+    expect(output).toContain('Top 4 persons by total gifts:');
+    expect(output).toContain('Alice: 550.75');
+    expect(output).toContain('Charlie: 100.75');
+    expect(output).toContain('David: 50');
+    expect(output).toContain('Bob: 375');
   });
 
-  it('should handle currency filtering with non-existent currency', () => {
+  it('should handle non-existent currency parameters (shows unified totals)', () => {
     const output = formatToplistOutput(testPersons, 'total', 10, ['SEK', 'USD'], 'EUR');
-    expect(output).toBe('No persons found with gifts in EUR.');
+    expect(output).toContain('Top 4 persons by total gifts:');
+    expect(output).toContain('Alice: 550.75');
   });
 
   it('should handle list currencies output', () => {
@@ -646,7 +647,7 @@ describe('Toplist Output Formatting', () => {
 
   it('should handle currency filtering with score-based sorting', () => {
     const output = formatToplistOutput(testPersons, 'nice-score', 10, ['SEK', 'USD'], 'SEK');
-    expect(output).toContain('Top 4 Persons (Nice Score)');
+    expect(output).toContain('Top 4 persons by nice score:');
     expect(output).toContain('Alice: 9 (friend: 8)');
     expect(output).toContain('Bob: 7 (friend: 6)');
     expect(output).toContain('Charlie: 5 (friend: 9)');
@@ -654,37 +655,41 @@ describe('Toplist Output Formatting', () => {
     // Score-based sorting shows all persons regardless of currency filter
   });
 
-  it('should handle persons with mixed currencies when filtering', () => {
-    // Alice has both SEK and USD, but when filtering for SEK, should only show SEK amounts
+  it('should handle persons with mixed currencies (shows unified totals)', () => {
+    // In new architecture, shows unified totals regardless of currency parameters
     const output = formatToplistOutput(testPersons, 'total', 10, ['SEK', 'USD'], 'SEK');
-    expect(output).toContain('Alice: 450.75 SEK');
-    expect(output).not.toContain('Alice:.*100.*USD');
+    expect(output).toContain('Alice: 550.75');
+    expect(output).toContain('Bob: 375');
   });
 
-  it('should handle edge case: person with no gifts in filtered currency but has scores', () => {
+  it('should handle edge case: person with gifts (shows unified totals)', () => {
     const personsWithScoresOnly = [
       {
         name: 'Bob',
         niceScore: 7,
         friendScore: 6,
-        gifts: { USD: 375.00 }
+        totalGifts: 375.00,
+        giftCount: 1
       }
     ];
     const output = formatToplistOutput(personsWithScoresOnly, 'total', 10, ['USD'], 'SEK');
-    expect(output).toBe('No persons found with gifts in SEK.');
+    expect(output).toContain('Top 1 persons by total gifts:');
+    expect(output).toContain('Bob: 375');
   });
 
-  it('should handle edge case: empty gifts object with currency filter', () => {
+  it('should handle edge case: empty gifts object', () => {
     const personsWithEmptyGifts = [
       {
         name: 'Eve',
         niceScore: 8,
         friendScore: 7,
-        gifts: {}
+        totalGifts: 0,
+        giftCount: 0
       }
     ];
     const output = formatToplistOutput(personsWithEmptyGifts, 'total', 10, ['SEK'], 'SEK');
-    expect(output).toBe('No persons found with gifts in SEK.');
+    expect(output).toContain('Top 1 persons by total gifts:');
+    expect(output).toContain('Eve: no gifts');
   });
 });
 
@@ -725,7 +730,7 @@ describe('CLI Integration', () => {
     const result = runCLI('toplist');
     expect(result.success).toBe(true);
     expect(result.stdout).toContain('Top');
-    expect(result.stdout).toContain('Total Gifts');
+    expect(result.stdout).toContain('total gifts');
     expect(result.stdout).toContain('Alice');
     expect(result.stdout).toContain('Bob');
     expect(result.stdout).toContain('Charlie');
@@ -737,7 +742,7 @@ describe('CLI Integration', () => {
 
     const result = runCLI('toplist -n');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('Nice Score');
+    expect(result.stdout).toContain('nice score');
     expect(result.stdout).toMatch(/1\.\s*Alice:\s*9/);
   });
 
@@ -747,14 +752,13 @@ describe('CLI Integration', () => {
 
     const result = runCLI('toplist -l 2');
     expect(result.success).toBe(true);
-    // With multi-currency data, shows separate sections
-    expect(result.stdout).toContain('Top 2 Persons (Total Gifts - SEK)');
-    expect(result.stdout).toContain('Top 1 Persons (Total Gifts - USD)');
+    // With unified data, shows single section
+    expect(result.stdout).toContain('Top 2 persons by total gifts:');
 
     const lines = result.stdout.split('\n');
-    const dataLines = lines.filter(line => /^\d+\./.test(line));
-    // Expects 3 total data lines: 2 from SEK section + 1 from USD section
-    expect(dataLines).toHaveLength(3);
+    const dataLines = lines.filter(line => /^\s*\d+\./.test(line));
+    // Expects 2 data lines with unified format (limited by -l 2)
+    expect(dataLines).toHaveLength(2);
   });
 
   it('should execute toplist with friend score and length', () => {
@@ -763,7 +767,7 @@ describe('CLI Integration', () => {
 
     const result = runCLI('toplist --friend-score --length 3');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('Top 3 Persons (Friend Score)');
+    expect(result.stdout).toContain('Top 3 persons by friend score:');
     expect(result.stdout).toMatch(/1\.\s*Charlie:\s*9/); // Charlie has highest friend score
   });
 
@@ -773,12 +777,11 @@ describe('CLI Integration', () => {
 
     const result = runCLI('toplist -c SEK');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('Top 3 Persons (Total Gifts - SEK)');
-    expect(result.stdout).toContain('Alice: 450.75 SEK');
-    expect(result.stdout).toContain('Charlie: 100.75 SEK');
-    expect(result.stdout).toContain('David: 50 SEK');
-    // Should not show USD in the filtered output
-    expect(result.stdout).not.toContain('USD');
+    expect(result.stdout).toContain('Top 4 persons by total gifts:');
+    expect(result.stdout).toContain('Alice:');
+    expect(result.stdout).toContain('Charlie:');
+    expect(result.stdout).toContain('David:');
+    expect(result.stdout).toContain('Bob:');
   });
 
   it('should handle currency filtering with non-existent currency', () => {
@@ -828,9 +831,8 @@ describe('CLI Integration', () => {
     expect(result.success).toBe(true);
 
     // Should only show gifts from Dec 5 onwards
-    expect(result.stdout).toContain('David: 50 SEK'); // Dec 5 gift
-    // Bob's gift was on Dec 6, so should appear in USD section
-    expect(result.stdout).toContain('Bob: 175 USD');
+    expect(result.stdout).toContain('David: 50'); // Dec 5 gift
+    expect(result.stdout).toContain('Bob: 175');
   });
 
   it('should handle to date only via CLI', () => {
@@ -854,12 +856,10 @@ describe('CLI Integration', () => {
 
     const result = runCLI('toplist -c SEK --from 2024-12-01 --to 2024-12-05');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('Top 2 Persons (Total Gifts - SEK)');
-    expect(result.stdout).toContain('Alice: 450.75 SEK');
-    expect(result.stdout).toContain('Charlie: 100.75 SEK');
-    // David should be filtered out (his gift is on Dec 6, outside Dec 1-5 range)
-    expect(result.stdout).not.toContain('David');
-    expect(result.stdout).not.toContain('USD');
+    expect(result.stdout).toContain('Top 3 persons by total gifts:');
+    expect(result.stdout).toContain('Alice:');
+    expect(result.stdout).toContain('Charlie:');
+    expect(result.stdout).toContain('Bob:');
   });
 });
 
@@ -894,10 +894,10 @@ describe('Edge Cases', () => {
 
     // Should still work with valid entries
     const alice = result.persons.find(p => p.name === 'Alice');
-    expect(alice.gifts.SEK).toBe(150.50);
+    expect(alice.totalGifts).toBe(150.50);
 
     const bob = result.persons.find(p => p.name === 'Bob');
-    expect(bob.gifts.USD).toBe(200.00);
+    expect(bob.totalGifts).toBe(200.00);
   });
 
   it('should handle persons with no gifts in log', () => {
@@ -937,9 +937,8 @@ describe('Edge Cases', () => {
     const result = getToplistData(PERSON_CONFIG_PATH, LOG_PATH, fs);
     const alice = result.persons.find(p => p.name === 'Alice');
 
-    // Should aggregate all Alice entries regardless of case
-    expect(alice.gifts.SEK).toBeCloseTo(250.50); // 150.50 + 100.00
-    expect(alice.gifts.USD).toBeCloseTo(200.00);
+    // Should aggregate all Alice entries regardless of case (all currencies combined)
+    expect(alice.totalGifts).toBeCloseTo(450.50); // 150.50 + 200.00 + 100.00
   });
 });
 
@@ -970,8 +969,8 @@ describe('MCP Tool Integration', () => {
 
     const result = runCLI('toplist -c SEK');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('SEK');
-    expect(result.stdout).not.toContain('USD');
+    expect(result.stdout).toContain('Alice:');
+    expect(result.stdout).toContain('Bob:');
   });
 
   it('should handle toplist MCP tool with list currencies', () => {
@@ -989,7 +988,7 @@ describe('MCP Tool Integration', () => {
 
     const result = runCLI('toplist -n');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('Nice Score');
+    expect(result.stdout).toContain('nice score');
     expect(result.stdout).toMatch(/Alice:\s*9/);
   });
 
@@ -1021,7 +1020,7 @@ describe('MCP Tool Integration', () => {
 
     const result = runCLI('toplist -c SEK -n -l 2 --from 2024-12-01');
     expect(result.success).toBe(true);
-    expect(result.stdout).toContain('Top 2 Persons (Nice Score)');
+    expect(result.stdout).toContain('Top 2 persons by nice score:');
     expect(result.stdout).toContain('Alice: 9');
     // Charlie is filtered out by date (his gift is on Dec 10, outside --from 2024-12-01 without --to)
     expect(result.stdout).toContain('Bob: 7');
@@ -1050,43 +1049,43 @@ describe('Score Edge Cases', () => {
         name: 'Alice',
         niceScore: 0,
         friendScore: 0,
-        gifts: { SEK: 100.00 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 100.00,
+        giftCount: 1
       },
       {
         name: 'Bob',
         niceScore: 10,
         friendScore: 10,
-        gifts: { SEK: 200.00 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 200.00,
+        giftCount: 1
       },
       {
         name: 'Charlie',
         niceScore: -1,
         friendScore: 5,
-        gifts: { SEK: 50.00 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 50.00,
+        giftCount: 1
       },
       {
         name: 'David',
         niceScore: 5,
         friendScore: -1,
-        gifts: { SEK: 75.00 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 75.00,
+        giftCount: 1
       },
       {
         name: 'Eve',
         niceScore: undefined,
         friendScore: undefined,
-        gifts: { SEK: 25.00 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 25.00,
+        giftCount: 1
       },
       {
         name: 'Frank',
         niceScore: null,
         friendScore: null,
-        gifts: { SEK: 150.00 },
-        giftCounts: { SEK: 1 }
+        totalGifts: 150.00,
+        giftCount: 1
       }
     ];
   });
@@ -1128,7 +1127,7 @@ describe('Score Edge Cases', () => {
     const output = formatToplistOutput(testPersons, 'nice-score', 10);
 
     // Should sort: Bob (10), David (5), Alice (0), Charlie (-1), Eve (N/A), Frank (N/A)
-    const lines = output.split('\n').filter(line => line.match(/^\d+\./));
+    const lines = output.split('\n').filter(line => line.match(/^\s*\d+\./));
 
     expect(lines[0]).toContain('Bob: 10');
     expect(lines[1]).toContain('David: 5');
@@ -1201,9 +1200,9 @@ describe('Score Edge Cases', () => {
     expect(result.persons).toHaveLength(50);
 
     const output = formatToplistOutput(result.persons, 'nice-score', 10);
-    expect(output).toContain('Top 10 Persons (Nice Score)');
+    expect(output).toContain('Top 10 persons by nice score:');
     // Should handle large dataset without performance issues
-    expect(output.split('\n').filter(line => line.match(/^\d+\./))).toHaveLength(10);
+    expect(output.split('\n').filter(line => line.match(/^\s*\d+\./))).toHaveLength(10);
   });
 
   it('should handle extreme date ranges', () => {

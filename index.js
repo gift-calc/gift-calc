@@ -563,15 +563,22 @@ async function displayResults(result, config) {
     naughtyListNote = ' (on naughty list!)';
   }
 
-  // Format and display main output using base currency and display currency conversion
-  const output = await formatOutputWithConversion(
-    result.amount,
-    config.baseCurrency,
-    config.displayCurrency,
-    result.recipient,
-    config.decimals
-  ) + naughtyListNote;
-  console.log(output);
+  // Format and display main output
+  let output;
+  if (result.isMatched && result.matchedGift) {
+    // When matching a gift, preserve the original currency (no conversion)
+    output = formatOutput(result.amount, result.matchedGift.currency, result.recipient, config.decimals);
+  } else {
+    // Normal flow: use base currency and display currency conversion
+    output = await formatOutputWithConversion(
+      result.amount,
+      config.baseCurrency,
+      config.displayCurrency,
+      result.recipient,
+      config.decimals
+    );
+  }
+  console.log(output + naughtyListNote);
   
   // Display matched gift information if applicable
   if (result.isMatched && result.matchedGift) {

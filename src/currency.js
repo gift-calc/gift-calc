@@ -212,9 +212,18 @@ export async function formatCurrencyOutput(baseAmount, baseCurrency, displayCurr
   let output = '';
 
   // Always show base currency amount
-  const formattedBase = decimals !== null ?
-    baseAmount.toFixed(decimals) :
-    baseAmount.toString();
+  let formattedBase;
+  if (decimals !== null) {
+    if (baseAmount % 1 === 0 && decimals === 2) {
+      // Whole number with default decimals (2) - don't show trailing zeros
+      formattedBase = baseAmount.toString();
+    } else {
+      // Either non-whole number or explicitly configured decimals - show with precision
+      formattedBase = baseAmount.toFixed(decimals);
+    }
+  } else {
+    formattedBase = baseAmount.toString();
+  }
 
   if (!displayCurrency || displayCurrency === baseCurrency) {
     // Single currency display
@@ -224,9 +233,18 @@ export async function formatCurrencyOutput(baseAmount, baseCurrency, displayCurr
     const conversion = await convertCurrency(baseAmount, baseCurrency, displayCurrency, decimals);
 
     if (conversion.success) {
-      const formattedConverted = decimals !== null ?
-        conversion.convertedAmount.toFixed(decimals) :
-        conversion.convertedAmount.toString();
+      let formattedConverted;
+      if (decimals !== null) {
+        if (conversion.convertedAmount % 1 === 0 && decimals === 2) {
+          // Whole number with default decimals (2) - don't show trailing zeros
+          formattedConverted = conversion.convertedAmount.toString();
+        } else {
+          // Either non-whole number or explicitly configured decimals - show with precision
+          formattedConverted = conversion.convertedAmount.toFixed(decimals);
+        }
+      } else {
+        formattedConverted = conversion.convertedAmount.toString();
+      }
 
       output = `${formattedBase} ${baseCurrency} (${formattedConverted} ${displayCurrency})`;
     } else {
