@@ -233,11 +233,14 @@ Calculate gift amount with full parameter control.
 - `variation` (number, optional): Percentage variation (0-100)
 - `friendScore` (number, optional): Relationship closeness (1-10) 
 - `niceScore` (number, optional): Person's niceness (0-10)
-- `currency` (string, optional): Currency code (e.g., "SEK", "USD")
+- `currency` (string, optional): Display currency for conversion (e.g., "SEK", "USD")
 - `name` (string, optional): Gift recipient name
 - `isMax` (boolean, optional): Set to maximum amount
 - `isMin` (boolean, optional): Set to minimum amount
 - `isAsshole` (boolean, optional): Set nice score to 0 (no gift)
+
+**Output Format:** When display currency differs from base currency, shows both: `"100 SEK (95 USD)"`
+Conversion failures display as: `"100 SEK (conversion unavailable)"`
 
 **Example:** Calculate 100 SEK gift for Alice (good friend, nice person)
 
@@ -355,7 +358,7 @@ Initialize configuration with specific default values.
 - `variation` (number, optional): Default variation percentage
 - `friendScore` (number, optional): Default friend score
 - `niceScore` (number, optional): Default nice score
-- `currency` (string, optional): Default currency
+- `currency` (string, optional): Default base currency
 
 **Example:** Set up config with 100 SEK base value and 25% variation
 
