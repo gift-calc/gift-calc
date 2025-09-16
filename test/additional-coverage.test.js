@@ -325,7 +325,7 @@ describe('Additional Coverage Tests', () => {
     test('should handle currency case conversion', () => {
       const result = runCLI('-c usd --max -b 100 --no-log');
       expect(result.success).toBe(true);
-      expect(result.stdout).toMatch(/USD$/);
+      expect(result.stdout).toMatch(/USD\)$/); // Should end with USD) for dual currency display
     });
 
     test('should handle recipient name with special characters', () => {

@@ -94,8 +94,8 @@ gift-calc --help             # Show help
 # Basic calculation
 gift-calc
 
-# For a good friend
-gift-calc -b 100 -f 8 --name "Alice"
+# For a good friend (with USD conversion display)
+gift-calc -b 100 -f 8 --name "Alice" -c USD
 
 # For someone you don't like
 gift-calc --asshole --name "Kevin"
@@ -134,7 +134,7 @@ gcalc tl --from 2024-12-01           # Top 10 from December 1 to today
 | `-r, --variation` | Variation percentage | 20 |
 | `-f, --friend-score` | Relationship closeness (1-10) | 5 |
 | `-n, --nice-score` | Person's niceness (0-10) | 5 |
-| `-c, --currency` | Currency code | SEK |
+| `-c, --currency` | Display currency for conversion (default: same as base) | SEK |
 | `--name` | Gift recipient name | - |
 | `--max` | Set to maximum amount | - |
 | `--min` | Set to minimum amount | - |
@@ -155,6 +155,22 @@ gcalc tl --from 2024-12-01           # Top 10 from December 1 to today
 | `--months` | Show spending for last N months | - |
 | `--years` | Show spending for last N years | - |
 
+### Currency Configuration
+
+Gift-calc uses a two-tier currency system:
+- **Base Currency**: Used for all calculations and storage (default: SEK)
+- **Display Currency**: Optional conversion for display (default: same as base)
+
+When display currency differs from base, shows: `"100 SEK (95 USD)"`
+Exchange rates are cached for 24 hours and require internet for updates.
+Conversion failures show as: `"100 SEK (conversion unavailable)"`
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GIFT_CALC_BASE_CURRENCY` | Base currency for calculations | SEK |
+
 ## Configuration
 
 Setup persistent configuration:
@@ -165,6 +181,21 @@ gift-calc update-config  # Update existing config
 ```
 
 Configuration file: `~/.config/gift-calc/.config.json`
+
+### Configuration Format
+
+```json
+{
+  "baseValue": 70,
+  "variation": 20,
+  "friendScore": 5,
+  "niceScore": 5,
+  "baseCurrency": "SEK",
+  "displayCurrency": "USD"
+}
+```
+
+**Migration Note:** Existing configurations with `currency` field are automatically migrated to `baseCurrency` for backward compatibility.
 
 ## Scoring Systems
 

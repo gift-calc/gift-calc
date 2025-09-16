@@ -94,7 +94,9 @@ export function parseArguments(args, defaultConfig = {}) {
     variation: defaultConfig.variation || 20,
     friendScore: 5,
     niceScore: 5,
-    currency: defaultConfig.currency || 'SEK',
+    baseCurrency: defaultConfig.baseCurrency || defaultConfig.currency || 'SEK',
+    displayCurrency: defaultConfig.displayCurrency || null, // null means use base currency
+    currency: defaultConfig.currency || 'SEK', // backwards compatibility
     decimals: defaultConfig.decimals !== undefined ? defaultConfig.decimals : 2,
     recipientName: null,
     logToFile: true,
@@ -228,10 +230,11 @@ export function parseArguments(args, defaultConfig = {}) {
     if (arg === '-c' || arg === '--currency') {
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith('-')) {
-        config.currency = nextArg.toUpperCase();
+        config.displayCurrency = nextArg.toUpperCase();
+        config.currency = nextArg.toUpperCase(); // backwards compatibility
         i++; // Skip the next argument as it's the value
       } else {
-        throw new Error('-c/--currency requires a currency code (e.g., SEK, USD, EUR)');
+        throw new Error('-c/--currency requires a currency code for display (e.g., SEK, USD, EUR)');
       }
     }
     
@@ -386,15 +389,15 @@ export function parseNaughtyListArguments(args) {
 
 /**
  * Format gift amount output with currency and optional recipient name
- * @param {number} amount - Gift amount
- * @param {string} currency - Currency code
+ * @param {number} amount - Gift amount in base currency
+ * @param {string} baseCurrency - Base currency code
  * @param {string|null} recipientName - Optional recipient name
  * @param {number} decimals - Number of decimal places to display (optional)
  * @returns {string} Formatted output string
  */
-export function formatOutput(amount, currency, recipientName = null, decimals = null) {
+export function formatOutput(amount, baseCurrency, recipientName = null, decimals = null) {
   let formattedAmount;
-  
+
   if (decimals !== null) {
     if (amount % 1 === 0 && decimals === 2) {
       // Whole number with default decimals (2) - don't show trailing zeros
@@ -407,12 +410,27 @@ export function formatOutput(amount, currency, recipientName = null, decimals = 
     // Backward compatibility - no decimals parameter provided
     formattedAmount = amount.toString();
   }
-  
-  let output = `${formattedAmount} ${currency}`;
+
+  let output = `${formattedAmount} ${baseCurrency}`;
   if (recipientName) {
     output += ` for ${recipientName}`;
   }
   return output;
+}
+
+/**
+ * Format gift amount output with currency conversion support
+ * @param {number} amount - Gift amount in base currency
+ * @param {string} baseCurrency - Base currency code
+ * @param {string|null} displayCurrency - Display currency code (null for base only)
+ * @param {string|null} recipientName - Optional recipient name
+ * @param {number} decimals - Number of decimal places to display
+ * @returns {Promise<string>} Formatted output string with currency conversion
+ */
+export async function formatOutputWithConversion(amount, baseCurrency, displayCurrency = null, recipientName = null, decimals = 2) {
+  // Import currency service dynamically to avoid circular dependencies
+  const { formatCurrencyOutput } = await import('./currency.js');
+  return await formatCurrencyOutput(amount, baseCurrency, displayCurrency, recipientName, decimals);
 }
 
 /**
@@ -484,7 +502,8 @@ OPTIONS:
                               Higher scores increase chance of higher amounts
   -n, --nice-score <0-10>     Nice score affecting gift amount bias (default: 5)
                               0=no gift, 1-3=fixed reductions, 4-10=bias amounts
-  -c, --currency <code>       Currency code to display (default: SEK)
+  -c, --currency <code>       Display currency for conversion (default: same as base)
+                              Shows "100 SEK (95 USD)" format when different from base
   -d, --decimals <0-10>       Number of decimal places (default: 2)
   --name <name>               Name of gift recipient to include in output
   -m, --match [name]          Match previous gift amount. If name provided, matches
@@ -513,12 +532,20 @@ CONFIGURATION:
   Budgets are stored at: ~/.config/gift-calc/budgets.json
   Person configurations are stored at: ~/.config/gift-calc/persons.json
   Gift calculations are logged at: ~/.config/gift-calc/gift-calc.log
-  
+
+  CURRENCY CONFIGURATION:
+    - baseCurrency: Base currency for calculations (default: SEK)
+    - displayCurrency: Currency for display conversion (default: same as base)
+    - When display currency differs from base, shows both: "100 SEK (95 USD)"
+    - Conversion failure shown as: "100 SEK (conversion unavailable)"
+    - Exchange rates cached for 24 hours, requires internet for updates
+
   CONFIGURATION PRECEDENCE (highest to lowest priority):
     1. CLI arguments (--base-value, --nice-score, etc.)
-    2. Person-specific config (when using --name)
-    3. Global config file (~/.config/gift-calc/.config.json)
-    4. Built-in defaults
+    2. Environment variables (GIFT_CALC_BASE_CURRENCY, etc.)
+    3. Person-specific config (when using --name)
+    4. Global config file (~/.config/gift-calc/.config.json)
+    5. Built-in defaults
   
   NAUGHTY LIST:
     When a recipient is on the naughty list, their gift amount is always 0,
@@ -556,9 +583,11 @@ EXAMPLES:
   gift-calc log                         # Open log file with less
   gift-calc -b 100                      # Base value of 100
   gcalc -b 100 -r 30 -d 0               # Base 100, 30% variation, no decimals
-  gift-calc --name "Alice" -c USD       # Gift for Alice in USD currency
+  gift-calc --name "Alice" -c USD       # Gift for Alice with USD conversion
+                                    # Shows: "75 SEK (7.50 USD) for Alice"
   gcalc -b 50 -f 9 --name "Bob"         # Gift for Bob (with logging by default)
-  gift-calc -c EUR -d 1 -C --no-log     # Use defaults with EUR, copy but no log
+  gift-calc -c EUR -d 1 -C --no-log     # Base in SEK, display EUR, 1 decimal
+                                    # Shows: "70.0 SEK (6.5 EUR)"
   gcalc --name "Charlie" -b 80 -C       # Gift for Charlie, copy to clipboard
   gift-calc -f 8 -n 9                   # High friend and nice scores
   gift-calc -n 0 -b 100                 # No gift (nice score 0)
@@ -1490,26 +1519,26 @@ export function parseLogEntry(logLine) {
 }
 
 /**
- * Calculate budget usage from log file with currency filtering
+ * Calculate budget usage from log file
  * @param {string} logPath - Path to the log file
  * @param {Object} activeBudget - Active budget object
- * @param {string} budgetCurrency - Currency to match for budget calculations
+ * @param {string} currency - Target currency for filtering
  * @param {object} fsModule - Node.js fs module
  * @returns {Object} Usage calculation result
  */
-export function calculateBudgetUsage(logPath, activeBudget, budgetCurrency, fsModule) {
+export function calculateBudgetUsage(logPath, activeBudget, currency, fsModule) {
   const result = {
     totalSpent: 0,
     skippedEntries: [],
     hasSkippedCurrencies: false,
     errorMessage: null
   };
-  
+
   // Check if log file exists
   if (!fsModule.existsSync(logPath)) {
     return result;
   }
-  
+
   let logContent;
   try {
     logContent = fsModule.readFileSync(logPath, 'utf8');
@@ -1517,71 +1546,73 @@ export function calculateBudgetUsage(logPath, activeBudget, budgetCurrency, fsMo
     result.errorMessage = `Could not read log file: ${error.message}`;
     return result;
   }
-  
+
   const lines = logContent.split('\n').filter(line => line.trim());
   const budgetStartDate = new Date(activeBudget.fromDate + 'T00:00:00');
   const budgetEndDate = new Date(activeBudget.toDate + 'T23:59:59');
-  
+
   for (const line of lines) {
     const entry = parseLogEntry(line);
     if (!entry) {
       continue; // Skip malformed lines silently
     }
-    
+
     // Check if entry falls within budget period
     if (entry.timestamp < budgetStartDate || entry.timestamp > budgetEndDate) {
       continue;
     }
-    
+
     // Check currency match
-    if (entry.currency === budgetCurrency) {
-      result.totalSpent += entry.amount;
-    } else {
-      // Track skipped entry
+    if (entry.currency !== currency) {
+      // Track skipped entries for different currencies
       result.skippedEntries.push({
         amount: entry.amount,
         currency: entry.currency,
-        date: entry.timestamp.toISOString().split('T')[0], // YYYY-MM-DD format
+        date: entry.timestamp.toISOString().split('T')[0],
         recipient: entry.recipient
       });
       result.hasSkippedCurrencies = true;
+      continue;
     }
+
+    // Include matching currency entries
+    result.totalSpent += entry.amount;
   }
-  
+
   return result;
 }
 
 /**
- * Format budget summary with currency warnings
- * @param {number} usedAmount - Amount spent in budget currency
+ * Format budget summary
+ * @param {number} usedAmount - Amount spent
  * @param {number} newAmount - Newly calculated amount to include
  * @param {number} totalBudget - Total budget amount
  * @param {number} remainingDays - Days remaining in budget period
  * @param {string} endDate - Budget end date (YYYY-MM-DD)
  * @param {string} currency - Budget currency
- * @param {boolean} hasSkippedCurrencies - Whether other currencies were found
+ * @param {boolean} hasMixedCurrencies - Whether there are mixed currencies
  * @returns {string} Formatted budget summary
  */
-export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainingDays, endDate, currency, hasSkippedCurrencies) {
+export function formatBudgetSummary(usedAmount, newAmount, totalBudget, remainingDays, endDate, currency, hasMixedCurrencies = false) {
   const totalUsed = usedAmount + newAmount;
   const remaining = totalBudget - totalUsed;
   const isOverBudget = totalUsed > totalBudget;
-  
+
   let summary = '';
-  
+
   if (isOverBudget) {
     const overAmount = totalUsed - totalBudget;
     summary = `⚠️  BUDGET EXCEEDED! Budget: ${formatBudgetAmount(totalBudget, currency)} | Used: ${formatBudgetAmount(totalUsed, currency)} | Over by: ${formatBudgetAmount(overAmount, currency)}`;
   } else {
     summary = `Budget: ${formatBudgetAmount(totalBudget, currency)} | Used: ${formatBudgetAmount(totalUsed, currency)} | Remaining: ${formatBudgetAmount(remaining, currency)}`;
   }
-  
+
   summary += ` | Ends: ${endDate} (${remainingDays} day${remainingDays === 1 ? '' : 's'})`;
-  
-  if (hasSkippedCurrencies) {
+
+  if (hasMixedCurrencies) {
     summary += ' [*mixed currencies]';
   }
-  
+
   return summary;
 }
 
@@ -2488,7 +2519,7 @@ export function parseToplistArguments(args) {
         i++;
       } else {
         config.success = false;
-        config.error = '--currency requires a currency code (e.g., SEK, USD, EUR)';
+        config.error = '--currency requires a currency code for display (e.g., SEK, USD, EUR)';
         return config;
       }
     } else if (arg === '--list-currencies') {
@@ -2597,24 +2628,17 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
           }
 
           const recipientKey = entry.recipient.toLowerCase();
+
+          // Simplified: Sum all amounts regardless of currency
+          result.currencies.add(entry.currency);
           if (!giftTotals[recipientKey]) {
-            giftTotals[recipientKey] = {};
+            giftTotals[recipientKey] = 0;
           }
           if (!giftCounts[recipientKey]) {
-            giftCounts[recipientKey] = {};
+            giftCounts[recipientKey] = 0;
           }
-
-          // Group by currency
-          const currency = entry.currency;
-          result.currencies.add(currency);
-          if (!giftTotals[recipientKey][currency]) {
-            giftTotals[recipientKey][currency] = 0;
-          }
-          if (!giftCounts[recipientKey][currency]) {
-            giftCounts[recipientKey][currency] = 0;
-          }
-          giftTotals[recipientKey][currency] += entry.amount;
-          giftCounts[recipientKey][currency] += 1;
+          giftTotals[recipientKey] += entry.amount;
+          giftCounts[recipientKey] += 1;
         }
       }
     } catch (error) {
@@ -2623,13 +2647,13 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
     }
   }
 
-  // Combine person data with gift totals and counts
+  // Combine person data with gift totals and counts (simplified)
   const personKeys = new Set([...Object.keys(persons), ...Object.keys(giftTotals), ...Object.keys(giftCounts)]);
 
   for (const personKey of personKeys) {
     const personConfig = persons[personKey] || {};
-    const personGifts = giftTotals[personKey] || {};
-    const personGiftCounts = giftCounts[personKey] || {};
+    const personGifts = giftTotals[personKey] || 0;
+    const personGiftCounts = giftCounts[personKey] || 0;
 
     // Use person config name if available, otherwise capitalize the key
     const displayName = personConfig.name || personKey.charAt(0).toUpperCase() + personKey.slice(1);
@@ -2640,8 +2664,8 @@ export function getToplistData(personConfigPath, logPath, fsModule, fromDate = n
       friendScore: personConfig.friendScore,
       baseValue: personConfig.baseValue,
       currency: personConfig.currency,
-      gifts: personGifts,
-      giftCounts: personGiftCounts
+      totalGifts: personGifts,
+      giftCount: personGiftCounts
     });
   }
 
@@ -2665,7 +2689,7 @@ export function formatToplistOutput(persons, sortBy, length, availableCurrencies
     return 'No persons found in configuration or gift history.';
   }
 
-  // Handle --list-currencies case
+  // Handle --list-currencies case for backward compatibility
   if (availableCurrencies.length > 0 && currencyFilter === 'LIST_CURRENCIES') {
     if (availableCurrencies.length === 0) {
       return 'No currencies found in gift history.';
@@ -2673,28 +2697,118 @@ export function formatToplistOutput(persons, sortBy, length, availableCurrencies
     return `Available currencies in dataset: ${availableCurrencies.join(', ')}`;
   }
 
-  // If sorting by scores or gift count, show all persons regardless of currency
-  if (sortBy === 'nice-score' || sortBy === 'friend-score') {
-    return formatScoreBasedToplist(persons, sortBy, length);
-  } else if (sortBy === 'gift-count') {
-    return formatGiftCountToplist(persons, length);
-  }
-
-  // For total gifts sorting, handle currencies
-  if (currencyFilter) {
-    // Single currency filter - show only that currency
-    return formatSingleCurrencyToplist(persons, sortBy, length, currencyFilter);
-  } else if (availableCurrencies.length <= 1) {
-    // Single currency in dataset (or no currencies) - use original behavior
-    return formatSingleCurrencyToplist(persons, sortBy, length, null);
-  } else {
-    // Multiple currencies - show separate toplists for each currency
-    return formatMultiCurrencyToplist(persons, sortBy, length, availableCurrencies);
-  }
+  // Simplified toplist formatting (no complex currency grouping)
+  return formatSimplifiedToplist(persons, sortBy, length);
 }
 
 /**
- * Format toplist for gift count sorting
+ * Format simplified toplist (unified sorting without currency grouping)
+ */
+function formatSimplifiedToplist(persons, sortBy, length) {
+  if (persons.length === 0) {
+    return 'No persons found in configuration or gift history.';
+  }
+
+  // Sort persons based on criteria
+  const sortedPersons = [...persons].sort((a, b) => {
+    switch (sortBy) {
+      case 'nice-score':
+        const aNice = a.niceScore !== undefined && a.niceScore !== null ? a.niceScore : -Infinity;
+        const bNice = b.niceScore !== undefined && b.niceScore !== null ? b.niceScore : -Infinity;
+        if (bNice !== aNice) return bNice - aNice;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+
+      case 'friend-score':
+        const aFriend = a.friendScore !== undefined && a.friendScore !== null ? a.friendScore : -Infinity;
+        const bFriend = b.friendScore !== undefined && b.friendScore !== null ? b.friendScore : -Infinity;
+        if (bFriend !== aFriend) return bFriend - aFriend;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+
+      case 'gift-count':
+        const aCount = a.giftCount || 0;
+        const bCount = b.giftCount || 0;
+        if (bCount !== aCount) return bCount - aCount;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+
+      case 'total':
+      default:
+        const aTotal = a.totalGifts || 0;
+        const bTotal = b.totalGifts || 0;
+        if (bTotal !== aTotal) return bTotal - aTotal;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    }
+  });
+
+  // Limit results
+  const limitedPersons = sortedPersons.slice(0, length);
+
+  // Format header
+  let header;
+  switch (sortBy) {
+    case 'nice-score':
+      header = `Top ${limitedPersons.length} persons by nice score:`;
+      break;
+    case 'friend-score':
+      header = `Top ${limitedPersons.length} persons by friend score:`;
+      break;
+    case 'gift-count':
+      header = `Top ${limitedPersons.length} persons by gift count:`;
+      break;
+    case 'total':
+    default:
+      header = `Top ${limitedPersons.length} persons by total gifts:`;
+      break;
+  }
+
+  // Format output lines
+  const lines = [header];
+  for (let i = 0; i < limitedPersons.length; i++) {
+    const person = limitedPersons[i];
+    const rank = i + 1;
+    let line = `${rank}. ${person.name}`;
+
+    switch (sortBy) {
+      case 'nice-score':
+        const niceScore = person.niceScore !== undefined && person.niceScore !== null ? person.niceScore : 'N/A';
+        line += `: ${niceScore}`;
+        if (person.friendScore !== undefined && person.friendScore !== null) line += ` (friend: ${person.friendScore})`;
+        break;
+      case 'friend-score':
+        const friendScore = person.friendScore !== undefined && person.friendScore !== null ? person.friendScore : 'N/A';
+        line += `: ${friendScore}`;
+        if (person.niceScore !== undefined && person.niceScore !== null) line += ` (nice: ${person.niceScore})`;
+        break;
+      case 'gift-count':
+        line += `: ${person.giftCount || 0} gifts`;
+        // Add scores if available
+        const giftCountScores = [];
+        if (person.niceScore !== undefined && person.niceScore !== null) giftCountScores.push(`nice: ${person.niceScore}`);
+        if (person.friendScore !== undefined && person.friendScore !== null) giftCountScores.push(`friend: ${person.friendScore}`);
+        if (giftCountScores.length > 0) line += ` (${giftCountScores.join(', ')})`;
+        break;
+      case 'total':
+      default:
+        if (person.totalGifts > 0) {
+          line += `: ${person.totalGifts}`;
+        } else {
+          line += ': no gifts';
+        }
+        // Add scores if available
+        const totalScores = [];
+        if (person.niceScore !== undefined && person.niceScore !== null) totalScores.push(`nice: ${person.niceScore}`);
+        if (person.friendScore !== undefined && person.friendScore !== null) totalScores.push(`friend: ${person.friendScore}`);
+        if (totalScores.length > 0) line += ` (${totalScores.join(', ')})`;
+        break;
+    }
+
+    lines.push(`  ${line}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format toplist for gift count sorting (legacy - now handled by formatSimplifiedToplist)
  */
 function formatGiftCountToplist(persons, length) {
   const sortedPersons = [...persons].sort((a, b) => {

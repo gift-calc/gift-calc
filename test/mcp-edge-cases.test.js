@@ -127,7 +127,7 @@ describe('MCP Server Edge Cases', () => {
       expect(result.result.content[0].text).toContain('Current gift-calc configuration');
       // Should fallback to defaults
       expect(result.result.content[0].text).toContain('baseValue: 70');
-      expect(result.result.content[0].text).toContain('currency: SEK');
+      expect(result.result.content[0].text).toContain('baseCurrency: SEK');
     });
 
     test('should handle missing config file gracefully', async () => {
