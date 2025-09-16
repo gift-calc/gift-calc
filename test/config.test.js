@@ -275,4 +275,156 @@ describe('Configuration and File Handling Tests', () => {
       expect(result.stdout).toMatch(/No log file found/);
     });
   });
+
+  describe('Configuration Migration Tests', () => {
+    test('should migrate legacy currency field to baseCurrency', () => {
+      // Create legacy config with only 'currency' field
+      createTestConfig({
+        baseValue: 100,
+        currency: 'EUR',
+        decimals: 2
+      });
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      expect(result.stdout).toMatch(/EUR$/);
+
+      cleanup();
+    });
+
+    test('should preserve baseCurrency over legacy currency field', () => {
+      // Create config with both fields - baseCurrency should win
+      createTestConfig({
+        currency: 'USD',
+        baseCurrency: 'SEK',
+        baseValue: 100
+      });
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      expect(result.stdout).toMatch(/SEK$/);
+
+      cleanup();
+    });
+
+    test('should handle missing currency fields gracefully', () => {
+      // Create config without any currency fields
+      createTestConfig({
+        baseValue: 100,
+        variation: 30
+      });
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      // Should use default currency (SEK)
+      expect(result.stdout).toMatch(/SEK$/);
+
+      cleanup();
+    });
+
+    test('should handle empty currency field migration', () => {
+      // Test with empty string currency field
+      createTestConfig({
+        currency: '',
+        baseValue: 100
+      });
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      // Should fall back to default (SEK)
+      expect(result.stdout).toMatch(/SEK$/);
+
+      cleanup();
+    });
+
+    test('should handle null currency field migration', () => {
+      // Test with null currency field
+      createTestConfig({
+        currency: null,
+        baseValue: 100
+      });
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      // Should fall back to default (SEK)
+      expect(result.stdout).toMatch(/SEK$/);
+
+      cleanup();
+    });
+
+    test('should handle corrupted config during migration', () => {
+      // Create config with invalid currency value
+      createTestConfig({
+        currency: 123, // Invalid type
+        baseValue: 100
+      });
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      // Should fall back to default (SEK) despite invalid currency
+      expect(result.stdout).toMatch(/SEK$/);
+
+      cleanup();
+    });
+
+    test('should work with environment variable override during migration', () => {
+      // Create legacy config
+      createTestConfig({
+        currency: 'EUR',
+        baseValue: 100
+      });
+
+      // Override with environment variable
+      const oldEnv = process.env.GIFT_CALC_BASE_CURRENCY;
+      process.env.GIFT_CALC_BASE_CURRENCY = 'USD';
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      expect(result.stdout).toMatch(/USD$/);
+
+      // Restore environment
+      if (oldEnv !== undefined) {
+        process.env.GIFT_CALC_BASE_CURRENCY = oldEnv;
+      } else {
+        delete process.env.GIFT_CALC_BASE_CURRENCY;
+      }
+
+      cleanup();
+    });
+
+    test('should handle complex migration scenario', () => {
+      // Test with person-specific config and legacy global config
+      createTestConfig({
+        currency: 'EUR',
+        baseValue: 100,
+        variation: 25,
+        friendScore: 7
+      });
+
+      const result = runCLI('--name TestPerson --no-log');
+      expect(result.success).toBe(true);
+      expect(result.stdout).toMatch(/EUR.*for TestPerson$/);
+
+      cleanup();
+    });
+
+    test('should preserve other config fields during migration', () => {
+      // Ensure migration doesn't affect other configuration fields
+      createTestConfig({
+        currency: 'USD',
+        baseValue: 150,
+        variation: 35,
+        friendScore: 8,
+        niceScore: 6,
+        decimals: 1
+      });
+
+      const result = runCLI('--no-log');
+      expect(result.success).toBe(true);
+      expect(result.stdout).toMatch(/USD$/);
+      expect(result.stdout).toMatch(/^\d+\.\d USD$/); // Should have 1 decimal place
+
+      cleanup();
+    });
+  });
 });

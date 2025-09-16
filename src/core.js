@@ -502,7 +502,8 @@ OPTIONS:
                               Higher scores increase chance of higher amounts
   -n, --nice-score <0-10>     Nice score affecting gift amount bias (default: 5)
                               0=no gift, 1-3=fixed reductions, 4-10=bias amounts
-  -c, --currency <code>       Display currency (converts from base currency)
+  -c, --currency <code>       Display currency for conversion (default: same as base)
+                              Shows "100 SEK (95 USD)" format when different from base
   -d, --decimals <0-10>       Number of decimal places (default: 2)
   --name <name>               Name of gift recipient to include in output
   -m, --match [name]          Match previous gift amount. If name provided, matches
@@ -531,12 +532,20 @@ CONFIGURATION:
   Budgets are stored at: ~/.config/gift-calc/budgets.json
   Person configurations are stored at: ~/.config/gift-calc/persons.json
   Gift calculations are logged at: ~/.config/gift-calc/gift-calc.log
-  
+
+  CURRENCY CONFIGURATION:
+    - baseCurrency: Base currency for calculations (default: SEK)
+    - displayCurrency: Currency for display conversion (default: same as base)
+    - When display currency differs from base, shows both: "100 SEK (95 USD)"
+    - Conversion failure shown as: "100 SEK (conversion unavailable)"
+    - Exchange rates cached for 24 hours, requires internet for updates
+
   CONFIGURATION PRECEDENCE (highest to lowest priority):
     1. CLI arguments (--base-value, --nice-score, etc.)
-    2. Person-specific config (when using --name)
-    3. Global config file (~/.config/gift-calc/.config.json)
-    4. Built-in defaults
+    2. Environment variables (GIFT_CALC_BASE_CURRENCY, etc.)
+    3. Person-specific config (when using --name)
+    4. Global config file (~/.config/gift-calc/.config.json)
+    5. Built-in defaults
   
   NAUGHTY LIST:
     When a recipient is on the naughty list, their gift amount is always 0,
@@ -574,9 +583,11 @@ EXAMPLES:
   gift-calc log                         # Open log file with less
   gift-calc -b 100                      # Base value of 100
   gcalc -b 100 -r 30 -d 0               # Base 100, 30% variation, no decimals
-  gift-calc --name "Alice" -c USD       # Gift for Alice in USD currency
+  gift-calc --name "Alice" -c USD       # Gift for Alice with USD conversion
+                                    # Shows: "75 SEK (7.50 USD) for Alice"
   gcalc -b 50 -f 9 --name "Bob"         # Gift for Bob (with logging by default)
-  gift-calc -c EUR -d 1 -C --no-log     # Use defaults with EUR, copy but no log
+  gift-calc -c EUR -d 1 -C --no-log     # Base in SEK, display EUR, 1 decimal
+                                    # Shows: "70.0 SEK (6.5 EUR)"
   gcalc --name "Charlie" -b 80 -C       # Gift for Charlie, copy to clipboard
   gift-calc -f 8 -n 9                   # High friend and nice scores
   gift-calc -n 0 -b 100                 # No gift (nice score 0)

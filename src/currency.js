@@ -9,8 +9,43 @@ import path from 'node:path';
 import os from 'node:os';
 
 // Cache configuration
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const DEFAULT_CACHE_TTL_HOURS = 24;
 const API_BASE_URL = 'https://open.er-api.com/v6/latest';
+
+/**
+ * Get configured cache TTL in milliseconds
+ * @returns {number} Cache TTL in milliseconds
+ */
+function getCacheTTL() {
+  // Check environment variable first
+  const envTTL = process.env.GIFT_CALC_CACHE_TTL_HOURS;
+  if (envTTL && !isNaN(parseInt(envTTL))) {
+    const hours = parseInt(envTTL);
+    if (hours > 0 && hours <= 168) { // Max 1 week
+      return hours * 60 * 60 * 1000;
+    }
+  }
+
+  // Check config file
+  try {
+    const homeDir = process.env.HOME || require('node:os').homedir();
+    const configPath = require('node:path').join(homeDir, '.config', 'gift-calc', '.config.json');
+    if (require('node:fs').existsSync(configPath)) {
+      const config = JSON.parse(require('node:fs').readFileSync(configPath, 'utf8'));
+      if (config.cacheTTLHours && !isNaN(config.cacheTTLHours)) {
+        const hours = config.cacheTTLHours;
+        if (hours > 0 && hours <= 168) { // Max 1 week
+          return hours * 60 * 60 * 1000;
+        }
+      }
+    }
+  } catch (error) {
+    // Ignore config read errors
+  }
+
+  // Default to 24 hours
+  return DEFAULT_CACHE_TTL_HOURS * 60 * 60 * 1000;
+}
 
 /**
  * Get cache file path for currency rates
@@ -47,9 +82,10 @@ function loadCachedRates(baseCurrency) {
     const now = Date.now();
 
     // Check if cache exists for this base currency and isn't expired
+    const cacheTTL = getCacheTTL();
     if (cacheData[baseCurrency] &&
         cacheData[baseCurrency].timestamp &&
-        (now - cacheData[baseCurrency].timestamp) < CACHE_TTL_MS) {
+        (now - cacheData[baseCurrency].timestamp) < cacheTTL) {
       return cacheData[baseCurrency].rates;
     }
 
@@ -116,8 +152,8 @@ async function fetchExchangeRates(baseCurrency) {
 
     return null;
   } catch (error) {
-    // Network or parsing error
-    return null;
+    // Re-throw to allow specific error handling in convertCurrency
+    throw error;
   }
 }
 
@@ -160,7 +196,19 @@ export async function convertCurrency(amount, fromCurrency, toCurrency, decimals
   }
 
   try {
-    const rates = await getExchangeRates(fromCurrency);
+    // Check if we're using cache before calling getExchangeRates
+    const cachedRates = loadCachedRates(fromCurrency);
+    let wasUsingCache = cachedRates !== null && cachedRates[toCurrency] !== undefined;
+
+    let rates;
+    if (cachedRates && cachedRates[toCurrency] !== undefined) {
+      // Complete cache hit - use cached rates
+      rates = cachedRates;
+    } else {
+      // Cache miss or incomplete cache - fetch fresh rates
+      rates = await fetchExchangeRates(fromCurrency);
+      wasUsingCache = false;
+    }
 
     if (!rates || !rates[toCurrency]) {
       return {
@@ -186,7 +234,7 @@ export async function convertCurrency(amount, fromCurrency, toCurrency, decimals
       fromCurrency,
       toCurrency,
       rate,
-      cached: loadCachedRates(fromCurrency) !== null
+      cached: wasUsingCache
     };
   } catch (error) {
     return {
@@ -248,8 +296,8 @@ export async function formatCurrencyOutput(baseAmount, baseCurrency, displayCurr
 
       output = `${formattedBase} ${baseCurrency} (${formattedConverted} ${displayCurrency})`;
     } else {
-      // Fallback to base currency if conversion fails
-      output = `${formattedBase} ${baseCurrency}`;
+      // Fallback to base currency with conversion failure indication
+      output = `${formattedBase} ${baseCurrency} (conversion unavailable)`;
     }
   }
 
@@ -298,5 +346,65 @@ export function clearCurrencyCache() {
     }
   } catch (error) {
     // Silently ignore errors
+  }
+}
+
+/**
+ * Refresh currency cache for a specific base currency
+ * @param {string} baseCurrency - Base currency code to refresh
+ * @returns {Promise<boolean>} True if refresh was successful
+ */
+export async function refreshCurrencyCache(baseCurrency) {
+  try {
+    // Clear existing cache for this currency
+    const cacheFile = getCacheFilePath();
+    if (fs.existsSync(cacheFile)) {
+      const cacheData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      if (cacheData[baseCurrency]) {
+        delete cacheData[baseCurrency];
+        fs.writeFileSync(cacheFile, JSON.stringify(cacheData, null, 2));
+      }
+    }
+
+    // Fetch fresh rates
+    const rates = await fetchExchangeRates(baseCurrency);
+    return rates !== null;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Get cache status information
+ * @param {string} baseCurrency - Base currency code
+ * @returns {Object} Cache status information
+ */
+export function getCacheStatus(baseCurrency) {
+  try {
+    const cacheFile = getCacheFilePath();
+    if (!fs.existsSync(cacheFile)) {
+      return { exists: false, expired: true, age: null };
+    }
+
+    const cacheData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+    if (!cacheData[baseCurrency] || !cacheData[baseCurrency].timestamp) {
+      return { exists: false, expired: true, age: null };
+    }
+
+    const now = Date.now();
+    const timestamp = cacheData[baseCurrency].timestamp;
+    const age = now - timestamp;
+    const cacheTTL = getCacheTTL();
+    const expired = age >= cacheTTL;
+
+    return {
+      exists: true,
+      expired,
+      age: Math.floor(age / (60 * 60 * 1000)), // Age in hours
+      ttl: Math.floor(cacheTTL / (60 * 60 * 1000)), // TTL in hours
+      timestamp: new Date(timestamp).toISOString()
+    };
+  } catch (error) {
+    return { exists: false, expired: true, age: null, error: error.message };
   }
 }

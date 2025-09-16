@@ -77,11 +77,18 @@ function loadConfig(personName = null) {
     try {
       const configData = fs.readFileSync(configPath, 'utf8');
       const fileConfig = JSON.parse(configData);
-      Object.assign(config, fileConfig);
+
+      // Sanitize fileConfig before assigning - filter out invalid types
+      const sanitizedConfig = { ...fileConfig };
+      if (sanitizedConfig.currency && typeof sanitizedConfig.currency !== 'string') {
+        delete sanitizedConfig.currency; // Remove invalid currency type
+      }
+
+      Object.assign(config, sanitizedConfig);
 
       // Migration: if only 'currency' exists, migrate to 'baseCurrency'
-      if (fileConfig.currency && !fileConfig.baseCurrency) {
-        config.baseCurrency = fileConfig.currency;
+      if (sanitizedConfig.currency && !sanitizedConfig.baseCurrency && typeof sanitizedConfig.currency === 'string') {
+        config.baseCurrency = sanitizedConfig.currency;
       }
     } catch (error) {
       console.error(`Warning: Could not parse config file at ${configPath}. Using defaults.`);
