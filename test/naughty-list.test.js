@@ -14,7 +14,7 @@ import {
   listNaughtyList,
   searchNaughtyList,
   parseNaughtyListArguments
-} from '../src/core.js';
+} from '../src/domains/naughty-list/index.js';
 
 // Test utility functions
 function createTestNaughtyList() {

@@ -8,11 +8,13 @@ import os from 'node:os';
 import {
   findLastGiftFromLog,
   findLastGiftForRecipientFromLog,
-  getNaughtyListPath,
-  addToNaughtyList,
   getBudgetPath,
   addBudget
 } from '../src/core.js';
+import {
+  getNaughtyListPath,
+  addToNaughtyList
+} from '../src/domains/naughty-list/index.js';
 
 const CLI_PATH = path.join(process.cwd(), 'index.js');
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'gift-calc');
