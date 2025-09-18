@@ -16,6 +16,33 @@ import { displayLog } from './utils/log.js';
 import { initConfig, updateConfig } from './utils/config-interactive.js';
 
 /**
+ * Get domain-specific arguments by removing the command prefix
+ * @param {string} commandName - The command name to remove from args
+ * @returns {string[]} Domain-specific arguments
+ */
+function getDomainArgs(commandName) {
+  return process.argv.slice(2).slice(1); // Remove command name
+}
+
+/**
+ * Handle domain command with proper error handling
+ * @param {string} commandName - Name of the command
+ * @param {Function} parser - Parsing function
+ * @param {Function} handler - Command handler function
+ */
+function handleDomainCommand(commandName, parser, handler) {
+  try {
+    const domainArgs = getDomainArgs(commandName);
+    const config = parser(domainArgs);
+    handler(config);
+    process.exit(0);
+  } catch (error) {
+    console.error(`Error in ${commandName} command:`, error.message);
+    process.exit(1);
+  }
+}
+
+/**
  * Route commands to appropriate handlers
  * @param {Object} parsedConfig - Parsed configuration from command line
  */
@@ -53,44 +80,34 @@ export async function routeCommand(parsedConfig) {
   // Route domain commands to their handlers
   switch (parsedConfig.command) {
     case 'naughty-list':
-      // Re-parse with domain-specific parser
-      const args = process.argv.slice(2);
-      const naughtyListConfig = parseNaughtyListArguments(args.slice(1)); // Remove 'naughty-list' prefix
-      handleNaughtyListCommand(naughtyListConfig);
-      process.exit(0);
+      handleDomainCommand('naughty-list', parseNaughtyListArguments, handleNaughtyListCommand);
+      break;
 
     case 'budget':
-      // Re-parse with domain-specific parser
-      const budgetArgs = process.argv.slice(2);
-      const budgetConfig = parseBudgetArguments(budgetArgs.slice(1)); // Remove 'budget' prefix
-      handleBudgetCommand(budgetConfig);
-      process.exit(0);
+      handleDomainCommand('budget', parseBudgetArguments, handleBudgetCommand);
+      break;
 
     case 'spendings':
-      // Re-parse with domain-specific parser
-      const spendingsArgs = process.argv.slice(2);
-      const spendingsConfig = parseSpendingsArguments(spendingsArgs.slice(1)); // Remove 'spendings' prefix
-      handleSpendingsCommand(spendingsConfig);
-      process.exit(0);
+      handleDomainCommand('spendings', parseSpendingsArguments, handleSpendingsCommand);
+      break;
 
     case 'person':
-      // Re-parse with domain-specific parser
-      const personArgs = process.argv.slice(2);
-      const personConfig = parsePersonArguments(personArgs.slice(1)); // Remove 'person' prefix
-      handlePersonCommand(personConfig);
-      process.exit(0);
+      handleDomainCommand('person', parsePersonArguments, handlePersonCommand);
+      break;
 
     case 'toplist':
-      // Re-parse with domain-specific parser
-      const toplistArgs = process.argv.slice(2);
-      const toplistConfig = parseToplistArguments(toplistArgs.slice(1)); // Remove 'toplist' prefix
-      handleToplistCommand(toplistConfig);
-      process.exit(0);
+      handleDomainCommand('toplist', parseToplistArguments, handleToplistCommand);
+      break;
 
     default:
       // If no command matched, this is the default gift calculation
-      await handleGiftCalculation(parsedConfig);
-      process.exit(0);
+      try {
+        await handleGiftCalculation(parsedConfig);
+        process.exit(0);
+      } catch (error) {
+        console.error('Error in gift calculation:', error.message);
+        process.exit(1);
+      }
   }
 
   return true;
