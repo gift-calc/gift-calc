@@ -1,3 +1,41 @@
+/**
+ * @fileoverview Configuration management for gift-calc CLI
+ *
+ * Handles configuration loading with proper precedence hierarchy:
+ * 1. CLI arguments (highest priority)
+ * 2. Person-specific config file (~/.config/gift-calc/person-config.json)
+ * 3. Global config file (~/.config/gift-calc/.config.json)
+ * 4. Environment variables (GIFT_CALC_*)
+ * 5. Built-in defaults (lowest priority)
+ *
+ * Key features:
+ * - Automatic config directory creation
+ * - Person-specific configuration overrides
+ * - Environment variable integration
+ * - Backwards compatibility for legacy config fields
+ * - Graceful error handling for corrupted config files
+ * - Configuration sanitization and validation
+ *
+ * The configuration system supports the modular architecture by providing
+ * centralized configuration management that all domain modules can rely on.
+ *
+ * @module cli/config
+ * @version 1.0.0
+ * @requires node:fs
+ * @requires node:path
+ * @requires node:os
+ * @see {@link module:core} Core configuration functions
+ * @see {@link module:types} GiftConfig type definition
+ * @example
+ * // Load config with person-specific overrides
+ * const config = loadConfig('John');
+ * console.log(config.baseValue); // May be overridden for John
+ *
+ * // Get standard config paths
+ * const configPath = getConfigPath();
+ * const logPath = getLogPath();
+ */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

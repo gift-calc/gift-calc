@@ -5,9 +5,36 @@
  */
 
 /**
- * Parse naughty list specific arguments
+ * Parse naughty list specific arguments with comprehensive validation
+ *
+ * Parses command line arguments specific to naughty list operations,
+ * handling all supported actions and providing detailed error reporting.
+ * This parser is designed to work with arguments that have already had
+ * the 'naughty-list' or 'nl' prefix removed.
+ *
+ * Supported argument patterns:
+ * - `list` - List all people on naughty list
+ * - `<name>` - Add person to naughty list
+ * - `--remove <name>` or `-r <name>` - Remove person from naughty list
+ * - `--search <term>` - Search for people by name prefix
+ *
  * @param {string[]} args - Array of command line arguments (without naughty-list/nl prefix)
- * @returns {Object} Naughty list configuration object
+ * @returns {NaughtyListConfig} Parsed configuration with action and validation results
+ * @throws {Error} When internal parsing logic fails (validation errors return in config.error)
+ * @example
+ * // Parse add command
+ * const config = parseNaughtyListArguments(['John Doe']);
+ * // Returns: { command: 'naughty-list', action: 'add', name: 'John Doe', success: true }
+ *
+ * // Parse remove command
+ * const config = parseNaughtyListArguments(['--remove', 'John Doe']);
+ * // Returns: { command: 'naughty-list', action: 'remove', name: 'John Doe', success: true }
+ *
+ * // Parse invalid command
+ * const config = parseNaughtyListArguments([]);
+ * // Returns: { success: false, error: 'No action specified...' }
+ *
+ * @since 1.0.0
  */
 export function parseNaughtyListArguments(args) {
   const config = {
@@ -163,12 +190,43 @@ export function saveNaughtyList(naughtyList, naughtyListPath, fsModule, pathModu
 }
 
 /**
- * Add a person to the naughty list
- * @param {string} name - Name to add to naughty list
- * @param {string} naughtyListPath - Path to naughty list file
- * @param {object} fsModule - Node.js fs module
- * @param {object} pathModule - Node.js path module
- * @returns {Object} Result object with success, message, and existing flags
+ * Add a person to the naughty list with duplicate detection and validation
+ *
+ * Adds a person to the naughty list with comprehensive validation including
+ * duplicate checking, input sanitization, and automatic timestamp generation.
+ * This function ensures data integrity and provides detailed feedback about
+ * the operation result.
+ *
+ * The function performs the following operations:
+ * 1. Validates and trims the input name
+ * 2. Loads the current naughty list from file
+ * 3. Checks for existing entries (case-insensitive)
+ * 4. Creates new entry with ISO timestamp
+ * 5. Saves updated list to file
+ * 6. Returns detailed operation result
+ *
+ * @param {string} name - Name to add to naughty list (will be trimmed)
+ * @param {string} naughtyListPath - Absolute path to naughty list file
+ * @param {object} fsModule - Node.js fs module for file operations
+ * @param {object} pathModule - Node.js path module for path operations
+ * @returns {NaughtyListResult} Result object with success status and details
+ * @throws {Error} When required modules are missing or file operations fail critically
+ * @example
+ * // Add new person successfully
+ * const result = addToNaughtyList('John Doe', '/path/to/naughty-list.json', fs, path);
+ * // Returns: { success: true, message: 'John Doe added to naughty list', added: true, entry: {...} }
+ *
+ * // Try to add duplicate
+ * const duplicate = addToNaughtyList('John Doe', '/path/to/naughty-list.json', fs, path);
+ * // Returns: { success: false, message: 'John Doe is already on the naughty list', existing: true }
+ *
+ * // Invalid name
+ * const invalid = addToNaughtyList('', '/path/to/naughty-list.json', fs, path);
+ * // Returns: { success: false, message: 'Name cannot be empty', existing: false }
+ *
+ * @since 1.0.0
+ * @see {@link loadNaughtyList} For loading existing list
+ * @see {@link saveNaughtyList} For saving updated list
  */
 export function addToNaughtyList(name, naughtyListPath, fsModule, pathModule) {
   // Validate input

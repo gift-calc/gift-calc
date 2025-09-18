@@ -1,6 +1,35 @@
 /**
- * Simplified command line argument parsing for gift calculator
- * Handles main gift calculation arguments and identifies domain commands
+ * @fileoverview Simplified command line argument parsing
+ *
+ * Streamlined argument parser that handles the main gift calculation flow
+ * and identifies domain commands for routing. This simplified version focuses
+ * on the most common use cases while delegating complex domain parsing to
+ * specialized parsers in the domain modules.
+ *
+ * Key features:
+ * - Fast parsing for standard gift calculation arguments
+ * - Domain command detection (naughty-list, budget, person, etc.)
+ * - Basic validation with informative error messages
+ * - Integration with configuration loading pipeline
+ * - Support for person-specific configuration detection
+ *
+ * This parser serves as the first-pass parser in the two-stage parsing
+ * process: first to detect person names for config loading, then final
+ * parsing with proper defaults applied.
+ *
+ * @module shared/argument-parsing-simple
+ * @version 1.0.0
+ * @requires None - Pure parsing functions
+ * @see {@link module:shared/argument-parsing} Full argument parser
+ * @see {@link module:types} GiftConfig type definition
+ * @example
+ * // Parse arguments for person detection
+ * const config = parseArguments(['--name', 'John', '--basevalue', '100']);
+ * console.log(config.recipientName); // 'John'
+ *
+ * // Detect domain command
+ * const nlConfig = parseArguments(['naughty-list', 'add', 'BadPerson']);
+ * console.log(nlConfig.command); // 'naughty-list'
  */
 
 /**

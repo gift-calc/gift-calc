@@ -1,3 +1,42 @@
+/**
+ * @fileoverview Gift calculation command handler
+ *
+ * Handles the core gift calculation functionality including:
+ * - Final gift amount calculation with bias and special cases
+ * - Currency conversion when display currency differs from base
+ * - Naughty list checking and nice score adjustment
+ * - Gift amount matching (match previous gifts for fairness)
+ * - File logging with structured data
+ * - Clipboard integration for easy sharing
+ * - Formatted output with proper currency display
+ *
+ * This is the main command that users interact with for calculating gift amounts.
+ * It integrates all the core calculation logic with CLI-specific features like
+ * logging, output formatting, and optional currency conversion.
+ *
+ * @module cli/commands/gift-calculation
+ * @version 1.0.0
+ * @requires node:fs
+ * @requires node:path
+ * @requires node:os
+ * @requires node:child_process
+ * @see {@link module:core/calculation} Core calculation algorithms
+ * @see {@link module:domains/naughty-list} Naughty list integration
+ * @see {@link module:types} GiftConfig and LogEntry types
+ * @example
+ * // Calculate gift for John with nice score 8
+ * await handleGiftCalculation({
+ *   recipientName: 'John',
+ *   niceScore: 8,
+ *   baseValue: 100,
+ *   baseCurrency: 'SEK',
+ *   displayCurrency: 'USD'
+ * });
+ *
+ * @exitcode {0} Success - gift calculated and logged
+ * @exitcode {1} Error - calculation failed, validation error, or system error
+ */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -17,9 +56,22 @@ import { getNaughtyListPath, isOnNaughtyList } from '../../domains/naughty-list/
 import { getLogPath } from '../config.js';
 
 /**
- * Validate recipient name and clean it
- * @param {string} name - Raw recipient name
- * @returns {string|null} Cleaned name or null if invalid
+ * Validate recipient name and clean it for safe usage
+ *
+ * Performs input validation and sanitization on recipient names to ensure
+ * they are safe for file operations and display. Trims whitespace and
+ * validates that the name is a non-empty string.
+ *
+ * @param {string} name - Raw recipient name from user input
+ * @returns {string|null} Cleaned name ready for use, or null if invalid
+ * @example
+ * const cleaned = validateRecipientName("  John Doe  ");
+ * console.log(cleaned); // "John Doe"
+ *
+ * const invalid = validateRecipientName("");
+ * console.log(invalid); // null
+ *
+ * @since 1.0.0
  */
 function validateRecipientName(name) {
   if (!name || typeof name !== 'string') return null;
@@ -274,8 +326,65 @@ async function displayResults(result, config) {
 }
 
 /**
- * Handle main gift calculation command
- * @param {Object} config - Parsed configuration
+ * Handle main gift calculation command with full feature integration
+ *
+ * Main entry point for gift calculation that orchestrates the complete calculation
+ * flow including naughty list checking, amount calculation, currency conversion,
+ * file logging, and optional clipboard copying. This function integrates all
+ * the core gift-calc functionality into a single cohesive command handler.
+ *
+ * Processing flow:
+ * 1. Determine gift amount (normal calculation, matching, or override)
+ * 2. Check naughty list and adjust nice score if needed
+ * 3. Apply currency conversion if display currency differs
+ * 4. Format output with appropriate currency symbols
+ * 5. Log to file with structured data (unless dry run or disabled)
+ * 6. Copy to clipboard if requested
+ * 7. Display formatted result to user
+ *
+ * @param {GiftConfig} config - Complete parsed configuration from CLI arguments
+ * @param {number} config.baseValue - Base gift amount for calculation
+ * @param {number} config.variation - Variation percentage (0-100)
+ * @param {number} config.friendScore - Friend score (1-10)
+ * @param {number} config.niceScore - Nice score (0-10, may be overridden by naughty list)
+ * @param {string} config.baseCurrency - Base currency for calculation
+ * @param {string|null} config.displayCurrency - Display currency for output
+ * @param {number} config.decimals - Decimal places for rounding
+ * @param {string|null} config.recipientName - Gift recipient name
+ * @param {boolean} config.logToFile - Whether to log to file
+ * @param {boolean} config.copyToClipboard - Whether to copy result to clipboard
+ * @param {boolean} config.useMaximum - Force maximum amount
+ * @param {boolean} config.useMinimum - Force minimum amount
+ * @param {boolean} config.matchPreviousGift - Match previous gift amount
+ * @param {string|null} config.matchRecipientName - Recipient for matching
+ * @param {boolean} [config.dryRun] - Preview mode without logging
+ * @returns {Promise<void>} Resolves when calculation and logging complete
+ * @throws {Error} When calculation fails, file operations fail, or currency conversion errors
+ * @example
+ * // Basic gift calculation
+ * await handleGiftCalculation({
+ *   baseValue: 100,
+ *   variation: 20,
+ *   friendScore: 7,
+ *   niceScore: 8,
+ *   baseCurrency: 'SEK',
+ *   displayCurrency: 'USD',
+ *   decimals: 2,
+ *   recipientName: 'John',
+ *   logToFile: true,
+ *   copyToClipboard: false
+ * });
+ *
+ * // Calculate with matching previous gift
+ * await handleGiftCalculation({
+ *   matchPreviousGift: true,
+ *   matchRecipientName: 'Alice',
+ *   // ... other config
+ * });
+ *
+ * @since 1.0.0
+ * @see {@link calculateFinalAmount} Core calculation algorithm
+ * @see {@link isOnNaughtyList} Naughty list checking
  */
 export async function handleGiftCalculation(config) {
   // Determine gift amount

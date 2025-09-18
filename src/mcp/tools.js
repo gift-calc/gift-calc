@@ -1,6 +1,36 @@
 /**
- * MCP Tool Definitions
- * These tools reuse existing gift-calc core functions following KISS principles
+ * @fileoverview MCP tool definitions and registration
+ *
+ * Defines all available MCP tools that AI assistants can invoke to interact
+ * with gift-calc functionality. These tools reuse existing gift-calc core
+ * functions following KISS principles and provide safe, structured access
+ * to the application's capabilities.
+ *
+ * Key features:
+ * - Tool registration with JSON schema validation
+ * - Read-only vs read-write tool classification for safety
+ * - Comprehensive tool schemas with parameter validation
+ * - Integration with existing domain modules
+ * - Error handling and result formatting
+ * - Tool discovery and metadata management
+ *
+ * All tools are designed to be stateless and safe for AI assistant use,
+ * with clear boundaries between read-only and potentially destructive operations.
+ *
+ * @module mcp/tools
+ * @version 1.0.0
+ * @requires node:fs
+ * @requires node:path
+ * @requires node:os
+ * @see {@link module:mcp/tools/core-calculation} Core calculation tools
+ * @see {@link module:mcp/tools/naughty-list} Naughty list tools
+ * @see {@link module:types} MCP type definitions
+ * @example
+ * // Register all tools with MCP server
+ * await registerAllTools(server);
+ *
+ * // Get available tools for discovery
+ * const tools = getAllToolSchemas();
  */
 
 import fs from 'node:fs';
@@ -41,6 +71,43 @@ import { loadConfig, getConfigPath, getLogPath } from './server.js';
 
 /**
  * Register all MCP tools with the provided server instance
+ *
+ * Registers all available gift-calc tools with the MCP server, including
+ * both read-only and read-write tools with proper schema validation and
+ * safety classification. This function serves as the central tool registry
+ * for the MCP server implementation.
+ *
+ * Registered tools include:
+ * - calculate_gift_amount: Core gift calculation (read-only)
+ * - list_naughty_list: List people on naughty list (read-only)
+ * - add_to_naughty_list: Add person to naughty list (read-write)
+ * - remove_from_naughty_list: Remove person from naughty list (read-write)
+ * - search_naughty_list: Search naughty list by prefix (read-only)
+ * - check_naughty_list: Check if person is on naughty list (read-only)
+ *
+ * Each tool includes comprehensive JSON schema validation and proper
+ * error handling to ensure safe operation when invoked by AI assistants.
+ *
+ * @param {MCPServer} server - MCP server instance to register tools with
+ * @returns {void} Tools are registered synchronously
+ * @throws {Error} When tool registration fails or server is invalid
+ * @example
+ * // Register all tools with MCP server
+ * const server = new MCPServer();
+ * registerAllTools(server);
+ *
+ * // Tools are now available for AI assistant invocation
+ * const result = await server.invokeTool('calculate_gift_amount', {
+ *   baseValue: 100,
+ *   variation: 20,
+ *   friendScore: 8,
+ *   niceScore: 7,
+ *   decimals: 2
+ * });
+ *
+ * @since 1.0.0
+ * @see {@link MCPServer} MCP server implementation
+ * @see {@link module:types} MCP type definitions
  */
 export function registerAllTools(server) {
   // Register core gift calculation tool

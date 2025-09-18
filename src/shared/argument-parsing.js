@@ -1,12 +1,80 @@
 /**
- * Command line argument parsing utilities
- * Shared across multiple CLI commands
+ * @fileoverview Command line argument parsing utilities
+ *
+ * Comprehensive CLI argument parsing system that handles both gift calculation
+ * arguments and domain-specific commands. This module provides the foundation
+ * for all command-line interactions in the gift-calc application.
+ *
+ * Key features:
+ * - Gift calculation argument parsing with validation
+ * - Domain command detection and routing (naughty-list, budget, person, etc.)
+ * - Special command handling (init-config, version, help, log)
+ * - Input validation with detailed error messages
+ * - Backwards compatibility support
+ * - Flexible argument structure (flags, positional arguments, named options)
+ *
+ * The parser follows a precedence model where explicit CLI arguments override
+ * configuration file values, supporting the overall configuration hierarchy.
+ *
+ * @module shared/argument-parsing
+ * @version 1.0.0
+ * @requires None - Pure parsing functions
+ * @see {@link module:domains/naughty-list} Naughty list argument parsing
+ * @see {@link module:types} GiftConfig and ParsedArguments types
+ * @example
+ * // Parse gift calculation arguments
+ * const config = parseArguments(['--basevalue', '100', '--name', 'John']);
+ * console.log(config.baseValue); // 100
+ * console.log(config.recipientName); // 'John'
+ *
+ * // Parse domain command
+ * const nlConfig = parseArguments(['naughty-list', 'add', 'BadPerson']);
+ * console.log(nlConfig.command); // 'naughty-list'
  */
 
 /**
- * Parse command line arguments for gift calculator
- * @param {string[]} args - Array of command line arguments
- * @returns {Object} Parsed configuration object
+ * Parse command line arguments for gift calculator with comprehensive validation
+ *
+ * Main argument parsing function that handles both gift calculation parameters
+ * and domain command detection. Supports a wide range of CLI argument patterns
+ * including short and long flags, positional arguments, and special commands.
+ *
+ * Argument categories handled:
+ * - Gift calculation: --basevalue, --variation, --friend-score, --nice-score
+ * - Currency: --currency (display), with base currency from config
+ * - Output: --decimals, --name, --no-log, --copy
+ * - Overrides: --max, --min, --asshole (nice score 0)
+ * - Matching: --match [recipient]
+ * - Special commands: version, help, init-config, update-config, log
+ * - Domain commands: naughty-list, budget, spendings, person, toplist
+ *
+ * The parser applies input validation with range checking and provides
+ * detailed error messages for invalid arguments. It maintains backwards
+ * compatibility with legacy flag names and supports flexible argument ordering.
+ *
+ * @param {string[]} args - Array of command line arguments from process.argv
+ * @param {GiftConfig} [defaultConfig={}] - Default configuration to merge with parsed args
+ * @returns {GiftConfig} Parsed configuration object with all recognized parameters
+ * @throws {Error} When argument validation fails or required values are missing
+ * @example
+ * // Parse basic gift calculation
+ * const config = parseArguments(['--basevalue', '100', '--name', 'John']);
+ * // Returns: { baseValue: 100, recipientName: 'John', ...defaults }
+ *
+ * // Parse with validation error
+ * try {
+ *   parseArguments(['--nice-score', '15']); // Invalid range
+ * } catch (error) {
+ *   console.log(error.message); // '--nice-score must be between 0 and 10'
+ * }
+ *
+ * // Parse domain command
+ * const nlConfig = parseArguments(['naughty-list', 'add', 'BadPerson']);
+ * // Returns: { command: 'naughty-list', ...domain-specific config }
+ *
+ * @since 1.0.0
+ * @see {@link module:domains/naughty-list} Naughty list argument parsing
+ * @see {@link module:types} GiftConfig type definition
  */
 export function parseArguments(args, defaultConfig = {}) {
   const config = {
