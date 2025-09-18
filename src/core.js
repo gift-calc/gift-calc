@@ -1,6 +1,35 @@
-// Gift Calculator Core Logic
-// Pure calculation functions with no Node.js dependencies
-// Can be used in both CLI and browser environments
+/**
+ * @fileoverview Legacy core logic module (being phased out)
+ *
+ * This module contains legacy functions that are being gradually moved to
+ * the new modular architecture. Many functions here are now better organized
+ * in domain-specific modules like src/core/calculation.js and src/domains/.
+ *
+ * Current contents:
+ * - Person configuration management
+ * - Gift calculation legacy functions
+ * - Help text generation
+ * - Log management and parsing
+ * - Output formatting utilities
+ *
+ * Note: This file is part of the ongoing modularization effort. New functionality
+ * should be added to appropriate domain modules rather than this central file.
+ * See CLAUDE.md for the current modular architecture guidelines.
+ *
+ * @module core
+ * @version 1.0.0
+ * @deprecated Use domain-specific modules instead where possible
+ * @requires None - Pure functions with no dependencies (for calculation functions)
+ * @see {@link module:core/calculation} New core calculation module
+ * @see {@link module:domains/naughty-list} Naughty list domain
+ * @see {@link module:types} Type definitions
+ * @example
+ * // Prefer using new modular functions:
+ * import { calculateFinalAmount } from './core/calculation.js';
+ *
+ * // Instead of legacy core.js functions:
+ * import { calculateGiftAmount } from './core.js';
+ */
 
 /**
  * Calculate gift amount with variation, friend score, and nice score influences

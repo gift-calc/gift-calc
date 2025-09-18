@@ -1,7 +1,35 @@
 /**
- * MCPServer - Core MCP (Model Context Protocol) Server implementation
- * Handles JSON-RPC 2.0 protocol over STDIO transport
- * 
+ * @fileoverview MCP (Model Context Protocol) Server implementation
+ *
+ * Core MCP server that provides AI assistants with safe access to gift-calc
+ * functionality through standardized JSON-RPC 2.0 protocol over STDIO transport.
+ * Implements the 2025-06-18 MCP specification with full protocol compliance.
+ *
+ * Key features:
+ * - JSON-RPC 2.0 protocol handling with proper error responses
+ * - STDIO transport for secure AI assistant communication
+ * - Tool registration and schema validation
+ * - Read-only and read-write tool categorization for safety
+ * - Comprehensive error handling and logging
+ * - Session management and cleanup
+ *
+ * The server exposes gift-calc functionality as MCP tools that AI assistants
+ * can safely invoke, enabling natural language interaction with the gift
+ * calculation system while maintaining security boundaries.
+ *
+ * @module mcp/server
+ * @version 1.0.0
+ * @requires node:fs
+ * @requires node:path
+ * @requires node:process
+ * @see {@link module:mcp/tools} Tool implementations
+ * @see {@link module:mcp/protocol} Protocol utilities
+ * @see {@link module:types} MCP type definitions
+ * @example
+ * // Start MCP server (typically called from bin/mcp-server.js)
+ * const server = new MCPServer();
+ * await server.start();
+ *
  * Protocol: JSON-RPC 2.0 over STDIO transport
  * Version: 2025-06-18 MCP specification
  */

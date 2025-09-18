@@ -1,7 +1,37 @@
 /**
- * Currency Conversion Service
- * Provides currency conversion with caching and graceful fallback
- * Uses ExchangeRate-API (free, no API key required)
+ * @fileoverview Currency conversion service with caching and fallback
+ *
+ * Provides real-time currency conversion functionality using ExchangeRate-API
+ * (free, no API key required) with intelligent caching and graceful degradation.
+ * This service enables gift-calc to display amounts in different currencies
+ * while maintaining the base currency for calculations.
+ *
+ * Key features:
+ * - Real-time exchange rate fetching from ExchangeRate-API
+ * - 24-hour caching to minimize API calls and improve performance
+ * - Graceful fallback when network is unavailable
+ * - Cache invalidation and refresh mechanisms
+ * - Support for all major world currencies
+ * - Error handling with informative messages
+ *
+ * The service follows a cache-first approach: checks local cache, fetches
+ * fresh rates if needed, and falls back gracefully if the API is unavailable.
+ *
+ * @module currency
+ * @version 1.0.0
+ * @requires node:fs
+ * @requires node:path
+ * @requires node:os
+ * @see {@link module:types} CurrencyConversion and CurrencyResult types
+ * @example
+ * // Convert 100 SEK to USD
+ * const result = await convertCurrency(100, 'SEK', 'USD');
+ * if (result.success) {
+ *   console.log(`${result.amount} ${result.currency}`);
+ * }
+ *
+ * // Check if conversion is available
+ * const available = await isCurrencyConversionAvailable('SEK', 'USD');
  */
 
 import fs from 'node:fs';

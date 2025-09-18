@@ -7,11 +7,20 @@
 - CLI: `gift-calc`, `gcalc`, `gift-calc-mcp`
 
 ## Project Structure
-- `index.js` - CLI interface
+- `index.js` - Simplified CLI entry point (31 lines)
 - `bin/mcp-server.js` - MCP server binary
-- `src/core.js` - Calculation engine
-- `src/mcp/` - MCP protocol implementation
+- `src/cli/` - CLI commands and utilities
+- `src/core/` - Core calculation algorithms
+- `src/domains/` - Domain-specific modules (naughty-list, etc.)
+- `src/shared/` - Common utilities and argument parsing
+- `src/mcp/` - MCP server tools and schemas
 - Config: `~/.config/gift-calc/.config.json`
+
+## Architecture Benefits
+- **Domain separation**: Naughty list, budgets, and calculations in dedicated modules
+- **Simplified testing**: Individual modules can be tested independently
+- **Reduced complexity**: Main index.js reduced from 1059 to 31 lines
+- **Better maintainability**: Clear boundaries between CLI, core logic, and MCP tools
 
 ## Commands
 ```bash
@@ -28,7 +37,7 @@ node bin/mcp-server.js      # MCP server
 
 ## Code Style
 - Manual CLI parsing (no libs)
-- Reuse `src/core.js` in MCP tools
+- Reuse `src/core/` modules in MCP tools
 - MCP safety: `isReadOnly: true/false`
 - Priority: CLI args > config > defaults
 

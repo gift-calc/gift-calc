@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { parseArguments } from '../src/core.js';
+import { parseArguments } from '../src/shared/argument-parsing-simple.js';
 // Test configuration paths
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'gift-calc');
 const CONFIG_PATH = path.join(CONFIG_DIR, '.config.json');

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { calculateGiftAmount, calculateFinalAmount } from '../src/core.js';
+import { calculateGiftAmount, calculateFinalAmount } from '../src/core/calculation.js';
 
 // Helper to get multiple calculations for statistical tests  
 function getStats(baseValue, variation, friendScore = 5, niceScore = 5, iterations = 50) {

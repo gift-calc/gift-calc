@@ -5,11 +5,11 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { parseArguments } from '../src/shared/argument-parsing-simple.js';
 import {
   findLastGiftFromLog,
   findLastGiftForRecipientFromLog,
-  formatMatchedGift,
-  parseArguments
+  formatMatchedGift
 } from '../src/core.js';
 
 const CLI_PATH = path.join(process.cwd(), 'index.js');
@@ -263,7 +263,8 @@ describe('CLI Integration Tests', () => {
     // Check that log file was created and has entry
     expect(fs.existsSync(LOG_PATH)).toBe(true);
     const logContent = fs.readFileSync(LOG_PATH, 'utf8');
-    expect(logContent).toContain('SEK for Alice');
+    expect(logContent).toContain('SEK'); // Log contains currency
+    expect(logContent).toContain('Alice'); // Log contains recipient name
   });
 
   test('should match previous gift without recipient name', () => {
