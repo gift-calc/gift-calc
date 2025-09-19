@@ -40,6 +40,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { getPersonConfig, getPersonConfigPath } from '../core.js';
+import { extractHooksConfig } from './hooks/index.js';
 
 /**
  * Get configuration file path
@@ -98,6 +99,17 @@ export function loadConfig(personName = null) {
       // Migration: if only 'currency' exists, migrate to 'baseCurrency'
       if (sanitizedConfig.currency && !sanitizedConfig.baseCurrency && typeof sanitizedConfig.currency === 'string') {
         config.baseCurrency = sanitizedConfig.currency;
+      }
+
+      // Load and validate hooks configuration
+      if (sanitizedConfig.hooks) {
+        try {
+          // Use the new hooks system to extract and validate hooks config
+          const hooksConfig = extractHooksConfig(sanitizedConfig);
+          config.hooks = hooksConfig;
+        } catch (error) {
+          console.warn('Warning: Invalid hooks configuration in config file. Hooks disabled.');
+        }
       }
     } catch (error) {
       console.error(`Warning: Could not parse config file at ${configPath}. Using defaults.`);

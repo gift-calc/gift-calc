@@ -46,6 +46,7 @@ import { handleGiftCalculation } from './commands/gift-calculation.js';
 import { showVersion } from './utils/version.js';
 import { displayLog } from './utils/log.js';
 import { initConfig, updateConfig } from './utils/config-interactive.js';
+import { executePostCommandHooks } from './hooks/index.js';
 
 /**
  * Get domain-specific arguments by removing the command prefix
@@ -81,24 +82,44 @@ function getDomainArgs(commandName) {
  * @param {string} commandName - Name of the domain command (e.g., 'naughty-list')
  * @param {Function} parser - Domain-specific parsing function
  * @param {Function} handler - Domain command handler function
+ * @param {Object} parsedConfig - Full parsed configuration for hook context
  * @returns {void} Function calls process.exit() with appropriate code
  * @throws {Error} Errors are caught and converted to exit code 1
  * @example
  * // Handle naughty list command
- * handleDomainCommand('naughty-list', parseNaughtyListArguments, handleNaughtyListCommand);
+ * handleDomainCommand('naughty-list', parseNaughtyListArguments, handleNaughtyListCommand, parsedConfig);
  *
  * @exitcode {0} Success - domain command completed successfully
  * @exitcode {1} Error - parsing failed, validation error, or command execution error
  * @since 1.0.0
  */
-function handleDomainCommand(commandName, parser, handler) {
+async function handleDomainCommand(commandName, parser, handler, parsedConfig) {
+
   try {
     const domainArgs = getDomainArgs(commandName);
     const config = parser(domainArgs);
     handler(config);
+
+    // Apply post-command hooks on success
+    await executePostCommandHooks(
+      process.argv.slice(2),
+      config,
+      `${commandName} command completed`,
+      { success: true },
+      commandName
+    );
     process.exit(0);
   } catch (error) {
     console.error(`Error in ${commandName} command:`, error.message);
+
+    // Apply post-command hooks on error
+    await executePostCommandHooks(
+      process.argv.slice(2),
+      config,
+      error.message,
+      { success: false, error },
+      commandName
+    );
     process.exit(1);
   }
 }
@@ -145,65 +166,170 @@ function handleDomainCommand(commandName, parser, handler) {
  * @see {@link handleDomainCommand} Domain command abstraction
  */
 export async function routeCommand(parsedConfig) {
+
   // Handle special commands that don't use the standard parsing structure
   if (parsedConfig.command === 'init-config') {
-    initConfig();
-    process.exit(0);
+    try {
+      initConfig();
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        'Config initialized',
+        { success: true },
+        'init-config'
+      );
+      process.exit(0);
+    } catch (error) {
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        error.message,
+        { success: false, error },
+        'init-config'
+      );
+      throw error;
+    }
   }
 
   if (parsedConfig.command === 'update-config') {
-    updateConfig();
-    process.exit(0);
+    try {
+      updateConfig();
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        'Config updated',
+        { success: true },
+        'update-config'
+      );
+      process.exit(0);
+    } catch (error) {
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        error.message,
+        { success: false, error },
+        'update-config'
+      );
+      throw error;
+    }
   }
 
   if (parsedConfig.command === 'log') {
-    displayLog();
-    process.exit(0);
+    try {
+      displayLog();
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        'Log displayed',
+        { success: true },
+        'log'
+      );
+      process.exit(0);
+    } catch (error) {
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        error.message,
+        { success: false, error },
+        'log'
+      );
+      throw error;
+    }
   }
 
   if (parsedConfig.showHelp) {
     // Import and display help text from core
-    import('../core.js').then(({ getHelpText }) => {
-      console.log(getHelpText());
-      process.exit(0);
+    import('../core.js').then(async ({ getHelpText }) => {
+      try {
+        console.log(getHelpText());
+        await executePostCommandHooks(
+          process.argv.slice(2),
+          parsedConfig,
+          'Help displayed',
+          { success: true },
+          'help'
+        );
+        process.exit(0);
+      } catch (error) {
+        await executePostCommandHooks(
+          process.argv.slice(2),
+          parsedConfig,
+          error.message,
+          { success: false, error },
+          'help'
+        );
+        process.exit(1);
+      }
     });
     return;
   }
 
   if (parsedConfig.command === 'version') {
-    showVersion();
-    process.exit(0);
+    try {
+      showVersion();
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        'Version displayed',
+        { success: true },
+        'version'
+      );
+      process.exit(0);
+    } catch (error) {
+      await executePostCommandHooks(
+        process.argv.slice(2),
+        parsedConfig,
+        error.message,
+        { success: false, error },
+        'version'
+      );
+      throw error;
+    }
   }
 
   // Route domain commands to their handlers
   switch (parsedConfig.command) {
     case 'naughty-list':
-      handleDomainCommand('naughty-list', parseNaughtyListArguments, handleNaughtyListCommand);
+      await handleDomainCommand('naughty-list', parseNaughtyListArguments, handleNaughtyListCommand, parsedConfig);
       break;
 
     case 'budget':
-      handleDomainCommand('budget', parseBudgetArguments, handleBudgetCommand);
+      await handleDomainCommand('budget', parseBudgetArguments, handleBudgetCommand, parsedConfig);
       break;
 
     case 'spendings':
-      handleDomainCommand('spendings', parseSpendingsArguments, handleSpendingsCommand);
+      await handleDomainCommand('spendings', parseSpendingsArguments, handleSpendingsCommand, parsedConfig);
       break;
 
     case 'person':
-      handleDomainCommand('person', parsePersonArguments, handlePersonCommand);
+      await handleDomainCommand('person', parsePersonArguments, handlePersonCommand, parsedConfig);
       break;
 
     case 'toplist':
-      handleDomainCommand('toplist', parseToplistArguments, handleToplistCommand);
+      await handleDomainCommand('toplist', parseToplistArguments, handleToplistCommand, parsedConfig);
       break;
 
     default:
       // If no command matched, this is the default gift calculation
       try {
-        await handleGiftCalculation(parsedConfig);
+        const result = await handleGiftCalculation(parsedConfig);
+        await executePostCommandHooks(
+          process.argv.slice(2),
+          parsedConfig,
+          result || 'Gift calculation completed',
+          { success: true },
+          'gift-calculation'
+        );
         process.exit(0);
       } catch (error) {
         console.error('Error in gift calculation:', error.message);
+        await executePostCommandHooks(
+          process.argv.slice(2),
+          parsedConfig,
+          error.message,
+          { success: false, error },
+          'gift-calculation'
+        );
         process.exit(1);
       }
   }

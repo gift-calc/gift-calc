@@ -35,6 +35,7 @@
 import { parseArguments } from './src/shared/argument-parsing-simple.js';
 import { loadConfig } from './src/cli/config.js';
 import { routeCommand } from './src/cli/router.js';
+import { applyConfigHooks } from './src/cli/hooks/index.js';
 
 // Get command line arguments
 const args = process.argv.slice(2);
@@ -60,5 +61,6 @@ try {
   process.exit(1);
 }
 
-// Route command to appropriate handler
-await routeCommand(parsedConfig);
+// Apply pre-command hooks and route command to appropriate handler
+const finalConfig = await applyConfigHooks(args, parsedConfig, parsedConfig.command);
+await routeCommand(finalConfig);

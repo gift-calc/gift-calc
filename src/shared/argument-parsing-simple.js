@@ -56,7 +56,8 @@ export function parseArguments(args, defaultConfig = {}) {
     command: null,
     matchPreviousGift: false,
     matchRecipientName: null,
-    dryRun: false
+    dryRun: false,
+    hooks: defaultConfig.hooks || undefined // Preserve hooks configuration
   };
 
   // Check for special commands first
